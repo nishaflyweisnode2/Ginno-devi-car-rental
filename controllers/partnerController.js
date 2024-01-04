@@ -5,8 +5,10 @@ const newOTP = require("otp-generators");
 const mongoose = require('mongoose');
 const Notification = require('../models/notificationModel');
 const bcrypt = require("bcryptjs");
+const Car = require('../models/carModel');
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
+
 
 
 
@@ -30,7 +32,7 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
         }
 
-        const existingUser = await User.findOne({ mobileNumber: mobileNumber, userType: "USER" });
+        const existingUser = await User.findOne({ mobileNumber: mobileNumber, userType: "PARTNER" });
         if (existingUser) {
             return res.status(409).json({ status: 409, message: 'User Already Registered' });
         }
@@ -42,7 +44,7 @@ exports.signup = async (req, res) => {
             mobileNumber,
             email,
             password: hashedPassword,
-            userType: "USER",
+            userType: "PARTNER",
             refferalCode: await reffralCode()
         });
 
@@ -69,13 +71,30 @@ exports.signup = async (req, res) => {
 
 exports.loginWithPhone = async (req, res) => {
     try {
-        const { mobileNumber } = req.body;
+        const { mobileNumber, email } = req.body;
 
-        if (mobileNumber.replace(/\D/g, '').length !== 10) {
-            return res.status(400).json({ status: 400, message: "Invalid mobile number length" });
+        if (!mobileNumber && !email) {
+            return res.status(400).json({ status: 400, message: "Mobile number or email is required" });
         }
 
-        const user = await User.findOne({ mobileNumber, userType: "USER" });
+        let query = { userType: "PARTNER" };
+
+        if (mobileNumber) {
+            if (mobileNumber.replace(/\D/g, '').length !== 10) {
+                return res.status(400).json({ status: 400, message: "Invalid mobile number length" });
+            }
+            query.mobileNumber = mobileNumber;
+        }
+
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ status: 400, message: "Invalid email format" });
+            }
+            query.email = email;
+        }
+
+        const user = await User.findOne(query);
 
         if (!user) {
             return res.status(404).json({ status: 404, message: 'User not found' });
@@ -88,7 +107,7 @@ exports.loginWithPhone = async (req, res) => {
         };
 
         const updatedUser = await User.findOneAndUpdate(
-            { mobileNumber, userType: "USER" },
+            query,
             userObj,
             { new: true }
         );
@@ -97,6 +116,7 @@ exports.loginWithPhone = async (req, res) => {
             id: updatedUser._id,
             otp: updatedUser.otp,
             mobileNumber: updatedUser.mobileNumber,
+            email: updatedUser.email,
         };
 
         return res.status(200).json({ status: 200, message: "Logged in successfully", data: responseObj });
@@ -141,7 +161,7 @@ exports.verifyOtp = async (req, res) => {
 exports.resendOTP = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await User.findOne({ _id: id, userType: "USER" });
+        const user = await User.findOne({ _id: id, userType: "PARTNER" });
         if (!user) {
             return res.status(404).send({ status: 404, message: "User not found" });
         }
@@ -176,7 +196,7 @@ exports.socialLogin = async (req, res) => {
                 accessToken,
             });
         } else {
-            const user = await userModel.create({ firstname, lastname, email, socialType, userType: "Distributor" });
+            const user = await userModel.create({ firstname, lastname, email, socialType, userType: "PARTNER" });
 
             if (user) {
                 const accessToken = jwt.sign({ id: user.id, email: user.email }, process.env.SECRETK, { expiresIn: "365d" });
@@ -385,5 +405,190 @@ exports.getCityById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.createCar = async (req, res) => {
+    try {
+        const { licenseNumber, brand, model, variant, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
+        const chassisNumberRegex = /^[A-Za-z0-9]{17}$/;
+        if (!chassisNumberRegex.test(chassisNumber)) {
+            return res.status(400).json({ message: 'Invalid chassisNumber format' });
+        }
+
+        const existingCarWithLicenseNumber = await Car.findOne({ licenseNumber });
+        if (existingCarWithLicenseNumber) {
+            return res.status(400).json({ message: 'License number already in use' });
+        }
+
+        const existingCarWithChassisNumber = await Car.findOne({ chassisNumber });
+        if (existingCarWithChassisNumber) {
+            return res.status(400).json({ message: 'ChassisNumber number already in use' });
+        }
+
+        const checkCity = await City.findById(city);
+        if (!checkCity) {
+            return res.status(404).json({ message: 'City not found' });
+        }
+
+        const carBrand = await Brand.findById(brand);
+        if (!carBrand) {
+            return res.status(404).json({ status: 404, message: 'CarBrand not found' });
+        }
+
+        const newCar = new Car({
+            owner: user._id,
+            licenseNumber,
+            brand,
+            model,
+            variant,
+            city,
+            yearOfRegistration,
+            fuelType,
+            transmissionType,
+            kmDriven,
+            chassisNumber,
+            sharingFrequency,
+            status
+        });
+
+        const savedCar = await newCar.save();
+
+        return res.status(201).json({ status: 201, data: savedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllCars = async (req, res) => {
+    try {
+        const cars = await Car.find();
+        return res.status(200).json({ status: 200, data: cars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarById = async (req, res) => {
+    try {
+        const car = await Car.findById(req.params.carId);
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+        return res.status(200).json({ status: 200, data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.updateCarById = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const userId = req.user._id;
+
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
+        const existingCar = await Car.findById(carId);
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        if (req.body.chassisNumber) {
+            const chassisNumberRegex = /^[A-Za-z0-9]{17}$/;
+            if (!chassisNumberRegex.test(req.body.chassisNumber)) {
+                return res.status(400).json({ message: 'Invalid chassisNumber format' });
+            }
+
+            const existingCarWithChassisNumber = await Car.findOne({ chassisNumber: req.body.chassisNumber });
+            if (existingCarWithChassisNumber) {
+                return res.status(400).json({ message: 'ChassisNumber already in use' });
+            }
+        }
+
+        if (req.body.licenseNumber) {
+            const existingCarWithLicenseNumber = await Car.findOne({ licenseNumber });
+            if (existingCarWithLicenseNumber) {
+                return res.status(400).json({ message: 'License number already in use' });
+            }
+        }
+
+        if (req.body.city) {
+            const checkCity = await City.findById(city);
+            if (!checkCity) {
+                return res.status(404).json({ message: 'City not found' });
+            }
+        }
+
+        if (req.body.brand) {
+            const carBrand = await Brand.findById(brand);
+            if (!carBrand) {
+                return res.status(404).json({ status: 404, message: 'CarBrand not found' });
+            }
+        }
+
+        for (const key in req.body) {
+            if (key in existingCar._doc) {
+                existingCar[key] = req.body[key];
+            }
+        }
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteCarById = async (req, res) => {
+    try {
+        const deletedCar = await Car.findByIdAndDelete(req.params.carId);
+        if (!deletedCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Car deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.updateCarDocuments = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const existingCar = await Car.findById(carId);
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        if (req.file) {
+            existingCar.carDocuments = req.file.path;
+            existingCar.isCarDocumentsUpload = true;
+        }
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Car documents updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };

@@ -40,6 +40,20 @@ const userSchema = new mongoose.Schema({
             default: [0, 0]
         },
     },
+    state: {
+        type: String
+    },
+    isState: {
+        type: String,
+        default: false
+    },
+    city: {
+        type: String
+    },
+    isCity: {
+        type: String,
+        default: false
+    },
     userType: {
         type: String,
         enum: ["ADMIN", "USER", "PARTNER"],
