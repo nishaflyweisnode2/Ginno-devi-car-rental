@@ -32,6 +32,10 @@ module.exports = (app) => {
     app.get('/api/v1/admin/brand/:carBrandId', [authJwt.isAdmin], auth.getCarBrandById);
     app.put('/api/v1/admin/brand/:carBrandId', [authJwt.isAdmin], brandImage.single('image'), auth.updateCarBrand);
     app.delete('/api/v1/admin/brand/:carBrandId', [authJwt.isAdmin], auth.deleteCarBrand);
-
+    app.post('/api/v1/admin/coupons', [authJwt.isAdmin], auth.createCoupon);
+    app.get('/api/v1/admin/coupons', [authJwt.isAdmin], auth.getAllCoupons);
+    app.get('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.getCouponById);
+    app.put('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.updateCouponById);
+    app.delete('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.deleteCouponById);
 
 }

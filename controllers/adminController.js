@@ -7,6 +7,7 @@ const Notification = require('../models/notificationModel');
 const bcrypt = require("bcryptjs");
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
+const Coupon = require('../models/couponModel');
 
 
 
@@ -464,5 +465,87 @@ exports.deleteCarBrand = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+
+exports.createCoupon = async (req, res) => {
+    try {
+        const { title, desc, code, discount, isPercent, expirationDate, isActive } = req.body;
+
+        const newCoupon = await Coupon.create({
+            title,
+            desc,
+            code,
+            discount,
+            isPercent,
+            expirationDate,
+            isActive,
+        });
+
+        res.status(201).json({ status: 201, message: 'Coupon created successfully', data: newCoupon });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.getAllCoupons = async (req, res) => {
+    try {
+        const coupons = await Coupon.find();
+        res.status(200).json({ status: 200, data: coupons });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.getCouponById = async (req, res) => {
+    try {
+        const couponId = req.params.id;
+        const coupon = await Coupon.findById(couponId);
+
+        if (!coupon) {
+            return res.status(404).json({ status: 404, message: 'Coupon not found' });
+        }
+
+        res.status(200).json({ status: 200, data: coupon });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.updateCouponById = async (req, res) => {
+    try {
+        const couponId = req.params.id;
+        const updateFields = req.body;
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(couponId, updateFields, { new: true });
+
+        if (!updatedCoupon) {
+            return res.status(404).json({ status: 404, message: 'Coupon not found' });
+        }
+
+        res.status(200).json({ status: 200, message: 'Coupon updated successfully', data: updatedCoupon });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.deleteCouponById = async (req, res) => {
+    try {
+        const couponId = req.params.id;
+        const deletedCoupon = await Coupon.findByIdAndDelete(couponId);
+
+        if (!deletedCoupon) {
+            return res.status(404).json({ status: 404, message: 'Coupon not found' });
+        }
+
+        res.status(200).json({ status: 200, message: 'Coupon deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
     }
 };
