@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const Car = require('../models/carModel');
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
+const CarImage = require('../models/carImageTipsModel');
 
 
 
@@ -590,5 +591,156 @@ exports.updateCarDocuments = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.updateDLDetails = async (req, res) => {
+    try {
+        const { carId } = req.params;
+        const existingCar = await Car.findById(carId);
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        if (req.files['dlFront']) {
+            let dlFront = req.files['dlFront'];
+            existingCar.dlFront = dlFront[0].path;
+            existingCar.isDlUpload = true;
+        }
+        if (req.files['dlBack']) {
+            let dlBack = req.files['dlBack'];
+            existingCar.dlBack = dlBack[0].path;
+            existingCar.isDlUpload = true;
+        }
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, message: 'DL details updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateAddressProof = async (req, res) => {
+    try {
+        const { carId } = req.params;
+        const { name, email, yourAddress, mobileNumber, pincode, city, state, district, alternateMobileNumber } = req.body;
+
+        const existingCar = await Car.findById(carId);
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        if (req.file) {
+            existingCar.addressProof.officeAddressProof = req.file.path;
+        }
+        console.log("existingCar.addressProof.officeAddressProof", existingCar.addressProof.officeAddressProof);
+        if (name) existingCar.addressProof.name = name;
+        if (email) existingCar.addressProof.email = email;
+        if (yourAddress) existingCar.addressProof.yourAddress = yourAddress;
+        if (mobileNumber) existingCar.addressProof.mobileNumber = mobileNumber;
+        if (pincode) existingCar.addressProof.pincode = pincode;
+        if (city) existingCar.addressProof.city = city;
+        if (state) existingCar.addressProof.state = state;
+        if (district) existingCar.addressProof.district = district;
+        if (alternateMobileNumber) existingCar.addressProof.alternateMobileNumber = alternateMobileNumber;
+
+        existingCar.addressProof.isUploadAddress = true;
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.uploadCarImages = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const existingCar = await Car.findById(carId);
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const maxImages = 14;
+
+        const totalImages = existingCar.images.length + req.files.length;
+
+        if (totalImages > maxImages) {
+            return res.status(400).json({ status: 400, message: 'Exceeded maximum limit of images' });
+        }
+
+        req.files.forEach(file => {
+            existingCar.images.push({ img: file.path });
+        });
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Images uploaded successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateCarImageById = async (req, res) => {
+    try {
+        const { carId, imageId } = req.params;
+
+        const existingCar = await Car.findById(carId);
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const imageIndex = existingCar.images.findIndex(image => image._id.toString() === imageId);
+
+        if (imageIndex === -1) {
+            return res.status(404).json({ status: 404, message: 'Image not found' });
+        }
+
+        if (req.file) {
+            existingCar.images[imageIndex].img = req.file.path;
+        }
+
+        const updatedCar = await existingCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Image updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllCarImages = async (req, res) => {
+    try {
+        const carImages = await CarImage.find();
+
+        return res.status(200).json({ status: 200, data: carImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarImageById = async (req, res) => {
+    try {
+        const { carImageId } = req.params;
+        const carImage = await CarImage.findById(carImageId);
+
+        if (!carImage) {
+            return res.status(404).json({ status: 404, message: 'Car Image not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: carImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

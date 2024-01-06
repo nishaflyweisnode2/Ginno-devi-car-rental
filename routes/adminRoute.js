@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage } = require('../middlewares/imageUpload');
+const { profileImage, cityImage, brandImage, referenceImage } = require('../middlewares/imageUpload');
 
 
 
@@ -37,5 +37,10 @@ module.exports = (app) => {
     app.get('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.getCouponById);
     app.put('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.updateCouponById);
     app.delete('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.deleteCouponById);
+    app.post('/api/v1/admin/carImages', [authJwt.isAdmin], referenceImage.array('image'), auth.createCarImage);
+    app.get('/api/v1/admin/carImages', [authJwt.isAdmin], auth.getAllCarImages);
+    app.get('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.getCarImageById);
+    app.put('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], referenceImage.array('image'), auth.updateCarImageById);
+    app.delete('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.deleteCarImageById);
 
 }

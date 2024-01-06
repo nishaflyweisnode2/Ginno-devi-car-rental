@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage } = require('../middlewares/imageUpload');
+const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage } = require('../middlewares/imageUpload');
 
 
 
@@ -31,5 +31,10 @@ module.exports = (app) => {
     app.put('/api/v1/partner/cars/:carId', [authJwt.isPartner], auth.updateCarById);
     app.delete('/api/v1/partner/cars/:carId', [authJwt.isPartner], auth.deleteCarById);
     app.put('/api/v1/partner/cars/:carId/documents', [authJwt.isPartner], carDocumentImage.single('image'), auth.updateCarDocuments);
-
+    app.put('/api/v1/partner/:carId/updateDLDetails', [authJwt.isPartner], kpUpload, auth.updateDLDetails);
+    app.put('/api/v1/partner/:carId/updateAddressProof', [authJwt.isPartner], addressPrrof.single('image'), auth.updateAddressProof);
+    app.put('/api/v1/partner/:carId/uploadCarImages', [authJwt.isPartner], carImage.array('image', 15), auth.uploadCarImages);
+    app.put('/api/v1/partner/:carId/images/:imageId', [authJwt.isPartner], carImage.single('image'), auth.updateCarImageById);
+    app.get('/api/v1/partner/carImages', [authJwt.isPartner], auth.getAllCarImages);
+    app.get('/api/v1/partner/carImages/:carImageId', [authJwt.isPartner], auth.getCarImageById);
 }

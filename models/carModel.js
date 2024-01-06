@@ -94,14 +94,18 @@ const carSchema = new mongoose.Schema({
         officeAddressProof: {
             type: String,
         },
-        uploadAddress: {
-            type: String,
-        },
         isUploadAddress: {
             type: Boolean,
             default: false,
         },
     },
+    images: [
+        {
+            img: {
+                type: String
+            }
+        }
+    ],
     status: {
         type: Boolean,
         default: false,

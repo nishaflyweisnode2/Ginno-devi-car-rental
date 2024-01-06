@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
 const Coupon = require('../models/couponModel');
+const CarImage = require('../models/carImageTipsModel');
 
 
 
@@ -547,5 +548,100 @@ exports.deleteCouponById = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.createCarImage = async (req, res) => {
+    try {
+        const { tips, url } = req.body;
+
+        let images = [];
+        if (req.files) {
+            for (let j = 0; j < req.files.length; j++) {
+                let obj = {
+                    img: req.files[j].path,
+                };
+                images.push(obj);
+            }
+        }
+        const newCarImage = new CarImage({
+            tips,
+            images,
+            url,
+        });
+
+        const savedCarImage = await newCarImage.save();
+
+        return res.status(201).json({ status: 201, data: savedCarImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllCarImages = async (req, res) => {
+    try {
+        const carImages = await CarImage.find();
+
+        return res.status(200).json({ status: 200, data: carImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarImageById = async (req, res) => {
+    try {
+        const { carImageId } = req.params;
+        const carImage = await CarImage.findById(carImageId);
+
+        if (!carImage) {
+            return res.status(404).json({ status: 404, message: 'Car Image not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: carImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateCarImageById = async (req, res) => {
+    try {
+        const { carImageId } = req.params;
+        const { tips, referenceImg, url } = req.body;
+
+        const existingCarImage = await CarImage.findById(carImageId);
+
+        if (!existingCarImage) {
+            return res.status(404).json({ status: 404, message: 'Car Image not found' });
+        }
+
+        existingCarImage.tips = tips;
+        existingCarImage.referenceImg = referenceImg;
+        existingCarImage.url = url;
+
+        const updatedCarImage = await existingCarImage.save();
+
+        return res.status(200).json({ status: 200, data: updatedCarImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteCarImageById = async (req, res) => {
+    try {
+        const { carImageId } = req.params;
+        const deletedCarImage = await CarImage.findByIdAndDelete(carImageId);
+
+        if (!deletedCarImage) {
+            return res.status(404).json({ status: 404, message: 'Car Image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Car Image deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
