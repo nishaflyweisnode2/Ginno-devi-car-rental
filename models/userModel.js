@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
     },
+    bio: {
+        type: String,
+    },
+    occupation: {
+        type: String,
+    },
     otp: {
         type: String,
     },

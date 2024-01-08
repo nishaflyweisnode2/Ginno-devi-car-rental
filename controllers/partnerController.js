@@ -9,6 +9,7 @@ const Car = require('../models/carModel');
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
 const CarImage = require('../models/carImageTipsModel');
+const Location = require("../models/carLocationModel");
 
 
 
@@ -299,7 +300,7 @@ exports.editProfile = async (req, res) => {
     try {
         const userId = req.user._id;
 
-        const { fullName, email, password, confirmPassword, mobileNumber } = req.body;
+        const { fullName, email, password, confirmPassword, mobileNumber, occupation, bio } = req.body;
 
         if (password !== confirmPassword) {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
@@ -313,6 +314,8 @@ exports.editProfile = async (req, res) => {
             updateObject.password = hashedPassword;
         }
         if (mobileNumber) updateObject.mobileNumber = mobileNumber;
+        if (occupation) updateObject.occupation = occupation;
+        if (bio) updateObject.bio = bio;
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
@@ -471,8 +474,16 @@ exports.createCar = async (req, res) => {
 
 exports.getAllCars = async (req, res) => {
     try {
-        const cars = await Car.find();
-        return res.status(200).json({ status: 200, data: cars });
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const partnerCars = await Car.find({ owner: userId });
+
+        return res.status(200).json({ status: 200, data: partnerCars });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Internal Server Error' });
@@ -503,7 +514,7 @@ exports.updateCarById = async (req, res) => {
             return res.status(404).send({ status: 404, message: "User not found" });
         }
 
-        const existingCar = await Car.findById(carId);
+        const existingCar = await Car.findOne({ _id: carId, owner: userId });
 
         if (!existingCar) {
             return res.status(404).json({ message: 'Car not found' });
@@ -559,6 +570,13 @@ exports.updateCarById = async (req, res) => {
 
 exports.deleteCarById = async (req, res) => {
     try {
+        const userId = req.user._id;
+
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
         const deletedCar = await Car.findByIdAndDelete(req.params.carId);
         if (!deletedCar) {
             return res.status(404).json({ message: 'Car not found' });
@@ -744,3 +762,216 @@ exports.getCarImageById = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
+exports.getCarsForPartner = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const partnerCars = await Car.find({ owner: userId });
+
+        return res.status(200).json({ status: 200, data: partnerCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getNewlyListedCarsForPartner = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const partnerCars = await Car.find({ owner: userId })
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        return res.status(200).json({ status: 200, data: partnerCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createLocation = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId, name, coordinates, type } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const existingCar = await Car.findOne({ _id: carId, owner: userId });
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const location = new Location({
+            user: userId,
+            car: carId,
+            name,
+            coordinates,
+            type,
+        });
+
+        const savedLocation = await location.save();
+
+        res.status(201).json({
+            status: 201,
+            message: 'Location created successfully',
+            data: savedLocation,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllLocations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const locations = await Location.find({ user: userId });
+
+        res.status(200).json({ status: 200, data: locations });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllLocationsByCar = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const existingCar = await Car.findOne({ owner: userId });
+
+        if (!existingCar) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const locations = await Location.find({ user: userId, car: existingCar._id });
+
+        res.status(200).json({ status: 200, data: locations });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getLocationById = async (req, res) => {
+    try {
+        const { locationId } = req.params;
+
+        const location = await Location.findById(locationId);
+
+        if (!location) {
+            return res.status(404).json({ status: 404, message: 'Location not found' });
+        }
+
+        res.status(200).json({ status: 200, data: location });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateLocationById = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const { locationId } = req.params;
+        const { name, coordinates, type } = req.body;
+
+        const location = await Location.findByIdAndUpdate(
+            locationId,
+            { $set: { name, coordinates, type } },
+            { new: true }
+        );
+
+        if (!location) {
+            return res.status(404).json({ status: 404, message: 'Location not found' });
+        }
+
+        res.status(200).json({ status: 200, message: 'Location updated successfully', data: location });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteLocationById = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const { locationId } = req.params;
+
+        const location = await Location.findByIdAndDelete(locationId);
+
+        if (!location) {
+            return res.status(404).json({ status: 404, message: 'Location not found' });
+        }
+
+        res.status(200).json({ status: 200, message: 'Location deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getLocationsByType = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const { type } = req.params;
+
+        const locations = await Location.find({ type: type, user: userId });
+
+        if (locations && locations.length > 0) {
+            return res.json(locations);
+        } else {
+            return res.status(404).json({ message: `No locations found for type: ${type}` });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: `Failed to retrieve locations for type: ${type}` });
+    }
+};
+
+

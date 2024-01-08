@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage } = require('../middlewares/imageUpload');
+const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage } = require('../middlewares/imageUpload');
 
 
 
@@ -42,5 +42,24 @@ module.exports = (app) => {
     app.get('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.getCarImageById);
     app.put('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], referenceImage.array('image'), auth.updateCarImageById);
     app.delete('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.deleteCarImageById);
+    app.post('/api/v1/admin/cars/add', [authJwt.isAdmin], auth.createCar);
+    app.get('/api/v1/admin/cars', [authJwt.isAdmin], auth.getAllAddedCars);
+    app.get('/api/v1/admin/car/allCars', [authJwt.isAdmin], auth.getAllCars);
+    app.get('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.getCarById);
+    app.put('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.updateCarById);
+    app.delete('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.deleteCarById);
+    app.put('/api/v1/admin/cars/:carId/documents', [authJwt.isAdmin], carDocumentImage.single('image'), auth.updateCarDocuments);
+    app.put('/api/v1/admin/:carId/updateDLDetails', [authJwt.isAdmin], kpUpload, auth.updateDLDetails);
+    app.put('/api/v1/admin/:carId/updateAddressProof', [authJwt.isAdmin], addressPrrof.single('image'), auth.updateAddressProof);
+    app.put('/api/v1/admin/:carId/uploadCarImages', [authJwt.isAdmin], carImage.array('image', 15), auth.uploadCarImages);
+    app.put('/api/v1/admin/:carId/images/:imageId', [authJwt.isAdmin], carImage.single('image'), auth.updateCarImageById);
+    app.get('/api/v1/admin/car/partnerCars/:partnerId', [authJwt.isAdmin], auth.getCarsForPartner);
+    app.post('/api/v1/admin/locations/create', [authJwt.isAdmin], auth.createLocation);
+    app.get('/api/v1/admin/locations/getAll', [authJwt.isAdmin], auth.getAllLocations);
+    app.get('/api/v1/admin/locations/getAllByCar', [authJwt.isAdmin], auth.getAllLocationsByCar);
+    app.get('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.getLocationById);
+    app.put('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.updateLocationById);
+    app.delete('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.deleteLocationById);
+    app.get('/api/v1/admin/locations/type/:type', [authJwt.isAdmin], auth.getLocationsByType);
 
 }

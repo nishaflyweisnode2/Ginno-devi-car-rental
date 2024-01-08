@@ -25,5 +25,9 @@ module.exports = (app) => {
     app.put("/api/v1/user/updateLocation", [authJwt.verifyToken], auth.updateLocation);
     app.get("/api/v1/user/city/cities", [authJwt.verifyToken], auth.getAllCities);
     app.get("/api/v1/user/city/cities/:id", [authJwt.verifyToken], auth.getCityById);
+    app.get('/api/v1/user/cars', [authJwt.verifyToken], auth.getAllCars);
+    app.get('/api/v1/user/cars/:carId', [authJwt.verifyToken], auth.getCarById);
+    app.post('/api/v1/user/review/createReview', [authJwt.verifyToken], auth.createReview);
+    app.get('/api/v1/user/review/getReviewsByCar/:carId', auth.getReviewsByCar);
 
 }

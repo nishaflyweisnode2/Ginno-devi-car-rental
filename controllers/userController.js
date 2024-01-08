@@ -7,6 +7,8 @@ const Notification = require('../models/notificationModel');
 const bcrypt = require("bcryptjs");
 const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
+const Car = require('../models/carModel');
+const Review = require('../models/ratingModel');
 
 
 
@@ -387,3 +389,101 @@ exports.getCityById = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
+
+exports.getAllCars = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const partnerCars = await Car.find();
+
+        return res.status(200).json({ status: 200, data: partnerCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarById = async (req, res) => {
+    try {
+        const car = await Car.findById(req.params.carId);
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+        return res.status(200).json({ status: 200, data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.createReview = async (req, res) => {
+    try {
+        const { carId, rating, comment } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        if (rating < 0 || rating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid rating. Rating should be between 0 and 5.', data: {} });
+        }
+
+        const newReview = await Review.create({ user: userId, car: carId, rating, comment });
+
+        if (!car.reviews || !Array.isArray(car.reviews)) {
+            car.reviews = [];
+        }
+
+        newReview.numOfUserReviews = newReview.numOfUserReviews + 1;
+
+        const totalRating = car.reviews.length > 0
+            ? car.reviews.reduce((sum, review) => sum + review.rating, 0)
+            : 0;
+
+        newReview.averageRating = totalRating / newReview.numOfUserReviews;
+
+        await newReview.save();
+
+        res.status(201).json({ status: 201, message: 'Review created successfully', data: newReview });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+
+exports.getReviewsByCar = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const car = await Car.findById(carId);
+
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const reviews = await Review.findById(carId);
+
+        if (!reviews) {
+            return res.status(404).json({ status: 404, message: 'reviews not found' });
+        }
+
+        res.status(200).json({ status: 200, data: reviews });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+

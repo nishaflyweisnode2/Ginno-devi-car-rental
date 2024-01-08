@@ -37,4 +37,14 @@ module.exports = (app) => {
     app.put('/api/v1/partner/:carId/images/:imageId', [authJwt.isPartner], carImage.single('image'), auth.updateCarImageById);
     app.get('/api/v1/partner/carImages', [authJwt.isPartner], auth.getAllCarImages);
     app.get('/api/v1/partner/carImages/:carImageId', [authJwt.isPartner], auth.getCarImageById);
+    app.get('/api/v1/partner/car/partnerCars', [authJwt.isPartner], auth.getCarsForPartner);
+    app.get('/api/v1/partner/newly-listed', [authJwt.isPartner], auth.getNewlyListedCarsForPartner);
+    app.post('/api/v1/partner/locations/create', [authJwt.isPartner], auth.createLocation);
+    app.get('/api/v1/partner/locations/getAll', [authJwt.isPartner], auth.getAllLocations);
+    app.get('/api/v1/partner/locations/getAllByCar', [authJwt.isPartner], auth.getAllLocationsByCar);
+    app.get('/api/v1/partner/locations/:locationId', [authJwt.isPartner], auth.getLocationById);
+    app.put('/api/v1/partner/locations/:locationId', [authJwt.isPartner], auth.updateLocationById);
+    app.delete('/api/v1/partner/locations/:locationId', [authJwt.isPartner], auth.deleteLocationById);
+    app.get('/api/v1/partner/locations/type/:type', [authJwt.isPartner], auth.getLocationsByType);
+
 }

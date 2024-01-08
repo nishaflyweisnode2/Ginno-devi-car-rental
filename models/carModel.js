@@ -110,6 +110,10 @@ const carSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isFastTag: {
+        type: Boolean,
+        default: false,
+    },
 
 }, { timestamps: true });
 
