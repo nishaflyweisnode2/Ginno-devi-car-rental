@@ -61,5 +61,19 @@ module.exports = (app) => {
     app.put('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.updateLocationById);
     app.delete('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.deleteLocationById);
     app.get('/api/v1/admin/locations/type/:type', [authJwt.isAdmin], auth.getLocationsByType);
+    app.post('/api/v1/admin/policies', [authJwt.isAdmin], auth.createPolicy);
+    app.get('/api/v1/admin/policies', [authJwt.isAdmin], auth.getAllPolicies);
+    app.get('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.getPolicyById);
+    app.put('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.updatePolicy);
+    app.delete('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.deletePolicy);
+    app.post('/api/v1/admin/cancellationPolicy', [authJwt.isAdmin], auth.createCancellationPolicy);
+    app.get('/api/v1/admin/cancellationPolicy', [authJwt.isAdmin], auth.getAllCancellationPolicy);
+    app.get('/api/v1/admin/cancellationPolicy/:id', [authJwt.isAdmin], auth.getCancellationPolicyById);
+    app.put('/api/v1/admin/cancellationPolicy/:id', [authJwt.isAdmin], auth.updateCancellationPolicy);
+    app.delete('/api/v1/admin/cancellationPolicy/:id', [authJwt.isAdmin], auth.deleteCancellationPolicy);
+    app.get('/api/v1/admin/host/offers', [authJwt.isAdmin], auth.getAllOffers);
+    app.get('/api/v1/admin/host/partner/:userId/offers', [authJwt.isAdmin], auth.getAllOffersForPartner);
+    app.get('/api/v1/admin/host/cars/:carId/offers', [authJwt.isAdmin], auth.getOffersByCarId);
+    app.get('/api/v1/admin/host/offers/:id', [authJwt.isAdmin], auth.getOfferById);
 
 }

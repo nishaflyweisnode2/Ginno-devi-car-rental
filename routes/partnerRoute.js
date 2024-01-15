@@ -38,6 +38,7 @@ module.exports = (app) => {
     app.get('/api/v1/partner/carImages', [authJwt.isPartner], auth.getAllCarImages);
     app.get('/api/v1/partner/carImages/:carImageId', [authJwt.isPartner], auth.getCarImageById);
     app.get('/api/v1/partner/car/partnerCars', [authJwt.isPartner], auth.getCarsForPartner);
+    app.put('/api/v1/partner/cars/:carId/update-is-fast-tag', [authJwt.isPartner], auth.updateIsFastTag);
     app.get('/api/v1/partner/newly-listed', [authJwt.isPartner], auth.getNewlyListedCarsForPartner);
     app.post('/api/v1/partner/locations/create', [authJwt.isPartner], auth.createLocation);
     app.get('/api/v1/partner/locations/getAll', [authJwt.isPartner], auth.getAllLocations);
@@ -46,5 +47,18 @@ module.exports = (app) => {
     app.put('/api/v1/partner/locations/:locationId', [authJwt.isPartner], auth.updateLocationById);
     app.delete('/api/v1/partner/locations/:locationId', [authJwt.isPartner], auth.deleteLocationById);
     app.get('/api/v1/partner/locations/type/:type', [authJwt.isPartner], auth.getLocationsByType);
+    app.get('/api/v1/partner/policies', [authJwt.isPartner], auth.getAllPolicies);
+    app.get('/api/v1/partner/policies/:id', [authJwt.isPartner], auth.getPolicyById);
+    app.get('/api/v1/partner/cancellationPolicy', [authJwt.isPartner], auth.getAllCancellationPolicy);
+    app.get('/api/v1/partner/cancellationPolicy/:id', [authJwt.isPartner], auth.getCancellationPolicyById);
+    app.post('/api/v1/partner/host/offers', [authJwt.isPartner], auth.createOffer);
+    app.get('/api/v1/partner/host/offers', [authJwt.isPartner], auth.getAllOffers);
+    app.get('/api/v1/partner/host/partner/offers', [authJwt.isPartner], auth.getAllOffersForPartner);
+    app.get('/api/v1/partner/host/cars/:carId/offers', [authJwt.isPartner], auth.getOffersByCarId);
+    app.get('/api/v1/partner/host/offers/:id', [authJwt.isPartner], auth.getOfferById);
+    app.put('/api/v1/partner/host/offers/:id', [authJwt.isPartner], auth.updateOffer);
+    app.put('/api/v1/partner/cars/:carId/offers/:offerId/updateFlags', [authJwt.isPartner], auth.updateOfferFlags);
+    app.delete('/api/v1/partner/host/offers/:id', [authJwt.isPartner], auth.deleteOffer);
+
 
 }

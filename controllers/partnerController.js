@@ -10,7 +10,9 @@ const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
 const CarImage = require('../models/carImageTipsModel');
 const Location = require("../models/carLocationModel");
-
+const FulfilmentPolicy = require('../models/fulfilmentPolicyModel');
+const CancellationPolicy = require('../models/cancellationPolicyModel');
+const HostOffer = require('../models/hostOfferModel');
 
 
 
@@ -781,6 +783,32 @@ exports.getCarsForPartner = async (req, res) => {
     }
 };
 
+exports.updateIsFastTag = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.carId;
+        const { isFastTag } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ _id: carId, owner: userId });
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found for the user' });
+        }
+
+        car.isFastTag = isFastTag;
+        await car.save();
+
+        return res.status(200).json({ status: 200, message: 'isFastTag updated successfully', data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getNewlyListedCarsForPartner = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -974,4 +1002,247 @@ exports.getLocationsByType = async (req, res) => {
     }
 };
 
+exports.getAllPolicies = async (req, res) => {
+    try {
+        const policies = await FulfilmentPolicy.find();
+        return res.status(200).json({ status: 200, data: policies });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
 
+exports.getPolicyById = async (req, res) => {
+    try {
+        const policy = await FulfilmentPolicy.findById(req.params.id);
+        if (!policy) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+        return res.status(200).json({ status: 200, data: policy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllCancellationPolicy = async (req, res) => {
+    try {
+        const policies = await CancellationPolicy.find();
+        return res.status(200).json({ status: 200, data: policies });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getCancellationPolicyById = async (req, res) => {
+    try {
+        const policy = await CancellationPolicy.findById(req.params.id);
+        if (!policy) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+        return res.status(200).json({ status: 200, data: policy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createOffer = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { car, title, description, type, duration, discount, isPercent, isLongDurationOffer, isEarlyBirdOffer, isRaiseTheCost, } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const CheckCar = await Car.findOne({ _id: car, owner: userId });
+        if (!CheckCar) {
+            return res.status(404).json({ status: 404, message: 'Car not found for the user' });
+        }
+
+        const existingOffer = await HostOffer.findOne({ car, type });
+        if (existingOffer) {
+            return res.status(400).json({ status: 400, message: 'An offer with the same car and type already exists' });
+        }
+
+        const newOffer = await HostOffer.create({
+            car,
+            title,
+            description,
+            type,
+            duration,
+            discount,
+            isPercent,
+            isLongDurationOffer,
+            isEarlyBirdOffer,
+            isRaiseTheCost,
+        });
+        return res.status(201).json({ status: 201, data: newOffer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllOffers = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const offers = await HostOffer.find();
+        return res.status(200).json({ status: 200, data: offers });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllOffersForPartner = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ owner: userId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carIds = userCars.map(car => car._id);
+
+        const offers = await HostOffer.find({ car: { $in: carIds } });
+        return res.status(200).json({ status: 200, data: offers });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getOffersByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.carId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCar = await Car.findOne({ _id: carId, owner: userId });
+        if (!userCar) {
+            return res.status(404).json({ status: 404, message: 'Car not found for the user' });
+        }
+
+        const offers = await HostOffer.find({ car: carId });
+        return res.status(200).json({ status: 200, data: offers });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getOfferById = async (req, res) => {
+    try {
+        const offer = await HostOffer.findById(req.params.id);
+        if (!offer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+        return res.status(200).json({ status: 200, data: offer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateOffer = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const offerId = req.params.id;
+        const { car, title, description, type, duration, discount, isPercent, isLongDurationOffer, isEarlyBirdOffer, isRaiseTheCost } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (car) {
+            const CheckCar = await Car.findOne({ _id: car, owner: userId });
+            if (!CheckCar) {
+                return res.status(404).json({ status: 404, message: 'Car not found for the user' });
+            }
+        }
+
+        const updatedOffer = await HostOffer.findOneAndUpdate(
+            { _id: offerId, car, },
+            { car, title, description, type, duration, discount, isPercent, isLongDurationOffer, isEarlyBirdOffer, isRaiseTheCost },
+            { new: true }
+        );
+
+        if (!updatedOffer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found for the user' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedOffer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateOfferFlags = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { isLongDurationOffer, isEarlyBirdOffer, isRaiseTheCost } = req.body;
+        const offerId = req.params.offerId;
+        const carId = req.params.carId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCar = await Car.findOne({ _id: carId, owner: userId });
+        if (!userCar) {
+            return res.status(404).json({ status: 404, message: 'Car not found for the user' });
+        }
+
+        const existingOffer = await HostOffer.findOne({ _id: offerId, car: carId });
+        if (!existingOffer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found for the specified car' });
+        }
+
+        existingOffer.isLongDurationOffer = isLongDurationOffer;
+        existingOffer.isEarlyBirdOffer = isEarlyBirdOffer;
+        existingOffer.isRaiseTheCost = isRaiseTheCost;
+
+        const updatedOffer = await existingOffer.save();
+
+        return res.status(200).json({ status: 200, data: updatedOffer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteOffer = async (req, res) => {
+    try {
+        const deletedOffer = await HostOffer.findByIdAndDelete(req.params.id);
+        if (!deletedOffer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+        return res.status(200).json({ status: 200, data: {} });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
