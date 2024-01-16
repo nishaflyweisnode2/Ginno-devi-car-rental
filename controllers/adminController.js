@@ -14,6 +14,11 @@ const Location = require("../models/carLocationModel");
 const FulfilmentPolicy = require('../models/fulfilmentPolicyModel');
 const CancellationPolicy = require('../models/cancellationPolicyModel');
 const HostOffer = require('../models/hostOfferModel');
+const TermAndCondition = require('../models/term&conditionModel');
+const FAQ = require('../models/faqModel');
+const AboutApps = require('../models/aboutAppModel');
+const Policy = require('../models/policiesModel');
+const Category = require('../models/categoryModel');
 
 
 
@@ -1389,5 +1394,426 @@ exports.getOfferById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createTermAndCondition = async (req, res) => {
+    try {
+        const { content } = req.body;
+
+        const termAndCondition = new TermAndCondition({ content });
+        await termAndCondition.save();
+
+        return res.status(201).json({ status: 201, message: 'Terms and Conditions created successfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAllTermAndCondition = async (req, res) => {
+    try {
+        const termAndCondition = await TermAndCondition.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getTermAndConditionById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await TermAndCondition.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.updateTermAndConditionById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const { content } = req.body;
+
+        const updatedTermAndCondition = await TermAndCondition.findByIdAndUpdate(
+            termAndConditionId,
+            { content },
+            { new: true }
+        );
+
+        if (!updatedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Terms and Conditions updated successfully', data: updatedTermAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.deleteTermAndConditionById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const deletedTermAndCondition = await TermAndCondition.findByIdAndDelete(termAndConditionId);
+
+        if (!deletedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Terms and Conditions deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.createFAQ = async (req, res) => {
+    try {
+        const { question, answer } = req.body;
+        const newFAQ = await FAQ.create({ question, answer });
+        return res.status(201).json({ status: 201, data: newFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFAQs = async (req, res) => {
+    try {
+        const faqs = await FAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const faq = await FAQ.findById(faqId);
+
+        if (!faq) {
+            return res.status(404).json({ status: 404, message: 'FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: faq });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const updatedFAQ = await FAQ.findByIdAndUpdate(faqId, { $set: req.body }, { new: true });
+
+        if (!updatedFAQ) {
+            return res.status(404).json({ status: 404, message: 'FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const deletedFAQ = await FAQ.findByIdAndDelete(faqId);
+
+        if (!deletedFAQ) {
+            return res.status(404).json({ status: 404, message: 'FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: deletedFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createAboutApps = async (req, res) => {
+    try {
+        const { content } = req.body;
+
+        const termAndCondition = new AboutApps({ content });
+        await termAndCondition.save();
+
+        return res.status(201).json({ status: 201, message: 'About Apps created successfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAllAboutApps = async (req, res) => {
+    try {
+        const termAndCondition = await AboutApps.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAboutAppsById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await AboutApps.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.updateAboutAppsById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const { content } = req.body;
+
+        const updatedTermAndCondition = await AboutApps.findByIdAndUpdate(
+            termAndConditionId,
+            { content },
+            { new: true }
+        );
+
+        if (!updatedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'About Apps updated successfully', data: updatedTermAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.deleteAboutAppsById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const deletedTermAndCondition = await AboutApps.findByIdAndDelete(termAndConditionId);
+
+        if (!deletedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'About Apps deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+
+exports.createPolicies = async (req, res) => {
+    try {
+        const { content } = req.body;
+
+        const termAndCondition = new Policy({ content });
+        await termAndCondition.save();
+
+        return res.status(201).json({ status: 201, message: 'Policy created successfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAllPolicies = async (req, res) => {
+    try {
+        const termAndCondition = await Policy.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getPoliciesById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await Policy.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.updatePoliciesById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const { content } = req.body;
+
+        const updatedTermAndCondition = await Policy.findByIdAndUpdate(
+            termAndConditionId,
+            { content },
+            { new: true }
+        );
+
+        if (!updatedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Policy updated successfully', data: updatedTermAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.deletePoliciesById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const deletedTermAndCondition = await Policy.findByIdAndDelete(termAndConditionId);
+
+        if (!deletedTermAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Policy deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.createCategory = async (req, res) => {
+    try {
+        const { name, status } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const category = new Category({
+            name,
+            status,
+            image: req.file.path,
+        });
+
+        await category.save();
+
+        return res.status(201).json({ status: 201, message: 'Category created successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Category creation failed', error: error.message });
+    }
+};
+
+exports.getAllCategories = async (req, res) => {
+    try {
+        const categories = await Category.find();
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching categories', error: error.message });
+    }
+};
+
+exports.getCategoryById = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching category', error: error.message });
+    }
+};
+
+exports.updateCategory = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+        const { name, status } = req.body;
+
+        const updateFields = {};
+
+        if (name) {
+            updateFields.name = name;
+        }
+
+        if (status !== undefined) {
+            updateFields.status = status;
+        }
+
+        if (req.file) {
+            updateFields.image = req.file.path;
+        }
+
+        const category = await Category.findByIdAndUpdate(categoryId, updateFields, { new: true });
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Category updated successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Category update failed', error: error.message });
+    }
+};
+
+exports.deleteCategory = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await Category.findByIdAndDelete(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Category deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Category deletion failed', error: error.message });
     }
 };

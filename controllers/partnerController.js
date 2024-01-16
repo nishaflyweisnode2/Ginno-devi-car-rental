@@ -13,7 +13,12 @@ const Location = require("../models/carLocationModel");
 const FulfilmentPolicy = require('../models/fulfilmentPolicyModel');
 const CancellationPolicy = require('../models/cancellationPolicyModel');
 const HostOffer = require('../models/hostOfferModel');
-
+const CarFeatures = require('../models/carFeaturesModel');
+const ContactUs = require('../models/contactUsmodel');
+const TermAndCondition = require('../models/term&conditionModel');
+const FAQ = require('../models/faqModel');
+const AboutApps = require('../models/aboutAppModel');
+const Policy = require('../models/policiesModel');
 
 
 
@@ -1244,5 +1249,351 @@ exports.deleteOffer = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createCarFeature = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.carId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const existingCarFeature = await CarFeatures.findOne({ car: carId });
+        if (existingCarFeature) {
+            return res.status(400).json({ status: 400, message: 'Car feature for the specified car already exists' });
+        }
+
+        const newCarFeature = await CarFeatures.create({ ...req.body, car: carId });
+        return res.status(201).json({ status: 201, data: newCarFeature });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllCarFeatures = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ owner: userId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carIds = userCars.map(car => car._id);
+        const carFeatures = await CarFeatures.find({ car: { $in: carIds } });
+
+        return res.status(200).json({ status: 200, data: carFeatures });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getCarFeatureById = async (req, res) => {
+    try {
+        const carFeatureId = req.params.id;
+        const carFeature = await CarFeatures.findById(carFeatureId);
+
+        if (!carFeature) {
+            return res.status(404).json({ status: 404, message: 'Car feature not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: carFeature });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateCarFeature = async (req, res) => {
+    try {
+        const carId = req.params.carId;
+        const carFeatureId = req.params.id;
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const carFeature = await CarFeatures.findOne({ _id: carFeatureId, car: carId });
+        if (!carFeature) {
+            return res.status(404).json({ status: 404, message: 'Car feature not found for the specified car' });
+        }
+
+        const updatedCarFeature = await CarFeatures.findByIdAndUpdate(
+            carFeatureId,
+            { $set: req.body },
+            { new: true }
+        );
+
+        return res.status(200).json({ status: 200, data: updatedCarFeature });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteCarFeature = async (req, res) => {
+    try {
+        const carFeatureId = req.params.id;
+        const deletedCarFeature = await CarFeatures.findByIdAndDelete(carFeatureId);
+
+        if (!deletedCarFeature) {
+            return res.status(404).json({ status: 404, message: 'Car feature not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Car feature deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createContactUs = async (req, res) => {
+    try {
+        const { mobileNumber, email, message, image } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        let attachmentPath = null;
+
+        if (req.file) {
+            attachmentPath = req.file.path;
+        } else if (image) {
+            attachmentPath = image;
+        }
+
+        const newContactUs = await ContactUs.create({
+            user: user._id,
+            attachment: attachmentPath,
+            mobileNumber,
+            email,
+            message,
+        });
+
+        return res.status(201).json({ status: 201, data: newContactUs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllContactUsEntries = async (req, res) => {
+    try {
+        const contactUsEntries = await ContactUs.find();
+        return res.status(200).json({ status: 200, data: contactUsEntries });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getContactUsEntryById = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const contactUsEntry = await ContactUs.findById(contactUsId);
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: contactUsEntry });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateContactUsEntry = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+
+        if (req.file) {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                {
+                    $set: {
+                        attachment: req.file.path,
+                        ...req.body,
+                    },
+                },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        } else {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                { $set: req.body },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteContactUsEntry = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const deletedContactUsEntry = await ContactUs.findByIdAndDelete(contactUsId);
+
+        if (!deletedContactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Contact us entry deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllTermAndCondition = async (req, res) => {
+    try {
+        const termAndCondition = await TermAndCondition.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getTermAndConditionById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await TermAndCondition.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Terms and Conditions not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAllFAQs = async (req, res) => {
+    try {
+        const faqs = await FAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const faq = await FAQ.findById(faqId);
+
+        if (!faq) {
+            return res.status(404).json({ status: 404, message: 'FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: faq });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllAboutApps = async (req, res) => {
+    try {
+        const termAndCondition = await AboutApps.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAboutAppsById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await AboutApps.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'About Apps not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getAllPolicy = async (req, res) => {
+    try {
+        const termAndCondition = await Policy.find();
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.getPolicyById = async (req, res) => {
+    try {
+        const termAndConditionId = req.params.id;
+        const termAndCondition = await Policy.findById(termAndConditionId);
+
+        if (!termAndCondition) {
+            return res.status(404).json({ status: 404, message: 'Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: termAndCondition });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };

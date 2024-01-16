@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage } = require('../middlewares/imageUpload');
+const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage } = require('../middlewares/imageUpload');
 
 
 
@@ -75,5 +75,30 @@ module.exports = (app) => {
     app.get('/api/v1/admin/host/partner/:userId/offers', [authJwt.isAdmin], auth.getAllOffersForPartner);
     app.get('/api/v1/admin/host/cars/:carId/offers', [authJwt.isAdmin], auth.getOffersByCarId);
     app.get('/api/v1/admin/host/offers/:id', [authJwt.isAdmin], auth.getOfferById);
+    app.post('/api/v1/admin/terms-and-conditions', [authJwt.isAdmin], auth.createTermAndCondition);
+    app.get('/api/v1/admin/terms-and-conditions', [authJwt.isAdmin], auth.getAllTermAndCondition);
+    app.get('/api/v1/admin/terms-and-conditions/:id', [authJwt.isAdmin], auth.getTermAndConditionById);
+    app.put('/api/v1/admin/terms-and-conditions/:id', [authJwt.isAdmin], auth.updateTermAndConditionById);
+    app.delete('/api/v1/admin/terms-and-conditions/:id', [authJwt.isAdmin], auth.deleteTermAndConditionById);
+    app.post('/api/v1/admin/faqs/create', [authJwt.isAdmin], auth.createFAQ);
+    app.get('/api/v1/admin/faqs', [authJwt.isAdmin], auth.getAllFAQs);
+    app.get('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.getFAQById);
+    app.put('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.updateFAQById);
+    app.delete('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.deleteFAQById);
+    app.post('/api/v1/admin/AboutApps', [authJwt.isAdmin], auth.createAboutApps);
+    app.get('/api/v1/admin/AboutApps', [authJwt.isAdmin], auth.getAllAboutApps);
+    app.get('/api/v1/admin/AboutApps/:id', [authJwt.isAdmin], auth.getAboutAppsById);
+    app.put('/api/v1/admin/AboutApps/:id', [authJwt.isAdmin], auth.updateAboutAppsById);
+    app.delete('/api/v1/admin/AboutApps/:id', [authJwt.isAdmin], auth.deleteAboutAppsById);
+    app.post('/api/v1/admin/Policy', [authJwt.isAdmin], auth.createPolicies);
+    app.get('/api/v1/admin/Policy', [authJwt.isAdmin], auth.getAllPolicies);
+    app.get('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.getPoliciesById);
+    app.put('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.updatePoliciesById);
+    app.delete('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.deletePoliciesById);
+    app.post('/api/v1/admin/categories', [authJwt.isAdmin], categoryImage.single('image'), auth.createCategory);
+    app.get('/api/v1/admin/categories', [authJwt.isAdmin], auth.getAllCategories);
+    app.get('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], auth.getCategoryById);
+    app.put('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], categoryImage.single('image'), auth.updateCategory);
+    app.delete('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], auth.deleteCategory);
 
 }

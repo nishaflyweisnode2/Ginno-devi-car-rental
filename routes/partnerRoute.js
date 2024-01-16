@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage } = require('../middlewares/imageUpload');
+const { profileImage, carDocumentImage, kpUpload, addressPrrof, carImage, attachement } = require('../middlewares/imageUpload');
 
 
 
@@ -59,6 +59,23 @@ module.exports = (app) => {
     app.put('/api/v1/partner/host/offers/:id', [authJwt.isPartner], auth.updateOffer);
     app.put('/api/v1/partner/cars/:carId/offers/:offerId/updateFlags', [authJwt.isPartner], auth.updateOfferFlags);
     app.delete('/api/v1/partner/host/offers/:id', [authJwt.isPartner], auth.deleteOffer);
-
+    app.post('/api/v1/partner/:carId/car-features', [authJwt.isPartner], auth.createCarFeature);
+    app.get('/api/v1/partner/car-features', [authJwt.isPartner], auth.getAllCarFeatures);
+    app.get('/api/v1/partner/car-features/:id', [authJwt.isPartner], auth.getCarFeatureById);
+    app.put('/api/v1/partner/cars/:carId/car-features/:id', [authJwt.isPartner], auth.updateCarFeature);
+    app.delete('/api/v1/partner/car-features/:id', [authJwt.isPartner], auth.deleteCarFeature);
+    app.post('/api/v1/partner/contact/us', [authJwt.isPartner], attachement.single('image'), auth.createContactUs);
+    app.get('/api/v1/partner/contact-us', [authJwt.isPartner], auth.getAllContactUsEntries);
+    app.get('/api/v1/partner/contact-us/:id', [authJwt.isPartner], auth.getContactUsEntryById);
+    app.put('/api/v1/partner/contact-us/:id', [authJwt.isPartner], attachement.single('image'), auth.updateContactUsEntry);
+    app.delete('/api/v1/partner/contact-us/:id', [authJwt.isPartner], auth.deleteContactUsEntry);
+    app.get('/api/v1/partner/terms-and-conditions', [authJwt.isPartner], auth.getAllTermAndCondition);
+    app.get('/api/v1/partner/terms-and-conditions/:id', [authJwt.isPartner], auth.getTermAndConditionById);
+    app.get('/api/v1/partner/faqs', [authJwt.isPartner], auth.getAllFAQs);
+    app.get('/api/v1/partner/faqs/:id', [authJwt.isPartner], auth.getFAQById);
+    app.get('/api/v1/partner/AboutApps', [authJwt.isPartner], auth.getAllAboutApps);
+    app.get('/api/v1/partner/AboutApps/:id', [authJwt.isPartner], auth.getAboutAppsById);
+    app.get('/api/v1/partner/Policy', [authJwt.isPartner], auth.getAllPolicy);
+    app.get('/api/v1/partner/Policy/:id', [authJwt.isPartner], auth.getPolicyById);
 
 }

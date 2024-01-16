@@ -463,7 +463,6 @@ exports.createReview = async (req, res) => {
     }
 };
 
-
 exports.getReviewsByCar = async (req, res) => {
     try {
         const { carId } = req.params;
