@@ -9,7 +9,12 @@ const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
 const Car = require('../models/carModel');
 const Review = require('../models/ratingModel');
-
+const Policy = require('../models/policiesModel');
+const MainCategory = require('../models/rental/mainCategoryModel');
+const Category = require('../models/rental/categoryModel');
+const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
+const Offer = require('../models/offerModel');
+const Coupon = require('../models/couponModel');
 
 
 
@@ -486,3 +491,186 @@ exports.getReviewsByCar = async (req, res) => {
     }
 };
 
+exports.getAllMainCategories = async (req, res) => {
+    try {
+        const categories = await MainCategory.find();
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching MainCategories', error: error.message });
+    }
+};
+
+exports.getMainCategoryById = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.mainCategoryId;
+
+        const category = await MainCategory.findById(mainCategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Main Category', error: error.message });
+    }
+};
+
+exports.getAllCategories = async (req, res) => {
+    try {
+        const categories = await Category.find().populate('mainCategory');
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching categories', error: error.message });
+    }
+};
+
+exports.getCategoryByMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.id;
+
+        const mainCategory = await MainCategory.findById(mainCategoryId);
+
+        if (!mainCategory) {
+            return res.status(404).json({ status: 404, message: 'Main category not found' });
+        }
+
+        const subcategories = await Category.find({ mainCategory: mainCategoryId }).populate('mainCategory');
+
+        const count = subcategories.length;
+
+        return res.status(200).json({ status: 200, data: count, subcategories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching subcategories', error: error.message });
+    }
+};
+
+exports.getCategoryById = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await Category.findById(categoryId).populate('mainCategory');
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching category', error: error.message });
+    }
+};
+
+exports.getAllSubscriptionCategories = async (req, res) => {
+    try {
+        const categories = await SubscriptionCategory.find().populate('mainCategory');
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
+exports.getSubcategoriesByMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.id;
+
+        const mainCategory = await MainCategory.findById(mainCategoryId);
+
+        if (!mainCategory) {
+            return res.status(404).json({ status: 404, message: 'Main category not found' });
+        }
+
+        const subcategories = await SubscriptionCategory.find({ mainCategory: mainCategoryId }).populate('mainCategory');
+
+        const count = subcategories.length;
+
+        return res.status(200).json({ status: 200, data: count, subcategories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching subcategories', error: error.message });
+    }
+};
+
+exports.getSubscriptionCategoryById = async (req, res) => {
+    try {
+        const subscriptioncategoryId = req.params.subscriptioncategoryId;
+
+        const category = await SubscriptionCategory.findById(subscriptioncategoryId).populate('mainCategory');
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
+exports.getAllOffers = async (req, res) => {
+    try {
+        const allOffers = await Offer.find();
+
+        return res.status(200).json({ status: 200, data: allOffers });
+    } catch (error) {
+        console.error('Error fetching offers:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getOfferById = async (req, res) => {
+    try {
+        const offer = await Offer.findById(req.params.id);
+
+        if (!offer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: offer });
+    } catch (error) {
+        console.error('Error fetching offer by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllCoupons = async (req, res) => {
+    try {
+        const coupons = await Coupon.find();
+        res.status(200).json({ status: 200, data: coupons });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.getCouponById = async (req, res) => {
+    try {
+        const couponId = req.params.id;
+        const coupon = await Coupon.findById(couponId);
+
+        if (!coupon) {
+            return res.status(404).json({ status: 404, message: 'Coupon not found' });
+        }
+
+        res.status(200).json({ status: 200, data: coupon });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};

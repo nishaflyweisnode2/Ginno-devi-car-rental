@@ -114,6 +114,10 @@ const carSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    pricing: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CarPricing',
+    },
 
 }, { timestamps: true });
 

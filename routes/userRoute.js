@@ -29,5 +29,17 @@ module.exports = (app) => {
     app.get('/api/v1/user/cars/:carId', [authJwt.verifyToken], auth.getCarById);
     app.post('/api/v1/user/review/createReview', [authJwt.verifyToken], auth.createReview);
     app.get('/api/v1/user/review/getReviewsByCar/:carId', auth.getReviewsByCar);
+    app.get('/api/v1/user/mainCategories', [authJwt.verifyToken], auth.getAllMainCategories);
+    app.get('/api/v1/user/mainCategories/:mainCategoryId', [authJwt.verifyToken], auth.getMainCategoryById);
+    app.get('/api/v1/user/categories', [authJwt.verifyToken], auth.getAllCategories);
+    app.get('/api/v1/user/mainCategories/:id/category', [authJwt.verifyToken], auth.getCategoryByMainCategory);
+    app.get('/api/v1/user/categories/:categoryId', [authJwt.verifyToken], auth.getCategoryById);
+    app.get('/api/v1/user/subscriptionCategory', [authJwt.verifyToken], auth.getAllSubscriptionCategories);
+    app.get('/api/v1/user/mainCategories/:id/subcategories', [authJwt.verifyToken], auth.getSubcategoriesByMainCategory);
+    app.get('/api/v1/user/subscriptionCategory/:subscriptioncategoryId', [authJwt.verifyToken], auth.getSubscriptionCategoryById);
+    app.get('/api/v1/user/offers', [authJwt.verifyToken], auth.getAllOffers);
+    app.get('/api/v1/user/offers/:id', [authJwt.verifyToken], auth.getOfferById);
+    app.get('/api/v1/user/coupons', [authJwt.verifyToken], auth.getAllCoupons);
+    app.get('/api/v1/user/coupons/:id', [authJwt.verifyToken], auth.getCouponById);
 
 }

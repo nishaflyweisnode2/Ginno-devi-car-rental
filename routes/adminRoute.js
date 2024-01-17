@@ -95,10 +95,27 @@ module.exports = (app) => {
     app.get('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.getPoliciesById);
     app.put('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.updatePoliciesById);
     app.delete('/api/v1/admin/Policy/:id', [authJwt.isAdmin], auth.deletePoliciesById);
+    app.post('/api/v1/admin/mainCategories', [authJwt.isAdmin], auth.createMainCategory);
+    app.get('/api/v1/admin/mainCategories', [authJwt.isAdmin], auth.getAllMainCategories);
+    app.get('/api/v1/admin/mainCategories/:mainCategoryId', [authJwt.isAdmin], auth.getMainCategoryById);
+    app.put('/api/v1/admin/mainCategories/:mainCategoryId', [authJwt.isAdmin], auth.updateMainCategory);
+    app.delete('/api/v1/admin/mainCategories/:mainCategoryId', [authJwt.isAdmin], auth.deleteMainCategory);
     app.post('/api/v1/admin/categories', [authJwt.isAdmin], categoryImage.single('image'), auth.createCategory);
     app.get('/api/v1/admin/categories', [authJwt.isAdmin], auth.getAllCategories);
     app.get('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], auth.getCategoryById);
     app.put('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], categoryImage.single('image'), auth.updateCategory);
     app.delete('/api/v1/admin/categories/:categoryId', [authJwt.isAdmin], auth.deleteCategory);
+    app.post('/api/v1/admin/subscriptionCategory', [authJwt.isAdmin], auth.createSubscriptionCategory);
+    app.get('/api/v1/admin/subscriptionCategory', [authJwt.isAdmin], auth.getAllSubscriptionCategories);
+    app.get('/api/v1/admin/subscriptionCategory/:subscriptioncategoryId', [authJwt.isAdmin], auth.getSubscriptionCategoryById);
+    app.put('/api/v1/admin/subscriptionCategory/:subscriptioncategoryId', [authJwt.isAdmin], auth.updateSubscriptionCategory);
+    app.delete('/api/v1/admin/subscriptionCategory/:subscriptioncategoryId', [authJwt.isAdmin], auth.deleteSubscriptionCategory);
+    app.post('/api/v1/admin/offers', [authJwt.isAdmin], auth.createOffer);
+    app.get('/api/v1/admin/offers', [authJwt.isAdmin], auth.getAllOffers);
+    app.get('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.getOfferById);
+    app.put('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.updateOfferById);
+    app.delete('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.deleteOfferById);
+    app.post('/api/v1/admin/cars/set-pricing', [authJwt.isAdmin], auth.setCarPricing);
+
 
 }

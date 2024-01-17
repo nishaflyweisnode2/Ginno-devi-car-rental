@@ -18,7 +18,12 @@ const TermAndCondition = require('../models/term&conditionModel');
 const FAQ = require('../models/faqModel');
 const AboutApps = require('../models/aboutAppModel');
 const Policy = require('../models/policiesModel');
-const Category = require('../models/categoryModel');
+const MainCategory = require('../models/rental/mainCategoryModel');
+const Category = require('../models/rental/categoryModel');
+const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
+const Offer = require('../models/offerModel');
+const CarPricing = require('../models/carPricingModel');
+
 
 
 
@@ -482,6 +487,12 @@ exports.deleteCarBrand = async (req, res) => {
 exports.createCoupon = async (req, res) => {
     try {
         const { title, desc, code, discount, isPercent, expirationDate, isActive } = req.body;
+
+        const existingCoupon = await Coupon.findOne({ code });
+
+        if (existingCoupon) {
+            return res.status(400).json({ status: 400, error: 'Coupon code already exists' });
+        }
 
         const newCoupon = await Coupon.create({
             title,
@@ -1632,7 +1643,6 @@ exports.deleteAboutAppsById = async (req, res) => {
     }
 };
 
-
 exports.createPolicies = async (req, res) => {
     try {
         const { content } = req.body;
@@ -1716,15 +1726,113 @@ exports.deletePoliciesById = async (req, res) => {
     }
 };
 
-exports.createCategory = async (req, res) => {
+exports.createMainCategory = async (req, res) => {
     try {
         const { name, status } = req.body;
+
+        const category = new MainCategory({
+            name,
+            status,
+        });
+
+        await category.save();
+
+        return res.status(201).json({ status: 201, message: 'Main Category created successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Main Category creation failed', error: error.message });
+    }
+};
+
+exports.getAllMainCategories = async (req, res) => {
+    try {
+        const categories = await MainCategory.find();
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching MainCategories', error: error.message });
+    }
+};
+
+exports.getMainCategoryById = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.mainCategoryId;
+
+        const category = await MainCategory.findById(mainCategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Main Category', error: error.message });
+    }
+};
+
+exports.updateMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.mainCategoryId;
+        const { name, status } = req.body;
+
+        const updateFields = {};
+
+        if (name) {
+            updateFields.name = name;
+        }
+
+        if (status !== undefined) {
+            updateFields.status = status;
+        }
+
+        const category = await MainCategory.findByIdAndUpdate(mainCategoryId, updateFields, { new: true });
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Main Category updated successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Main Category update failed', error: error.message });
+    }
+};
+
+exports.deleteMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.mainCategoryId;
+
+        const category = await MainCategory.findByIdAndDelete(mainCategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Main Category deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Main Category deletion failed', error: error.message });
+    }
+};
+
+exports.createCategory = async (req, res) => {
+    try {
+        const { mainCategory, name, status } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ status: 400, error: "Image file is required" });
         }
+        const mainCategories = await MainCategory.findById(mainCategory);
+        if (!mainCategories) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
 
         const category = new Category({
+            mainCategory,
             name,
             status,
             image: req.file.path,
@@ -1772,9 +1880,17 @@ exports.getCategoryById = async (req, res) => {
 exports.updateCategory = async (req, res) => {
     try {
         const categoryId = req.params.categoryId;
-        const { name, status } = req.body;
+        const { mainCategory, name, status } = req.body;
 
         const updateFields = {};
+
+        if (mainCategory) {
+            const mainCategories = await MainCategory.findById(mainCategory);
+            if (!mainCategories) {
+                return res.status(404).json({ status: 404, message: 'Main Category not found' });
+            }
+            updateFields.mainCategory = mainCategory;
+        }
 
         if (name) {
             updateFields.name = name;
@@ -1817,3 +1933,237 @@ exports.deleteCategory = async (req, res) => {
         return res.status(500).json({ status: 500, message: 'Category deletion failed', error: error.message });
     }
 };
+
+exports.createSubscriptionCategory = async (req, res) => {
+    try {
+        const { mainCategory, name, status } = req.body;
+
+        const mainCategories = await MainCategory.findById(mainCategory);
+        if (!mainCategories) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const category = new SubscriptionCategory({
+            mainCategory,
+            name,
+            status,
+        });
+
+        await category.save();
+
+        return res.status(201).json({ status: 201, message: 'Subscription Category created successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Subscription Category creation failed', error: error.message });
+    }
+};
+
+exports.getAllSubscriptionCategories = async (req, res) => {
+    try {
+        const categories = await SubscriptionCategory.find();
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
+exports.getSubscriptionCategoryById = async (req, res) => {
+    try {
+        const subscriptioncategoryId = req.params.subscriptioncategoryId;
+
+        const category = await SubscriptionCategory.findById(subscriptioncategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
+exports.updateSubscriptionCategory = async (req, res) => {
+    try {
+        const subscriptioncategoryId = req.params.subscriptioncategoryId;
+        const { mainCategory, name, status } = req.body;
+
+        const updateFields = {};
+
+        if (mainCategory) {
+            const mainCategories = await MainCategory.findById(mainCategory);
+            if (!mainCategories) {
+                return res.status(404).json({ status: 404, message: 'Subscription Category not found' });
+            }
+            updateFields.mainCategory = mainCategory;
+        }
+
+        if (name) {
+            updateFields.name = name;
+        }
+
+        if (status !== undefined) {
+            updateFields.status = status;
+        }
+
+        const category = await SubscriptionCategory.findByIdAndUpdate(subscriptioncategoryId, updateFields, { new: true });
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Subscription updated successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Category update failed', error: error.message });
+    }
+};
+
+exports.deleteSubscriptionCategory = async (req, res) => {
+    try {
+        const subscriptioncategoryId = req.params.subscriptioncategoryId;
+
+        const category = await SubscriptionCategory.findByIdAndDelete(subscriptioncategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Subscription Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Subscription Category deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Subscription Category deletion failed', error: error.message });
+    }
+};
+
+exports.createOffer = async (req, res) => {
+    try {
+        const { title, description, discountPercentage, targetUsers, validUntil } = req.body;
+
+        const newOffer = new Offer({
+            title,
+            description,
+            discountPercentage,
+            targetUsers,
+            validUntil,
+        });
+
+        const savedOffer = await newOffer.save();
+
+        return res.status(201).json({ status: 201, data: savedOffer });
+    } catch (error) {
+        console.error('Error creating offer:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllOffers = async (req, res) => {
+    try {
+        const allOffers = await Offer.find();
+
+        return res.status(200).json({ status: 200, data: allOffers });
+    } catch (error) {
+        console.error('Error fetching offers:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getOfferById = async (req, res) => {
+    try {
+        const offer = await Offer.findById(req.params.id);
+
+        if (!offer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: offer });
+    } catch (error) {
+        console.error('Error fetching offer by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateOfferById = async (req, res) => {
+    try {
+        const { title, description, discountPercentage, targetUsers, validUntil } = req.body;
+
+        const updatedOffer = await Offer.findByIdAndUpdate(
+            req.params.id,
+            { title, description, discountPercentage, targetUsers, validUntil },
+            { new: true }
+        );
+
+        if (!updatedOffer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedOffer });
+    } catch (error) {
+        console.error('Error updating offer by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteOfferById = async (req, res) => {
+    try {
+        const deletedOffer = await Offer.findByIdAndDelete(req.params.id);
+
+        if (!deletedOffer) {
+            return res.status(404).json({ status: 404, message: 'Offer not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Offer deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting offer by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.setCarPricing = async (req, res) => {
+    try {
+        const { carId, adminHourlyRate, hostHourlyRate, isHostPricing } = req.body;
+
+        const existingPricing = await CarPricing.findOne({ car: carId });
+
+        if (existingPricing) {
+            if (adminHourlyRate !== undefined) {
+                existingPricing.adminHourlyRate = adminHourlyRate;
+            }
+            if (hostHourlyRate !== undefined) {
+                existingPricing.hostHourlyRate = hostHourlyRate;
+            }
+            if (isHostPricing !== undefined) {
+                existingPricing.isHostPricing = isHostPricing;
+            }
+
+            const updatedPricing = await existingPricing.save();
+
+            await Car.findOneAndUpdate({ _id: carId }, { pricing: existingPricing._id });
+
+            return res.status(200).json({ status: 200, message: 'Car pricing updated successfully', data: updatedPricing });
+        }
+
+        const newPricing = new CarPricing({
+            car: carId,
+            adminHourlyRate,
+            hostHourlyRate,
+            isHostPricing,
+        });
+
+        const savedPricing = await newPricing.save();
+
+        await Car.findOneAndUpdate({ _id: carId }, { pricing: savedPricing._id });
+
+        res.status(201).json({ status: 201, message: 'Car pricing set successfully', data: savedPricing });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+
