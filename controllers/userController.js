@@ -15,7 +15,7 @@ const Category = require('../models/rental/categoryModel');
 const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
 const Offer = require('../models/offerModel');
 const Coupon = require('../models/couponModel');
-
+const Booking = require('../models/bookingModel');
 
 
 
@@ -672,5 +672,124 @@ exports.getCouponById = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.checkCarAvailability1 = async (req, res) => {
+    try {
+        const { pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
+
+        const startDateTime = new Date(`${pickupDate}T${pickupTime}`);
+        const endDateTime = new Date(`${dropOffDate}T${dropOffTime}`);
+
+        const bookedCar = await Booking.find({
+            $and: [
+                {
+                    $or: [
+                        {
+                            $and: [
+                                { 'pickupTime': { $lte: pickupTime } },
+                                { 'dropOffTime': { $gte: dropOffTime } },
+                            ],
+                        },
+                        {
+                            $and: [
+                                { 'pickupTime': { $gte: pickupTime } },
+                                { 'dropOffTime': { $lte: dropOffTime } },
+                            ],
+                        },
+                    ],
+                    $or: [
+                        {
+                            $and: [
+                                { 'pickupDate': { $lte: pickupDate } },
+                                { 'dropOffDate': { $gte: dropOffDate } },
+                            ],
+                        },
+                        {
+                            $and: [
+                                { 'pickupDate': { $lte: pickupDate } },
+                                { 'dropOffDate': { $gte: dropOffDate } },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    $or: [
+                        { 'status': 'PENDING', 'isTripCompleted': false },
+                        { 'isSubscription': false },
+                        {
+                            'isTimeExtended': true,
+                            'timeExtendedDropOffTime': { $gte: startDateTime, $lte: endDateTime },
+                        },
+                    ],
+                },
+            ],
+        });
+        const bookedCarIds = bookedCar.map(booking => booking.car);
+
+        const car = await Car.find();
+        let availableCars = {};
+
+        if (bookedCarIds) {
+            availableCars = await Car.find({
+                _id: { $nin: bookedCarIds, },
+                isOnTrip: false,
+                isAvailable: true,
+                nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
+            });
+        }
+
+        return res.status(200).json({ status: 200, data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking Bike availability' });
+    }
+};
+
+exports.checkCarAvailability = async (req, res) => {
+    try {
+        const { pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
+
+        const startDateTime = new Date(`${pickupDate}T${pickupTime}`);
+        const endDateTime = new Date(`${dropOffDate}T${dropOffTime}`);
+
+        const bookedCars = await Booking.find({
+            $and: [
+                {
+                    $or: [
+                        { pickupTime: { $lte: pickupTime }, dropOffTime: { $gte: dropOffTime } },
+                        { pickupTime: { $gte: pickupTime }, dropOffTime: { $lte: dropOffTime } },
+                    ]
+                },
+                {
+                    $or: [
+                        { pickupDate: { $lte: pickupDate }, dropOffDate: { $gte: dropOffDate } },
+                        { pickupDate: { $gte: pickupDate }, dropOffDate: { $lte: dropOffDate } },
+                    ]
+                },
+                {
+                    $or: [
+                        { status: 'PENDING', isTripCompleted: false },
+                        { isSubscription: false },
+                        { isTimeExtended: true, timeExtendedDropOffTime: { $gte: startDateTime, $lte: endDateTime } },
+                    ]
+                },
+            ],
+        });
+
+        const bookedCarIds = bookedCars.map(booking => booking.car);
+
+        const availableCars = await Car.find({
+            _id: { $nin: bookedCarIds },
+            isOnTrip: false,
+            isAvailable: true,
+            nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
+        });
+
+        return res.status(200).json({ status: 200, data: availableCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking Car availability' });
     }
 };

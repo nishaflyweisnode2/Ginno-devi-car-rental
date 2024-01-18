@@ -114,10 +114,44 @@ const carSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    pricing: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'CarPricing',
+    isAvailable: {
+        type: Boolean,
+        default: true,
     },
+    depositMoney: {
+        type: Number,
+    },
+    rentalPrice: {
+        type: Number,
+    },
+    rentalExtendedPrice: {
+        type: Number,
+    },
+    rentalStart: {
+        type: Date,
+        default: null,
+    },
+    rentalEnd: {
+        type: Date,
+        default: null,
+    },
+    rentalCount: {
+        type: Number,
+        default: 0,
+    },
+    isOnTrip: {
+        type: Boolean,
+        default: false,
+    },
+    pickup: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location',
+    },
+    drop: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location',
+    },
+   
 
 }, { timestamps: true });
 

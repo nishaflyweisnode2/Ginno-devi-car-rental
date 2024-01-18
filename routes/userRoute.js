@@ -41,5 +41,6 @@ module.exports = (app) => {
     app.get('/api/v1/user/offers/:id', [authJwt.verifyToken], auth.getOfferById);
     app.get('/api/v1/user/coupons', [authJwt.verifyToken], auth.getAllCoupons);
     app.get('/api/v1/user/coupons/:id', [authJwt.verifyToken], auth.getCouponById);
+    app.get('/api/v1/user/bike/availability', [authJwt.verifyToken], auth.checkCarAvailability);
 
 }

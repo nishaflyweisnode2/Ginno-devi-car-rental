@@ -115,7 +115,16 @@ module.exports = (app) => {
     app.get('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.getOfferById);
     app.put('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.updateOfferById);
     app.delete('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.deleteOfferById);
-    app.post('/api/v1/admin/cars/set-pricing', [authJwt.isAdmin], auth.setCarPricing);
+    app.post('/api/v1/admin/car-prices', [authJwt.isAdmin], auth.createAdminCarPrice);
+    app.get('/api/v1/admin/car-prices', [authJwt.isAdmin], auth.getAllAdminCarPrices);
+    app.get('/api/v1/admin/car-prices/:id', [authJwt.isAdmin], auth.getAdminCarPriceById);
+    app.put('/api/v1/admin/car-prices/:id', [authJwt.isAdmin], auth.updateAdminCarPriceById);
+    app.delete('/api/v1/admin/car-prices/:id', [authJwt.isAdmin], auth.deleteAdminCarPriceById);
+    app.post('/api/v1/admin/plans', [authJwt.isAdmin], auth.createPlan);
+    app.get('/api/v1/admin/plans', [authJwt.isAdmin], auth.getAllPlans);
+    app.get('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.getPlanById);
+    app.put('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.updatePlan);
+    app.delete('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.deletePlanById);
 
 
 }

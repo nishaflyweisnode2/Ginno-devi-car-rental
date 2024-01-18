@@ -19,6 +19,7 @@ const TermAndCondition = require('../models/term&conditionModel');
 const FAQ = require('../models/faqModel');
 const AboutApps = require('../models/aboutAppModel');
 const Policy = require('../models/policiesModel');
+const AdminCarPrice = require('../models/adminCarPriceModel');
 
 
 
@@ -1595,5 +1596,135 @@ exports.getPolicyById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+exports.updateHostCarPricing = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ owner: userId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carIds = userCars.map(car => car._id);
+
+        const partnerCar = await AdminCarPrice.findOne({ car: { $in: carIds } });
+
+        if (!partnerCar) {
+            return res.status(404).json({ status: 404, message: 'Host car pricing not found or does not belong to the partner' });
+        }
+
+        const isUserCar = carIds.some(id => id.equals(partnerCar.car));
+        if (!isUserCar) {
+            return res.status(403).json({ status: 403, message: 'User does not own the specified car' });
+        }
+
+        partnerCar.hostHourlyRate = req.body.hostHourlyRate || partnerCar.hostHourlyRate;
+        partnerCar.isHostPricing = req.body.isHostPricing || partnerCar.isHostPricing;
+        partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour || partnerCar.hostMinPricePerHour;
+        partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour || partnerCar.hostMaxPricePerHour;
+
+        if (req.body.autoPricing) {
+            partnerCar.autoPricing = true;
+            partnerCar.hostHourlyRate = 0;
+            partnerCar.isHostPricing = false;
+            partnerCar.hostMinPricePerHour = 0;
+            partnerCar.hostMaxPricePerHour = 0;
+        } else {
+            partnerCar.autoPricing = false;
+        }
+
+        await partnerCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Host car pricing updated successfully', data: partnerCar });
+    } catch (error) {
+        console.error('Error updating host car pricing:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateHostCarPricingByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ owner: userId, _id: carId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const partnerCar = await AdminCarPrice.findOne({ car: carId });
+
+        if (!partnerCar) {
+            return res.status(404).json({ status: 404, message: 'Host car pricing not found or does not belong to the partner' });
+        }
+
+        partnerCar.hostHourlyRate = req.body.hostHourlyRate || partnerCar.hostHourlyRate;
+        partnerCar.isHostPricing = req.body.isHostPricing || partnerCar.isHostPricing;
+        partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour || partnerCar.hostMinPricePerHour;
+        partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour || partnerCar.hostMaxPricePerHour;
+
+        if (req.body.autoPricing) {
+            partnerCar.autoPricing = true;
+            partnerCar.hostHourlyRate = 0;
+            partnerCar.isHostPricing = false;
+            partnerCar.hostMinPricePerHour = 0;
+            partnerCar.hostMaxPricePerHour = 0;
+        } else {
+            partnerCar.autoPricing = false;
+        }
+
+        await partnerCar.save();
+
+        return res.status(200).json({ status: 200, message: 'Host car pricing updated successfully', data: partnerCar });
+    } catch (error) {
+        console.error('Error updating host car pricing:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getHostCarPricing = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ owner: userId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carIds = userCars.map(car => car._id);
+
+        const partnerCar = await AdminCarPrice.findOne({ car: { $in: carIds } });
+
+        if (!partnerCar) {
+            return res.status(404).json({ status: 404, message: 'Host car pricing not found or does not belong to the partner' });
+        }
+
+        const isUserCar = carIds.some(id => id.equals(partnerCar.car));
+        if (!isUserCar) {
+            return res.status(403).json({ status: 403, message: 'User does not own the specified car' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Host car pricing fetched successfully', data: partnerCar });
+    } catch (error) {
+        console.error('Error fetching host car pricing:', error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };

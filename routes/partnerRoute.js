@@ -77,5 +77,9 @@ module.exports = (app) => {
     app.get('/api/v1/partner/AboutApps/:id', [authJwt.isPartner], auth.getAboutAppsById);
     app.get('/api/v1/partner/Policy', [authJwt.isPartner], auth.getAllPolicy);
     app.get('/api/v1/partner/Policy/:id', [authJwt.isPartner], auth.getPolicyById);
+    app.put('/api/v1/partner/cars/update/host-pricing', [authJwt.isPartner], auth.updateHostCarPricing);
+    app.put('/api/v1/partner/cars/:id/update/host-pricing', [authJwt.isPartner], auth.updateHostCarPricingByCarId);
+    app.get('/api/v1/partner/cars/host/pricing', [authJwt.isPartner], auth.getHostCarPricing);
+
 
 }

@@ -22,7 +22,8 @@ const MainCategory = require('../models/rental/mainCategoryModel');
 const Category = require('../models/rental/categoryModel');
 const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
 const Offer = require('../models/offerModel');
-const CarPricing = require('../models/carPricingModel');
+const AdminCarPrice = require('../models/adminCarPriceModel');
+const Plan = require('../models/kmPlanModel');
 
 
 
@@ -2124,45 +2125,209 @@ exports.deleteOfferById = async (req, res) => {
     }
 };
 
-exports.setCarPricing = async (req, res) => {
+exports.createAdminCarPrice = async (req, res) => {
     try {
-        const { carId, adminHourlyRate, hostHourlyRate, isHostPricing } = req.body;
+        const { mainCategory, car, adminHourlyRate, adminMinPricePerHour, adminMaxPricePerHour, autoPricing, } = req.body;
 
-        const existingPricing = await CarPricing.findOne({ car: carId });
+        const mainCategoryObjects = await MainCategory.find({ _id: { $in: mainCategory } });
 
-        if (existingPricing) {
-            if (adminHourlyRate !== undefined) {
-                existingPricing.adminHourlyRate = adminHourlyRate;
-            }
-            if (hostHourlyRate !== undefined) {
-                existingPricing.hostHourlyRate = hostHourlyRate;
-            }
-            if (isHostPricing !== undefined) {
-                existingPricing.isHostPricing = isHostPricing;
-            }
-
-            const updatedPricing = await existingPricing.save();
-
-            await Car.findOneAndUpdate({ _id: carId }, { pricing: existingPricing._id });
-
-            return res.status(200).json({ status: 200, message: 'Car pricing updated successfully', data: updatedPricing });
+        if (mainCategoryObjects.length !== mainCategory.length) {
+            return res.status(404).json({ status: 404, message: 'One or more MainCategories not found' });
         }
 
-        const newPricing = new CarPricing({
-            car: carId,
+        const adminCarPrice = new AdminCarPrice({
+            mainCategory,
+            car,
             adminHourlyRate,
-            hostHourlyRate,
-            isHostPricing,
+            adminMinPricePerHour,
+            adminMaxPricePerHour,
+            price: adminHourlyRate,
+            autoPricing
+        });
+        await adminCarPrice.save();
+        return res.status(201).json({ status: 201, message: 'AdminCarPrice created successfully', data: adminCarPrice });
+    } catch (error) {
+        return res.status(400).json({ status: 400, error: error.message });
+    }
+};
+
+exports.getAllAdminCarPrices = async (req, res) => {
+    try {
+        const adminCarPrices = await AdminCarPrice.find();
+        return res.json({ status: 200, data: adminCarPrices });
+    } catch (error) {
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAdminCarPriceById = async (req, res) => {
+    try {
+        const adminCarPrice = await AdminCarPrice.findById(req.params.id);
+        if (!adminCarPrice) {
+            return res.status(404).json({ status: 404, message: 'AdminCarPrice not found' });
+        }
+        return res.json({ status: 200, data: adminCarPrice });
+    } catch (error) {
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateAdminCarPriceById = async (req, res) => {
+    try {
+        const { mainCategory, ...updateData } = req.body;
+
+        let mainCategoryObjects;
+        if (mainCategory) {
+            mainCategoryObjects = await MainCategory.find({ _id: { $in: mainCategory } });
+
+            if (mainCategoryObjects.length !== mainCategory.length) {
+                return res.status(404).json({ status: 404, message: 'One or more MainCategories not found' });
+            }
+        }
+
+        const adminCarPrice = await AdminCarPrice.findByIdAndUpdate(
+            req.params.id,
+            { mainCategory, ...updateData },
+            { new: true }
+        );
+
+        if (!adminCarPrice) {
+            return res.status(404).json({ status: 404, message: 'AdminCarPrice not found' });
+        }
+
+        return res.json({ status: 200, message: 'AdminCarPrice updated successfully', data: adminCarPrice });
+    } catch (error) {
+        return res.status(400).json({ status: 400, error: error.message });
+    }
+};
+
+exports.deleteAdminCarPriceById = async (req, res) => {
+    try {
+        const deletedAdminCarPrice = await AdminCarPrice.findByIdAndDelete(req.params.id);
+
+        if (!deletedAdminCarPrice) {
+            return res.status(404).json({ status: 404, message: 'AdminCarPrice not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'AdminCarPrice deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting admin car price by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createPlan = async (req, res) => {
+    try {
+        const { mainCategory, name, description, klLimit } = req.body;
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const existingCoupon = await Plan.findOne({ name });
+
+        if (existingCoupon) {
+            return res.status(400).json({ status: 400, error: 'Plan Name already exists' });
+        }
+
+        const adminCarPrice = await AdminCarPrice.findOne({ mainCategories: mainCategory });
+
+        if (!adminCarPrice || adminCarPrice.length === 0) {
+            return res.status(404).json({ status: 404, message: 'AdminCarPrices not found for the Main Category' });
+        }
+
+
+        let price;
+        if (!req.body.price) {
+            if (adminCarPrice.autoPricing) {
+                price = adminCarPrice.adminHourlyRate;
+            } else if (adminCarPrice.isHostPricing) {
+                price = adminCarPrice.hostHourlyRate;
+            } else {
+                price = adminCarPrice.price;
+            }
+        }
+
+        const newPlan = new Plan({
+            mainCategory,
+            name,
+            description,
+            klLimit,
+            price: price * 24 || req.body.price,
         });
 
-        const savedPricing = await newPricing.save();
+        await newPlan.save();
 
-        await Car.findOneAndUpdate({ _id: carId }, { pricing: savedPricing._id });
-
-        res.status(201).json({ status: 201, message: 'Car pricing set successfully', data: savedPricing });
+        return res.status(201).json({ status: 201, message: 'Plan created successfully', data: newPlan });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ status: 500, error: 'Server error' });
+        console.error('Error creating plan:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllPlans = async (req, res) => {
+    try {
+        const plans = await Plan.find();
+        return res.status(200).json({ status: 200, data: plans });
+    } catch (error) {
+        console.error('Error fetching plans:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getPlanById = async (req, res) => {
+    try {
+        const planId = req.params.id;
+        const plan = await Plan.findById(planId);
+
+        if (!plan) {
+            return res.status(404).json({ status: 404, message: 'Plan not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: plan });
+    } catch (error) {
+        console.error('Error fetching plan by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updatePlan = async (req, res) => {
+    try {
+        const planId = req.params.id;
+        const { mainCategory, name, description, klLimit, price } = req.body;
+
+        const updatedPlan = await Plan.findByIdAndUpdate(planId, {
+            mainCategory,
+            name,
+            description,
+            klLimit,
+            price,
+        }, { new: true });
+
+        if (!updatedPlan) {
+            return res.status(404).json({ status: 404, message: 'Plan not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Plan updated successfully', data: updatedPlan });
+    } catch (error) {
+        console.error('Error updating plan:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deletePlanById = async (req, res) => {
+    try {
+        const deleteplan = await Plan.findByIdAndDelete(req.params.id);
+        if (!deleteplan) {
+            return res.status(404).json({ status: 404, message: 'plan not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'plan deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting admin car price by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
