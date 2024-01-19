@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const locationSchema = new mongoose.Schema({
-
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -25,6 +24,8 @@ const locationSchema = new mongoose.Schema({
         required: true,
     },
 });
+
+locationSchema.index({ coordinates: '2dsphere' });
 
 const LocationModel = mongoose.model('Location', locationSchema);
 

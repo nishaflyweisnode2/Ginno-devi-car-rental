@@ -35,6 +35,9 @@ const bookingSchema = new mongoose.Schema(
         pickupTime: {
             type: String,
         },
+        destinationLocation: {
+            type: String,
+        },
         dropOffTime: {
             type: String,
         },

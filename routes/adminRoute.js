@@ -125,6 +125,11 @@ module.exports = (app) => {
     app.get('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.getPlanById);
     app.put('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.updatePlan);
     app.delete('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.deletePlanById);
+    app.post('/api/v1/admin/admin-packages', [authJwt.isAdmin], auth.createAdminPackage);
+    app.get('/api/v1/admin/admin-packages', [authJwt.isAdmin], auth.getAllAdminPackages);
+    app.get('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.getAdminPackageById);
+    app.put('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.updateAdminPackage);
+    app.delete('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.deleteAdminPackage);
 
 
 }

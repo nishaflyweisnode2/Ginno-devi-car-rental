@@ -24,6 +24,7 @@ const SubscriptionCategory = require('../models/subscription/subscriptionCategor
 const Offer = require('../models/offerModel');
 const AdminCarPrice = require('../models/adminCarPriceModel');
 const Plan = require('../models/kmPlanModel');
+const AdminPackage = require('../models/adminPackageModel');
 
 
 
@@ -2331,4 +2332,83 @@ exports.deletePlanById = async (req, res) => {
     }
 };
 
+exports.createAdminPackage = async (req, res) => {
+    try {
+        const { title, description, price } = req.body;
+
+        const newAdminPackage = new AdminPackage({
+            title,
+            description,
+            price,
+        });
+
+        await newAdminPackage.save();
+
+        return res.status(201).json({ status: 201, message: 'Admin package created successfully', data: newAdminPackage });
+    } catch (error) {
+        console.error('Error creating admin package:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllAdminPackages = async (req, res) => {
+    try {
+        const adminPackages = await AdminPackage.find();
+        return res.status(200).json({ status: 200, data: adminPackages });
+    } catch (error) {
+        console.error('Error fetching admin packages:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAdminPackageById = async (req, res) => {
+    try {
+        const adminPackage = await AdminPackage.findById(req.params.id);
+
+        if (!adminPackage) {
+            return res.status(404).json({ status: 404, message: 'Admin package not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: adminPackage });
+    } catch (error) {
+        console.error('Error fetching admin package:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateAdminPackage = async (req, res) => {
+    try {
+        const { title, description, price } = req.body;
+
+        const updatedAdminPackage = await AdminPackage.findByIdAndUpdate(
+            req.params.id,
+            { title, description, price },
+            { new: true }
+        );
+
+        if (!updatedAdminPackage) {
+            return res.status(404).json({ status: 404, message: 'Admin package not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Admin package updated successfully', data: updatedAdminPackage });
+    } catch (error) {
+        console.error('Error updating admin package:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteAdminPackage = async (req, res) => {
+    try {
+        const deletedAdminPackage = await AdminPackage.findByIdAndDelete(req.params.id);
+
+        if (!deletedAdminPackage) {
+            return res.status(404).json({ status: 404, message: 'Admin package not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Admin package deleted successfully', data: deletedAdminPackage });
+    } catch (error) {
+        console.error('Error deleting admin package:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
 

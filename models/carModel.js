@@ -144,16 +144,30 @@ const carSchema = new mongoose.Schema({
         default: false,
     },
     pickup: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Location',
+        type: {
+            type: String,
+            enum: ['pickup'],
+        },
+        coordinates: {
+            type: [Number],
+            index: '2dsphere',
+        },
     },
     drop: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Location',
+        type: {
+            type: String,
+            enum: ['drop'],
+        },
+        coordinates: {
+            type: [Number],
+            index: '2dsphere',
+        },
     },
-   
+
 
 }, { timestamps: true });
+
+carSchema.index({ 'pickup.coordinates': '2dsphere' });
 
 const Car = mongoose.model('Car', carSchema);
 

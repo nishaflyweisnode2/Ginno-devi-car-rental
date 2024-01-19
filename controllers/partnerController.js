@@ -861,6 +861,19 @@ exports.createLocation = async (req, res) => {
 
         const savedLocation = await location.save();
 
+        const locationInfo = {
+            type: type,
+            coordinates: coordinates,
+        };
+
+        if (type === 'pickup') {
+            existingCar.pickup = locationInfo;
+        } else {
+            existingCar.drop = locationInfo;
+        }
+
+        await existingCar.save();
+
         res.status(201).json({
             status: 201,
             message: 'Location created successfully',
@@ -952,6 +965,25 @@ exports.updateLocationById = async (req, res) => {
         if (!location) {
             return res.status(404).json({ status: 404, message: 'Location not found' });
         }
+
+        const existingCar = await Car.findOne({_id: location.car });
+
+        if (!existingCar) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const locationInfo = {
+            type: type,
+            coordinates: coordinates,
+        };
+
+        if (type === 'pickup') {
+            existingCar.pickup = locationInfo;
+        } else {
+            existingCar.drop = locationInfo;
+        }
+
+        await existingCar.save();
 
         res.status(200).json({ status: 200, message: 'Location updated successfully', data: location });
     } catch (error) {
