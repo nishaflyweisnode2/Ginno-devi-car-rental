@@ -749,7 +749,7 @@ exports.checkCarAvailability1 = async (req, res) => {
     }
 };
 
-exports.checkCarAvailability = async (req, res) => {
+exports.checkCarAvailability1 = async (req, res) => {
     try {
         const { pickupLocation, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
 
@@ -801,19 +801,25 @@ exports.checkCarAvailability = async (req, res) => {
             isOnTrip: false,
             isAvailable: true,
             nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
-            pickup: {
+            'pickup.coordinates': {
                 $near: {
                     $geometry: {
-                        type: 'Point',
+                        type: 'pickup',
                         coordinates: [pickupCoordinates[0], pickupCoordinates[1]],
                     },
-                    $maxDistance: 10000,
+                    $maxDistance: 1,
                 },
             },
         });
 
         console.log("availableCars", availableCars);
 
+        if (availableCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No available cars found for the specified location and time window.',
+            });
+        }
         return res.status(200).json({ status: 200, data: availableCars });
     } catch (error) {
         console.error(error);
@@ -821,3 +827,105 @@ exports.checkCarAvailability = async (req, res) => {
     }
 };
 
+
+exports.checkCarAvailability = async (req, res) => {
+    try {
+        const { pickup, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
+
+        const [latitude, longitude] = pickup.split('%2C').map(Number);
+
+        const locationDetails = await Location.findOne({
+            coordinates: {
+                $near: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [longitude, latitude],
+                    },
+                    $maxDistance: 10000,
+                },
+            },
+        });
+
+        if (!locationDetails) {
+            return res.status(404).json({ status: 404, message: 'Location not found' });
+        }
+
+        const startDateTime = new Date(`${pickupDate}T${pickupTime}`);
+        const endDateTime = new Date(`${dropOffDate}T${dropOffTime}`);
+
+        const bookedCars = await Booking.find({
+            $and: [
+                {
+                    $or: [
+                        { pickupTime: { $lte: pickupTime }, dropOffTime: { $gte: dropOffTime } },
+                        { pickupTime: { $gte: pickupTime }, dropOffTime: { $lte: dropOffTime } },
+                    ],
+                },
+                {
+                    $or: [
+                        { pickupDate: { $lte: pickupDate }, dropOffDate: { $gte: dropOffDate } },
+                        { pickupDate: { $gte: pickupDate }, dropOffDate: { $lte: dropOffDate } },
+                    ],
+                },
+                {
+                    $or: [
+                        { status: 'PENDING', isTripCompleted: false },
+                        { isSubscription: false },
+                        { isTimeExtended: true, timeExtendedDropOffTime: { $gte: startDateTime, $lte: endDateTime } },
+                    ],
+                },
+            ],
+        });
+
+        const bookedCarIds = bookedCars.map(booking => booking.car);
+
+        const availableCars = await Car.find({
+            _id: { $nin: bookedCarIds },
+            pickup: locationDetails._id,
+            'pickup.coordinates': {
+                $near: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [longitude, latitude],
+                    },
+                    $maxDistance: 10000,
+                },
+            },
+            isOnTrip: false,
+            isAvailable: true,
+            nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
+        }).populate('pickup');
+
+        if (availableCars.length === 0) {
+            const nearbyCars = await Car.find({
+                _id: { $nin: bookedCarIds },
+                'pickup.coordinates': {
+                    $near: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: [longitude, latitude],
+                        },
+                        $maxDistance: 10000,
+                    },
+                },                
+                isOnTrip: false,
+                isAvailable: true,
+                nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
+            }).populate('pickup');
+
+            if (nearbyCars.length === 0) {
+                return res.status(404).json({
+                    status: 404,
+                    message: 'No available cars found for the specified location and time window.',
+                });
+            }
+
+            return res.status(200).json({ status: 200, data: nearbyCars });
+        }
+
+        return res.status(200).json({ status: 200, data: availableCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
+    }
+}

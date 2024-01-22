@@ -144,24 +144,12 @@ const carSchema = new mongoose.Schema({
         default: false,
     },
     pickup: {
-        type: {
-            type: String,
-            enum: ['pickup'],
-        },
-        coordinates: {
-            type: [Number],
-            index: '2dsphere',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location',
     },
     drop: {
-        type: {
-            type: String,
-            enum: ['drop'],
-        },
-        coordinates: {
-            type: [Number],
-            index: '2dsphere',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location',
     },
 
 
