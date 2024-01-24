@@ -25,6 +25,8 @@ const Offer = require('../models/offerModel');
 const AdminCarPrice = require('../models/adminCarPriceModel');
 const Plan = require('../models/kmPlanModel');
 const AdminPackage = require('../models/adminPackageModel');
+const DoorstepDeliveryPrice = require('../models/doorstepPriceModel');
+const DriverPrice = require('../models/driverPriceModel');
 
 
 
@@ -2128,7 +2130,7 @@ exports.deleteOfferById = async (req, res) => {
 
 exports.createAdminCarPrice = async (req, res) => {
     try {
-        const { mainCategory, car, adminHourlyRate, adminMinPricePerHour, adminMaxPricePerHour, autoPricing, } = req.body;
+        const { mainCategory, car, adminHourlyRate, adminMinPricePerHour, adminMaxPricePerHour, autoPricing, depositedMoney, extendPrice } = req.body;
 
         const mainCategoryObjects = await MainCategory.find({ _id: { $in: mainCategory } });
 
@@ -2143,7 +2145,9 @@ exports.createAdminCarPrice = async (req, res) => {
             adminMinPricePerHour,
             adminMaxPricePerHour,
             price: adminHourlyRate,
-            autoPricing
+            autoPricing,
+            depositedMoney,
+            extendPrice
         });
         await adminCarPrice.save();
         return res.status(201).json({ status: 201, message: 'AdminCarPrice created successfully', data: adminCarPrice });
@@ -2219,7 +2223,7 @@ exports.deleteAdminCarPriceById = async (req, res) => {
 
 exports.createPlan = async (req, res) => {
     try {
-        const { mainCategory, name, description, klLimit } = req.body;
+        const { mainCategory, name, description, klLimit, extendPrice } = req.body;
 
         const category = await MainCategory.findById(mainCategory);
 
@@ -2257,6 +2261,7 @@ exports.createPlan = async (req, res) => {
             description,
             klLimit,
             price: price * 24 || req.body.price,
+            extendPrice
         });
 
         await newPlan.save();
@@ -2297,7 +2302,7 @@ exports.getPlanById = async (req, res) => {
 exports.updatePlan = async (req, res) => {
     try {
         const planId = req.params.id;
-        const { mainCategory, name, description, klLimit, price } = req.body;
+        const { mainCategory, name, description, klLimit, price, extendPrice } = req.body;
 
         const updatedPlan = await Plan.findByIdAndUpdate(planId, {
             mainCategory,
@@ -2305,6 +2310,7 @@ exports.updatePlan = async (req, res) => {
             description,
             klLimit,
             price,
+            extendPrice,
         }, { new: true });
 
         if (!updatedPlan) {
@@ -2412,3 +2418,200 @@ exports.deleteAdminPackage = async (req, res) => {
     }
 };
 
+exports.createPrice = async (req, res) => {
+    try {
+        const { categoryId, description, distance, extendPrice, price } = req.body;
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        const newPrice = new DoorstepDeliveryPrice({
+            category: categoryId,
+            description,
+            distance,
+            extendPrice,
+            price,
+        });
+
+        const savedPrice = await newPrice.save();
+
+        return res.status(201).json({ status: 201, message: 'Price created successfully', data: savedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllPrices = async (req, res) => {
+    try {
+        const prices = await DoorstepDeliveryPrice.find();
+
+        return res.status(200).json({ status: 200, data: prices });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const price = await DoorstepDeliveryPrice.findById(priceId);
+
+        if (!price) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: price });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updatePriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+        const { categoryId, description, distance, extendPrice, price } = req.body;
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        const updatedPrice = await DoorstepDeliveryPrice.findByIdAndUpdate(
+            priceId,
+            { category: categoryId, description, distance, extendPrice, price },
+            { new: true }
+        );
+
+        if (!updatedPrice) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Price updated successfully', data: updatedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deletePriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const deletedPrice = await DoorstepDeliveryPrice.findByIdAndDelete(priceId);
+
+        if (!deletedPrice) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Price deleted successfully', data: deletedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createDriverPrice = async (req, res) => {
+    try {
+        const { categoryId, description, price } = req.body;
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        const newPrice = new DriverPrice({
+            category: categoryId,
+            description,
+            price,
+        });
+
+        const savedPrice = await newPrice.save();
+
+        return res.status(201).json({ status: 201, message: 'Price created successfully', data: savedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllDriverPrice = async (req, res) => {
+    try {
+        const prices = await DriverPrice.find();
+
+        return res.status(200).json({ status: 200, data: prices });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getDriverPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const price = await DriverPrice.findById(priceId);
+
+        if (!price) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: price });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateDriverPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+        const { categoryId, description, price } = req.body;
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        const updatedPrice = await DriverPrice.findByIdAndUpdate(
+            priceId,
+            { category: categoryId, description, price },
+            { new: true }
+        );
+
+        if (!updatedPrice) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Price updated successfully', data: updatedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteDriverPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const deletedPrice = await DriverPrice.findByIdAndDelete(priceId);
+
+        if (!deletedPrice) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Price deleted successfully', data: deletedPrice });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};

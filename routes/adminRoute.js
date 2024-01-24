@@ -130,6 +130,16 @@ module.exports = (app) => {
     app.get('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.getAdminPackageById);
     app.put('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.updateAdminPackage);
     app.delete('/api/v1/admin/admin-packages/:id', [authJwt.isAdmin], auth.deleteAdminPackage);
+    app.post('/api/v1/admin/prices', [authJwt.isAdmin], auth.createPrice);
+    app.get('/api/v1/admin/prices', [authJwt.isAdmin], auth.getAllPrices);
+    app.get('/api/v1/admin/prices/:id', [authJwt.isAdmin], auth.getPriceById);
+    app.put('/api/v1/admin/prices/:id', [authJwt.isAdmin], auth.updatePriceById);
+    app.delete('/api/v1/admin/prices/:id', [authJwt.isAdmin], auth.deletePriceById);
+    app.post('/api/v1/admin/driverPrices', [authJwt.isAdmin], auth.createDriverPrice);
+    app.get('/api/v1/admin/driverPrices', [authJwt.isAdmin], auth.getAllDriverPrice);
+    app.get('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.getDriverPriceById);
+    app.put('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.updateDriverPriceById);
+    app.delete('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.deleteDriverPriceById);
 
 
 }

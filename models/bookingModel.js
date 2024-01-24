@@ -6,6 +6,18 @@ const bookingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Car',
         },
+        category: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Category',
+        },
+        plan: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Plan',
+        },
+        tripPackage: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'AdminPackage',
+        },
         accessories: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Accessory',
@@ -22,9 +34,9 @@ const bookingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Location',
         },
-        gst: {
+        carChoice: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'GST',
+            ref: 'Category',
         },
         pickupDate: {
             type: Date,
@@ -35,10 +47,10 @@ const bookingSchema = new mongoose.Schema(
         pickupTime: {
             type: String,
         },
-        destinationLocation: {
+        dropOffTime: {
             type: String,
         },
-        dropOffTime: {
+        destinationLocation: {
             type: String,
         },
         status: {
@@ -46,13 +58,16 @@ const bookingSchema = new mongoose.Schema(
             enum: ['PENDING', 'APPROVED', 'CANCELLED', 'COMPLETED'],
             default: 'PENDING',
         },
+        tripProtctionMoney: {
+            type: Number,
+        },
+        carChoicePrice: {
+            type: Number,
+        },
         depositedMoney: {
             type: Number,
         },
         price: {
-            type: Number,
-        },
-        taxAmount: {
             type: Number,
         },
         totalPrice: {
@@ -166,6 +181,14 @@ const bookingSchema = new mongoose.Schema(
         upiId: {
             type: String,
         },
+        isPlanExtend: {
+            type: Boolean,
+            default: false
+        },
+        driverPrice: {
+            type: Number,
+        },
+
 
     },
     { timestamps: true }

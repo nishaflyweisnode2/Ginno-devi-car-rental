@@ -38,6 +38,12 @@ const adminCarPriceSchema = new mongoose.Schema({
     hostMaxPricePerHour: {
         type: Number,
     },
+    depositedMoney: {
+        type: Number,
+    },
+    extendPrice: {
+        type: Number,
+    },
 
 }, { timestamps: true });
 

@@ -43,6 +43,20 @@ module.exports = (app) => {
     app.get('/api/v1/user/coupons/:id', [authJwt.verifyToken], auth.getCouponById);
     app.get('/api/v1/user/admin-packages', [authJwt.verifyToken], auth.getAllAdminPackages);
     app.get('/api/v1/user/admin-packages/:id', [authJwt.verifyToken], auth.getAdminPackageById);
-    app.get('/api/v1/user/bike/availability', [authJwt.verifyToken], auth.checkCarAvailability);
+    app.get('/api/v1/user/car/availability', [authJwt.verifyToken], auth.checkCarAvailability);
+    app.post("/api/v1/user/booking/create", [authJwt.verifyToken], auth.createBooking);
+    app.get('/api/v1/user/bookings/user', [authJwt.verifyToken], auth.getBookingsByUser);
+    app.get('/api/v1/user/bookings/user/:bookingId', [authJwt.verifyToken], auth.getBookingsById);
+    app.get('/api/v1/user/bookings/completed/user', [authJwt.verifyToken], auth.getCompletedBookingsByUser);
+    app.get('/api/v1/user/bookings/upcoming/user', [authJwt.verifyToken], auth.getUpcomingBookingsByUser);
+    app.put('/api/v1/user/bookings/:id', [authJwt.verifyToken], auth.updateBookingById);
+    app.post('/api/v1/user/coupon/apply-coupon', [authJwt.verifyToken], auth.applyCouponToBooking);
+    app.post('/api/v1/user/coupon/remove-coupon', [authJwt.verifyToken], auth.removeCouponFromBooking);
+    app.post('/api/v1/user/wallet/apply-wallet', [authJwt.verifyToken], auth.applyWalletToBooking);
+    app.put('/api/v1/user/bookings/updatePaymentStatus/:bookingId', [authJwt.verifyToken], auth.updatePaymentStatus);
+    app.post('/api/v1/user/bookings/:bookingId/extend', [authJwt.verifyToken], auth.extendBooking);
+    app.put('/api/v1/user/bookings/:bookingId/cancel', [authJwt.verifyToken], auth.cancelBooking);
+    app.get('/api/v1/user/booking/:bookingId/refund', [authJwt.verifyToken], auth.getRefundStatusAndAmount);
+    app.get('/api/v1/user/bookings/cancel/user', [authJwt.verifyToken], auth.getCancelBookingsByUser);
 
 }

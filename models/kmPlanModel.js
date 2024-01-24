@@ -18,6 +18,10 @@ const planSchema = new mongoose.Schema({
     price: {
         type: Number,
     },
+    extendPrice: {
+        type: Number,
+    },
+    
 });
 
 const Plan = mongoose.model('Plan', planSchema);
