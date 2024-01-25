@@ -27,7 +27,10 @@ const Plan = require('../models/kmPlanModel');
 const AdminPackage = require('../models/adminPackageModel');
 const DoorstepDeliveryPrice = require('../models/doorstepPriceModel');
 const DriverPrice = require('../models/driverPriceModel');
-
+const CancelReason = require('../models/cancelReasonModel');
+const RefundCharge = require('../models/refunfChargeModel');
+const Refund = require('../models/refundModel');
+const Booking = require('../models/bookingModel');
 
 
 
@@ -2613,5 +2616,234 @@ exports.deleteDriverPriceById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createCancelReason = async (req, res) => {
+    try {
+        const { reason, description } = req.body;
+
+        const existingReason = await CancelReason.findOne({ reason });
+        if (existingReason) {
+            return res.status(400).json({ status: 400, message: 'Cancel reason already exists', data: null });
+        }
+
+        const newCancelReason = await CancelReason.create({ reason, description });
+
+        return res.status(201).json({ status: 201, message: 'Cancel reason created successfully', data: newCancelReason });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllCancelReasons = async (req, res) => {
+    try {
+        const cancelReasons = await CancelReason.find();
+        return res.status(200).json({ status: 200, message: 'Success', data: cancelReasons });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCancelReasonById = async (req, res) => {
+    try {
+        const cancelReason = await CancelReason.findById(req.params.id);
+        if (!cancelReason) {
+            return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Success', data: cancelReason });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateCancelReasonById = async (req, res) => {
+    try {
+        const { reason, description } = req.body;
+
+        const updatedCancelReason = await CancelReason.findByIdAndUpdate(
+            req.params.id,
+            { reason, description },
+            { new: true }
+        );
+
+        if (!updatedCancelReason) {
+            return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Cancel reason updated successfully', data: updatedCancelReason });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.deleteCancelReasonById = async (req, res) => {
+    try {
+        const deletedCancelReason = await CancelReason.findByIdAndDelete(req.params.id);
+
+        if (!deletedCancelReason) {
+            return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Cancel reason deleted successfully', data: deletedCancelReason });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.createRefundCharge = async (req, res) => {
+    try {
+        const { refundAmount } = req.body;
+
+        const newRefundCharge = new RefundCharge({ refundAmount });
+
+        const savedRefundCharge = await newRefundCharge.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: 'Refund charge created successfully',
+            data: savedRefundCharge,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getAllRefundCharges = async (req, res) => {
+    try {
+        const refundCharges = await RefundCharge.find();
+        return res.status(200).json({ status: 200, data: refundCharges });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getRefundChargeById = async (req, res) => {
+    try {
+        const refundCharge = await RefundCharge.findById(req.params.id);
+        if (!refundCharge) {
+            return res.status(404).json({ status: 404, message: 'Refund charge not found' });
+        }
+        return res.status(200).json({ status: 200, data: refundCharge });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.updateRefundChargeById = async (req, res) => {
+    try {
+        const refundCharge = await RefundCharge.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        if (!refundCharge) {
+            return res.status(404).json({ status: 404, message: 'Refund charge not found' });
+        }
+        return res.status(200).json({ sataus: 200, message: 'Refund charge updated sucessfully', data: refundCharge });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.deleteRefundChargeById = async (req, res) => {
+    try {
+        const refundCharge = await RefundCharge.findByIdAndDelete(req.params.id);
+        if (!refundCharge) {
+            return res.status(404).json({ status: 404, message: 'Refund charge not found' });
+        }
+        return res.status(200).json({
+            status: 200,
+            message: 'Refund  deleted successfully',
+            data: refundCharge,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.updateRefundPaymentStatus = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+        const { refundStatus, refundTransactionId } = req.body;
+
+        const updatedBooking = await Booking.findOne({ _id: bookingId });
+
+        if (!updatedBooking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const refundId = await Refund.findOne({ booking: bookingId });
+
+        if (!refundId) {
+            return res.status(404).json({ status: 404, message: 'RefundId not found', data: null });
+        }
+
+        const validStatusValues = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'];
+        if (!validStatusValues.includes(refundStatus)) {
+            return res.status(400).json({ error: "Invalid RefundStatus status value" });
+        }
+
+        refundId.refundStatus = refundStatus;
+        refundId.refundTransactionId = refundTransactionId;
+        refundId.refundTransactionDate = new Date;
+
+        await refundId.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Payment status updated successfully',
+            data: refundId,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while updating payment status',
+            data: null,
+        });
+    }
+};
+
+exports.getRefundStatusAndAmount = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+
+        const booking = await Booking.findOne({ _id: bookingId });
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const refund = await Refund.findOne({ booking: bookingId });
+
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        const response = {
+            status: 200,
+            message: 'Refund status and amount retrieved successfully',
+            data: refund,
+        };
+
+        return res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving refund status and amount',
+            data: null,
+        });
     }
 };

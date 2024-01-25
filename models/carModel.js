@@ -46,12 +46,18 @@ const carSchema = new mongoose.Schema({
         enum: ['0-10', '10-20', '20-25', '25+'],
         default: '0-10',
     },
+    carDocumentsText: {
+        type: String,
+    },
     carDocuments: {
         type: String,
     },
     isCarDocumentsUpload: {
         type: Boolean,
         default: false
+    },
+    dlNumber: {
+        type: String,
     },
     dlFront: {
         type: String,

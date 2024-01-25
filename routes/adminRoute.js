@@ -140,6 +140,17 @@ module.exports = (app) => {
     app.get('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.getDriverPriceById);
     app.put('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.updateDriverPriceById);
     app.delete('/api/v1/admin/driverPrices/:id', [authJwt.isAdmin], auth.deleteDriverPriceById);
-
+    app.post('/api/v1/admin/cancel-reasons', [authJwt.isAdmin], auth.createCancelReason);
+    app.get('/api/v1/admin/cancel-reasons', [authJwt.isAdmin], auth.getAllCancelReasons);
+    app.get('/api/v1/admin/cancel-reasons/:id', [authJwt.isAdmin], auth.getCancelReasonById);
+    app.put('/api/v1/admin/cancel-reasons/:id', [authJwt.isAdmin], auth.updateCancelReasonById);
+    app.delete('/api/v1/admin/cancel-reasons/:id', [authJwt.isAdmin], auth.deleteCancelReasonById);
+    app.post('/api/v1/admin/refund-charges', [authJwt.isAdmin], auth.createRefundCharge);
+    app.get('/api/v1/admin/refund-charges', [authJwt.isAdmin], auth.getAllRefundCharges);
+    app.get('/api/v1/admin/refund-charges/:id', [authJwt.isAdmin], auth.getRefundChargeById);
+    app.put('/api/v1/admin/refund-charges/:id', [authJwt.isAdmin], auth.updateRefundChargeById);
+    app.delete('/api/v1/admin/refund-charges/:id', [authJwt.isAdmin], auth.deleteRefundChargeById);
+    app.put('/api/v1/admin/bookings/updatePaymentStatus/:bookingId', [authJwt.isAdmin], auth.updateRefundPaymentStatus);
+    app.get('/api/v1/admin/booking/:bookingId/refund', [authJwt.isAdmin], auth.getRefundStatusAndAmount);
 
 }

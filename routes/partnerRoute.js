@@ -80,6 +80,21 @@ module.exports = (app) => {
     app.put('/api/v1/partner/cars/update/host-pricing', [authJwt.isPartner], auth.updateHostCarPricing);
     app.put('/api/v1/partner/cars/:id/update/host-pricing', [authJwt.isPartner], auth.updateHostCarPricingByCarId);
     app.get('/api/v1/partner/cars/host/pricing', [authJwt.isPartner], auth.getHostCarPricing);
-
+    app.get('/api/v1/partner/upcoming-bookings', [authJwt.isPartner], auth.getUpcomingBookingsForPartner);
+    app.get('/api/v1/partner/bookings/:bookingId', [authJwt.isPartner], auth.getBookingByIdForPartner);
+    app.get('/api/v1/partner/completed-bookings', [authJwt.isPartner], auth.getCompletedBookingsForPartner);
+    app.get('/api/v1/partner/canceled-bookings', [authJwt.isPartner], auth.getCanceledBookingsForPartner);
+    app.get('/api/v1/partner/paymentFalied-bookings', [authJwt.isPartner], auth.getPaymentFaliedBookingsForPartner);
+    app.put('/api/v1/partner/bookings/:bookingId/approve', [authJwt.isPartner], auth.approveBookingStatus);
+    app.post("/api/v1/partner/bookings/verify/:bookingId", [authJwt.isPartner], auth.approveBookingVerifyOtp);
+    app.post("/api/v1/partner/bookings/resendOtp/:id", [authJwt.isPartner], auth.approveBookingResendOTP);
+    app.get('/api/v1/partner/approved-bookings', [authJwt.isPartner], auth.getApprovedBookingsForPartner);
+    app.put('/api/v1/partner/bookings/:bookingId/reject', [authJwt.isPartner], auth.rejectBookingStatus);
+    app.post("/api/v1/partner/bookings/cancleBooking/verify/:bookingId", [authJwt.isPartner], auth.rejectBookingVerifyOtp);
+    app.post("/api/v1/partner/bookings/cancleBooking/resendOtp/:id", [authJwt.isPartner], auth.rejectBookingResendOTP);
+    app.get('/api/v1/partner/rejected-bookings', [authJwt.isPartner], auth.getRejectedBookingsForPartner);
+    app.put('/api/v1/partner/bookings/:bookingId/trip-end-details', [authJwt.isPartner], auth.updateTripEndDetails);
+    app.post("/api/v1/partner/bookings/trip-end-details/verify/:bookingId", [authJwt.isPartner], auth.approveTripEndDetailsVerifyOtp);
+    app.post("/api/v1/partner/bookings/trip-end-details/resendOtp/:id", [authJwt.isPartner], auth.approveTripEndDetailsResendOTP);
 
 }

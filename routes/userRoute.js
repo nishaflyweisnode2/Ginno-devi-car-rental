@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage } = require('../middlewares/imageUpload');
+const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, overAllImage } = require('../middlewares/imageUpload');
 
 
 
@@ -58,5 +58,16 @@ module.exports = (app) => {
     app.put('/api/v1/user/bookings/:bookingId/cancel', [authJwt.verifyToken], auth.cancelBooking);
     app.get('/api/v1/user/booking/:bookingId/refund', [authJwt.verifyToken], auth.getRefundStatusAndAmount);
     app.get('/api/v1/user/bookings/cancel/user', [authJwt.verifyToken], auth.getCancelBookingsByUser);
+    app.get('/api/v1/user/cancel-reasons', [authJwt.verifyToken], auth.getAllCancelReasons);
+    app.get('/api/v1/user/cancel-reasons/:id', [authJwt.verifyToken], auth.getCancelReasonById);
+    app.post('/api/v1/user/upload/image', [authJwt.verifyToken], overAllImage.array('image'), auth.uploadImage);
+    app.post('/api/v1/user/inspections/exterior', [authJwt.verifyToken], auth.createInspectionExterior);
+    app.put('/api/v1/user/inspections/interior/:inspectionId', [authJwt.verifyToken], auth.updateInspectionInterior);
+    app.get('/api/v1/user/inspections', [authJwt.verifyToken], auth.getAllInspections);
+    app.get('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.getInspectionById);
+    app.put('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.updateInspectionById);
+    app.delete('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.deleteInspectionById);
+
+
 
 }

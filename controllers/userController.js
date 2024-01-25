@@ -22,7 +22,11 @@ const AdminCarPrice = require('../models/adminCarPriceModel');
 const DoorstepDeliveryPrice = require('../models/doorstepPriceModel');
 const Plan = require('../models/kmPlanModel');
 const DriverPrice = require('../models/driverPriceModel');
-
+const CancelReason = require('../models/cancelReasonModel');
+const RefundCharge = require('../models/refunfChargeModel');
+const Refund = require('../models/refundModel');
+const InspectionModel = require('../models/carInsceptionModel');
+const Image = require('../models/imageModel');
 
 
 
@@ -35,6 +39,23 @@ const reffralCode = async () => {
         OTP += digits[Math.floor(Math.random() * 36)];
     }
     return OTP;
+}
+
+const generateBookingCode = async () => {
+    const digits = "0123456789";
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    let code = '';
+
+    for (let i = 0; i < 5; i++) {
+        code += digits[Math.floor(Math.random() * 10)];
+    }
+
+    for (let i = 0; i < 3; i++) {
+        code += letters[Math.floor(Math.random() * 26)];
+    }
+
+    return code;
 }
 
 exports.signup = async (req, res) => {
@@ -1130,7 +1151,8 @@ exports.createBooking = async (req, res) => {
                 tripProtctionMoney: tripProtctionMoney,
                 carChoice,
                 carChoicePrice,
-                driverPrice
+                driverPrice,
+                uniqueBookinId: await generateBookingCode()
             });
 
             const welcomeMessage = `Welcome, ${user.userName}! Thank you for Booking, your Booking details ${newBooking}.`;
@@ -1460,13 +1482,13 @@ exports.updatePaymentStatus = async (req, res) => {
         updatedBooking.referenceId = referenceId;
 
         if (paymentStatus === 'PAID') {
-            const bikeId = updatedBooking.bike;
+            const carId = updatedBooking.car;
 
-            const bike = await Bike.findOne({ _id: bikeId });
+            const car = await Car.findOne({ _id: carId });
 
-            bike.rentalCount += 1;
+            car.rentalCount += 1;
 
-            await bike.save();
+            await car.save();
         }
 
         await updatedBooking.save();
@@ -1503,7 +1525,6 @@ const isCarAvailableForPeriod = async (carId, pickupDate, dropOffDate, pickupTim
 
     return existingBookings.length === 0;
 };
-
 const getPricingInfo = async (carId) => {
     try {
         const car = await Car.findById(carId);
@@ -1511,14 +1532,23 @@ const getPricingInfo = async (carId) => {
             throw new Error("Car not found");
         }
 
+        const adminCarPrice = await AdminCarPrice.findOne({ car: carId });
+
+        let rentalPrice;
+        if (adminCarPrice.autoPricing) {
+            rentalPrice = adminCarPrice.adminHourlyRate;
+        } else {
+            rentalPrice = adminCarPrice.hostHourlyRate;
+        }
+
         const pricingInfo = {
-            hourlyRate: car.hourlyRate,
-            extendPrice: car.extendPrice,
+            hourlyRate: rentalPrice,
+            extendPrice: adminCarPrice.extendPrice,
         };
         console.log("pricingInfo", pricingInfo);
 
         return pricingInfo;
-        console.log(pricingInfo);
+
     } catch (error) {
         console.error("Error getting pricing information:", error.message);
         throw error;
@@ -1549,7 +1579,6 @@ function calculateDurationInDays1(extendedDropOffDate, dropOffDate, extendedDrop
     return durationInDays;
 }
 
-
 const calculateExtendPrice = async (bookingId, extendedDropOffDate, extendedDropOffTime) => {
     try {
         const extendedBooking = await Booking.findById(bookingId);
@@ -1567,7 +1596,7 @@ const calculateExtendPrice = async (bookingId, extendedDropOffDate, extendedDrop
         const pricingInfo = await getPricingInfo(extendedBooking.car);
 
         const extendPrice = pricingInfo.extendPrice * extendDurationInDays;
-        console.log("extendPrice", extendPrice);
+        console.log("extendPrice1***", extendPrice);
         return extendPrice;
     } catch (error) {
         console.error("Error calculating extend price:", error.message);
@@ -1581,6 +1610,7 @@ exports.extendBooking = async (req, res) => {
         const { extendedDropOffDate, extendedDropOffTime } = req.body;
 
         const extendPrice = await calculateExtendPrice(bookingId, extendedDropOffDate, extendedDropOffTime);
+        console.log("extendPrice2***", extendPrice);
 
         const extendedBooking = await Booking.findById(bookingId);
         if (!extendedBooking) {
@@ -1603,7 +1633,8 @@ exports.extendBooking = async (req, res) => {
         extendedBooking.extendedDropOffDate = extendedDropOffDate;
         extendedBooking.extendedDropOffTime = extendedDropOffTime;
 
-        extendedBooking.extendPrice = extendPrice;
+        extendedBooking.extendedPrice = extendPrice;
+        extendedBooking.totalExtendedPrice = extendedBooking.totalPrice + extendPrice;
 
         await extendedBooking.save();
 
@@ -1625,11 +1656,20 @@ exports.extendBooking = async (req, res) => {
 exports.cancelBooking = async (req, res) => {
     try {
         const bookingId = req.params.bookingId;
-        const { refundPreference, upiId } = req.body;
+        const { refundPreference, upiId, cancelReason } = req.body;
 
         const booking = await Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const findCancelReason = await CancelReason.findById(cancelReason);
+        if (!findCancelReason) {
+            return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
+        }
+
+        if (booking.paymentStatus === 'PENDING') {
+            return res.status(400).json({ status: 400, message: 'Booking Is Not Cancellable First Paid Amount', data: null });
         }
 
         if (booking.status === 'CANCELLED' || booking.isTripCompleted) {
@@ -1637,21 +1677,26 @@ exports.cancelBooking = async (req, res) => {
         }
 
         if (booking.paymentStatus === 'PAID') {
-            const bikeId = booking.bike;
-            const bike = await Bike.findById(bikeId);
-            if (bike) {
-                bike.rentalCount -= 1;
-                await bike.save();
+            const carId = booking.car;
+            const car = await Car.findById(carId);
+            if (car) {
+                car.rentalCount -= 1;
+                await car.save();
             }
         }
 
         const refundCharges = await RefundCharge.findOne();
         const refundAmount = booking.totalPrice
+
+        const extendedPriceRefund = booking.isExtendedPricePaid ? booking.extendedPrice : 0;
+        const totalRefundAmount = refundAmount - refundCharges.refundAmount + extendedPriceRefund;
+
         const newRefund = new Refund({
             booking: booking._id,
             refundAmount: refundAmount,
             refundCharges: refundCharges.refundAmount || 0,
-            totalRefundAmount: refundAmount - refundCharges.refundAmount,
+            extendedPrice: extendedPriceRefund,
+            totalRefundAmount: totalRefundAmount,
             refundStatus: 'PENDING',
             refundDetails: refundPreference,
             userPaymentDetails: upiId,
@@ -1665,6 +1710,7 @@ exports.cancelBooking = async (req, res) => {
         booking.refundPreference = refundPreference;
         booking.upiId = upiId;
         booking.refund = savedRefund._id;
+        booking.cancelReason = cancelReason;
         await booking.save();
 
         return res.status(200).json({ status: 200, message: 'Booking cancelled successfully', data: booking });
@@ -1688,7 +1734,7 @@ exports.getRefundStatusAndAmount = async (req, res) => {
             .populate({
                 path: 'booking',
                 populate: {
-                    path: 'bike user pickupLocation dropOffLocation',
+                    path: 'car user pickupLocation dropOffLocation',
                 },
             });
         if (!refund) {
@@ -1743,3 +1789,131 @@ exports.getCancelBookingsByUser = async (req, res) => {
     }
 };
 
+exports.getAllCancelReasons = async (req, res) => {
+    try {
+        const cancelReasons = await CancelReason.find();
+        return res.status(200).json({ status: 200, message: 'Success', data: cancelReasons });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCancelReasonById = async (req, res) => {
+    try {
+        const cancelReason = await CancelReason.findById(req.params.id);
+        if (!cancelReason) {
+            return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Success', data: cancelReason });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.uploadImage = async (req, res) => {
+    try {
+        let images = [];
+        if (req.files) {
+            for (let j = 0; j < req.files.length; j++) {
+                let obj = {
+                    img: req.files[j].path,
+                };
+                images.push(obj);
+            }
+        }
+
+        const image = await Image.create({
+            images
+        })
+
+        return res.status(200).json({ status: 200, message: 'Image Upload Successfully', data: image });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.createInspectionExterior = async (req, res) => {
+    try {
+        const inspectionData = req.body;
+
+        const carExist = await Car.findById(req.body.car);
+        if (!carExist) {
+            return res.status(400).json({ status: 400, message: 'Car not available', data: null });
+        }
+
+        const newInspection = await InspectionModel.create(inspectionData);
+        return res.status(201).json({ status: 201, message: 'Inspection created successfully', data: newInspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateInspectionInterior = async (req, res) => {
+    try {
+        const inspectionId = req.params.inspectionId;
+        const updatedInspection = await InspectionModel.findByIdAndUpdate(inspectionId, req.body, { new: true });
+        if (!updatedInspection) {
+            return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Inspection updated successfully', data: updatedInspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllInspections = async (req, res) => {
+    try {
+        const inspections = await InspectionModel.find();
+        return res.status(200).json({ status: 200, message: 'Inspections retrieved successfully', data: inspections });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getInspectionById = async (req, res) => {
+    try {
+        const inspectionId = req.params.inspectionId;
+        const inspection = await InspectionModel.findById(inspectionId);
+        if (!inspection) {
+            return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Inspection retrieved successfully', data: inspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateInspectionById = async (req, res) => {
+    try {
+        const inspectionId = req.params.inspectionId;
+        const updatedInspection = await InspectionModel.findByIdAndUpdate(inspectionId, req.body, { new: true });
+        if (!updatedInspection) {
+            return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Inspection updated successfully', data: updatedInspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.deleteInspectionById = async (req, res) => {
+    try {
+        const inspectionId = req.params.inspectionId;
+        const deletedInspection = await InspectionModel.findByIdAndRemove(inspectionId);
+        if (!deletedInspection) {
+            return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Inspection deleted successfully', data: deletedInspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};

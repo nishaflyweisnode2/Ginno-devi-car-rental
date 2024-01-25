@@ -20,6 +20,7 @@ const FAQ = require('../models/faqModel');
 const AboutApps = require('../models/aboutAppModel');
 const Policy = require('../models/policiesModel');
 const AdminCarPrice = require('../models/adminCarPriceModel');
+const Booking = require('../models/bookingModel');
 
 
 
@@ -599,6 +600,7 @@ exports.deleteCarById = async (req, res) => {
 exports.updateCarDocuments = async (req, res) => {
     try {
         const { carId } = req.params;
+        const { carDocumentsText } = req.body;
 
         const existingCar = await Car.findById(carId);
 
@@ -610,6 +612,8 @@ exports.updateCarDocuments = async (req, res) => {
             existingCar.carDocuments = req.file.path;
             existingCar.isCarDocumentsUpload = true;
         }
+
+        existingCar.carDocumentsText = carDocumentsText;
 
         const updatedCar = await existingCar.save();
 
@@ -623,6 +627,8 @@ exports.updateCarDocuments = async (req, res) => {
 exports.updateDLDetails = async (req, res) => {
     try {
         const { carId } = req.params;
+        const { dlNumber } = req.body;
+
         const existingCar = await Car.findById(carId);
         if (!existingCar) {
             return res.status(404).json({ message: 'Car not found' });
@@ -638,6 +644,8 @@ exports.updateDLDetails = async (req, res) => {
             existingCar.dlBack = dlBack[0].path;
             existingCar.isDlUpload = true;
         }
+
+        existingCar.dlNumber = dlNumber;
 
         const updatedCar = await existingCar.save();
 
@@ -1749,5 +1757,611 @@ exports.getHostCarPricing = async (req, res) => {
     } catch (error) {
         console.error('Error fetching host car pricing:', error);
         return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+async function sendNotificationToPartner(booking, partnerId) {
+    const partner = await User.findById(partnerId);
+
+    if (partner && partner._id) {
+        const notificationMessage = `You have a new booking scheduled for ${booking.pickupDate}.`;
+
+        const notification = new Notification({
+            recipient: partner._id,
+            content: notificationMessage,
+        });
+
+        try {
+            await notification.save();
+        } catch (error) {
+            console.error('Error saving partner notification:', error);
+        }
+    }
+}
+
+exports.getUpcomingBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const currentDate = new Date();
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const upcomingBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            paymentStatus: 'PAID',
+            isTripCompleted: false,
+            $or: [
+                {
+                    $and: [
+                        { pickupDate: { $gte: currentDate.toISOString().split('T')[0] } },
+                        { pickupTime: { $gte: currentDate.toISOString().split('T')[1].split('.')[0] } }
+                    ]
+                },
+                {
+                    dropOffDate: { $gt: currentDate.toISOString().split('T')[0] }
+                }
+            ]
+        }).populate('user car');
+
+        for (const booking of upcomingBookings) {
+            await sendNotificationToPartner(booking, partnerId);
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Upcoming bookings retrieved successfully for the partner',
+            data: upcomingBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getBookingByIdForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId).populate({
+            path: 'car',
+            populate: { path: 'owner pickup drop' }
+        }).populate('user');
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking retrieved successfully for the partner',
+            data: booking,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCompletedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const completedBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'COMPLETED',
+            paymentStatus: 'PAID',
+            isTripCompleted: true,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Completed bookings retrieved successfully for the partner',
+            data: completedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCanceledBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const canceledBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'CANCELLED',
+            isTripCompleted: false,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Canceled bookings retrieved successfully for the partner',
+            data: canceledBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getPaymentFaliedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const canceledBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'PENDING',
+            paymentStatus: 'FAILED',
+            isTripCompleted: false,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Canceled bookings retrieved successfully for the partner',
+            data: canceledBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.approveBookingStatus = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+
+        if (!bookingId) {
+            return res.status(400).json({ status: 400, message: 'Booking ID is required', data: null });
+        }
+
+        const {
+            tripStartKm,
+        } = req.body;
+
+        const booking = await Booking.findById(bookingId).populate('car');
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (booking.paymentStatus !== "PAID") {
+            return res.status(403).json({ status: 403, message: 'Cannot approve booking because payment is not complete', data: null });
+        }
+
+        if (tripStartKm) {
+            booking.tripStartKm = req.body.tripStartKm;
+        }
+
+        let otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        booking.tripStartKm = req.body.tripStartKm || tripStartKm;
+        booking.approvedOtp = otp;
+
+        booking.status = 'APPROVED';
+
+        await booking.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking status approved successfully',
+            data: booking,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.approveBookingVerifyOtp = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+        const { otp } = req.body;
+
+        const findPartner = await User.findById(partnerId);
+        if (!findPartner) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const userId = booking.user;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        if (booking.approvedOtp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            bookingId,
+            {
+                isApprovedOtp: true,
+                tripStartTime: new Date
+            },
+            { new: true }
+        );
+
+        if (updatedBooking) {
+            await Car.findByIdAndUpdate(
+                updatedBooking.car,
+                { isOnTrip: true },
+                { new: true }
+            );
+        }
+
+        return res.status(200).send({ status: 200, message: "OTP verified successfully", data: updatedBooking });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).send({ error: "Internal server error" + err.message });
+    }
+};
+
+exports.approveBookingResendOTP = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        const updated = await Booking.findOneAndUpdate(
+            { _id: id },
+            { approvedOtp: otp, isApprovedOtp: false },
+            { new: true }
+        );
+
+        return res.status(200).send({ status: 200, message: "OTP resent", data: updated });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ status: 500, message: "Server error" + error.message });
+    }
+};
+
+exports.getApprovedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const approvedBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'APPROVED',
+            paymentStatus: 'PAID'
+        }).populate('car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Approved bookings for partner retrieved successfully',
+            data: approvedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.rejectBookingStatus = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+
+        const {
+            rejectRemarks,
+        } = req.body;
+
+        if (!bookingId) {
+            return res.status(400).json({ status: 400, message: 'Booking ID is required', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(400).json({ status: 400, message: 'Booking is not found', data: null });
+        }
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (booking.paymentStatus !== "PAID") {
+            return res.status(403).json({ status: 403, message: 'Cannot canclelled booking because payment is not complete', data: null });
+        }
+
+        let otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+
+        booking.status = 'CANCELLED';
+        booking.rejectRemarks = req.body.rejectRemarks || rejectRemarks;
+        booking.rejectOtp = otp
+
+        await booking.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking status CANCELLED successfully',
+            data: booking,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.rejectBookingVerifyOtp = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+        const { otp } = req.body;
+
+        const findUser = await User.findById(partnerId);
+        if (!findUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const userId = booking.user;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        if (booking.rejectOtp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        const updated = await Booking.findByIdAndUpdate(
+            bookingId,
+            { isRejectOtp: true },
+            { new: true }
+        );
+
+        return res.status(200).send({ status: 200, message: "OTP verified successfully", data: updated });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).send({ error: "Internal server error" + err.message });
+    }
+};
+
+exports.rejectBookingResendOTP = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        const updated = await Booking.findOneAndUpdate(
+            { _id: id },
+            { rejectOtp: otp, isRejectOtp: false },
+            { new: true }
+        );
+
+        return res.status(200).send({ status: 200, message: "OTP resent", data: updated });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ status: 500, message: "Server error" + error.message });
+    }
+};
+
+exports.getRejectedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const rejectBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'CANCELLED',
+        }).populate('car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Reject bookings for partner retrieved successfully',
+            data: rejectBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateTripEndDetails = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+
+        if (!bookingId) {
+            return res.status(400).json({ status: 400, message: 'Booking ID is required', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.isTripCompleted) {
+            return res.status(400).json({ status: 400, message: 'Trip is already marked as completed', data: null });
+        }
+
+        booking.tripEndKm = req.query.tripEndKm !== undefined ? req.query.tripEndKm : booking.tripEndKm;
+
+        booking.remarks = req.query.remarks !== undefined ? req.query.remarks : booking.remarks;
+
+        const car = await Car.findById(booking.car);
+        if (car) {
+            car.kmDriven += booking.tripEndKm;
+            await car.save();
+        }
+
+        let otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        booking.tripEndTime = new Date();
+        booking.tripEndOtp = otp;
+        booking.isTripCompleted = true;
+        booking.status = "COMPLETED";
+
+        const updatedBooking = await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Trip end details updated successfully', data: updatedBooking });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+        const { otp } = req.body;
+
+        const findUser = await User.findById(partnerId);
+        if (!findUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const userId = booking.user;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        if (booking.tripEndOtp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            bookingId,
+            {
+                isTripEndOtp: true,
+            },
+            { new: true }
+        );
+
+
+        return res.status(200).send({ status: 200, message: "OTP verified successfully", data: updatedBooking });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).send({ error: "Internal server error" + err.message });
+    }
+};
+
+exports.approveTripEndDetailsResendOTP = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        const updated = await Booking.findOneAndUpdate(
+            { _id: id },
+            { tripEndOtp: otp, isTripEndOtp: false },
+            { new: true }
+        );
+
+        return res.status(200).send({ status: 200, message: "OTP resent", data: updated });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ status: 500, message: "Server error" + error.message });
     }
 };

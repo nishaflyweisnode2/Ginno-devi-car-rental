@@ -31,7 +31,9 @@ const storage8 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folde
 const attachement = multer({ storage: storage8 });
 const storage9 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "GinnoDeviCar/categoryImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const categoryImage = multer({ storage: storage9 });
+const storage10 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "GinnoDeviCar/overAllImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const overAllImage = multer({ storage: storage10 });
 
 
 
-module.exports = { profileImage, cityImage, brandImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, referenceImage, attachement,categoryImage }
+module.exports = { profileImage, cityImage, brandImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, referenceImage, attachement, categoryImage, overAllImage }

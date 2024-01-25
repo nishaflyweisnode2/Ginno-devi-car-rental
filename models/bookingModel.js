@@ -106,6 +106,13 @@ const bookingSchema = new mongoose.Schema(
         extendedPrice: {
             type: Number,
         },
+        totalExtendedPrice: {
+            type: Number,
+        },
+        isExtendedPricePaid: {
+            type: Boolean,
+            default: false
+        },
         offerCode: {
             type: String,
         },
@@ -175,11 +182,15 @@ const bookingSchema = new mongoose.Schema(
         },
         refundPreference: {
             type: String,
-            enum: ['UPI', 'WALLET', 'OTHER'],
+            enum: ['UPI', 'WALLET'],
             default: 'UPI',
         },
         upiId: {
             type: String,
+        },
+        cancelReason: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'CancelReason',
         },
         isPlanExtend: {
             type: Boolean,
@@ -187,6 +198,9 @@ const bookingSchema = new mongoose.Schema(
         },
         driverPrice: {
             type: Number,
+        },
+        uniqueBookinId: {
+            type: String,
         },
 
 
