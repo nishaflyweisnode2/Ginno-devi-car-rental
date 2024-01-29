@@ -729,6 +729,55 @@ exports.getAdminPackageById = async (req, res) => {
     }
 };
 
+exports.getAllPlans = async (req, res) => {
+    try {
+        const plans = await Plan.find();
+        return res.status(200).json({ status: 200, data: plans });
+    } catch (error) {
+        console.error('Error fetching plans:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getPlanById = async (req, res) => {
+    try {
+        const planId = req.params.id;
+        const plan = await Plan.findById(planId);
+
+        if (!plan) {
+            return res.status(404).json({ status: 404, message: 'Plan not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: plan });
+    } catch (error) {
+        console.error('Error fetching plan by ID:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getPlanByMainCategory = async (req, res) => {
+    try {
+        const mainCategory = req.params.mainCategory;
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const plans = await Plan.find({ mainCategory: mainCategory });
+
+        if (!plans || plans.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No plans found for the specified main category' });
+        }
+
+        return res.status(200).json({ status: 200, data: plans });
+    } catch (error) {
+        console.error('Error fetching plans by main category:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
 function getDistanceBetweenCoordinates(lat1, lon1, lat2, lon2) {
     const R = 6371; // Earth's radius in kilometers
     const dLat = degToRad(lat2 - lat1);
@@ -956,7 +1005,7 @@ exports.checkCarAvailability = async (req, res) => {
 exports.createBooking = async (req, res) => {
     try {
         const userId = req.user._id;
-        let { carId, category, carChoice, plan, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime, subscriptionMonths, accessoriesId, tripPackage } = req.body;
+        let { carId, mainCategory, category, carChoice, plan, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime, subscriptionMonths, accessoriesId, tripPackage } = req.body;
 
         const currentDate = new Date();
         const requestedPickupDate = new Date(`${pickupDate}T${pickupTime}:00.000Z`);
@@ -993,6 +1042,12 @@ exports.createBooking = async (req, res) => {
             driverPrice = price.price
         }
 
+        if (mainCategory) {
+            const checkMainCategory = await MainCategory.findById(mainCategory);
+            if (!checkMainCategory) {
+                return res.status(404).json({ status: 404, message: 'MainCategory not found' });
+            }
+        }
 
         const checkPlan = await Plan.findById(plan);
         if (!checkPlan) {
@@ -1059,7 +1114,7 @@ exports.createBooking = async (req, res) => {
         });
 
         if (existingBookingPickup || existingBookingDrop || existingExtendedBookingPickup || existingExtendedBookingDrop) {
-            return res.status(400).json({ status: 400, message: 'Bike is already booked for the specified pickup and/or drop-off date and time.', data: null, });
+            return res.status(400).json({ status: 400, message: 'Car is already booked for the specified pickup and/or drop-off date and time.', data: null, });
         } else {
 
             const user = await User.findById(userId);
@@ -1068,7 +1123,7 @@ exports.createBooking = async (req, res) => {
             }
 
             if (user.isVerified === false) {
-                return res.status(404).json({ status: 404, message: 'User can not book bike first approved account by admin', data: null });
+                return res.status(404).json({ status: 404, message: 'User can not book Car first approved account by admin', data: null });
             }
 
             const carExist = await Car.findById(carId);
@@ -1089,14 +1144,14 @@ exports.createBooking = async (req, res) => {
                     const accessoryStore = await BikeStoreRelation.findOne({ accessory: accessoriesId });
 
                     if (!bikeStore || !accessoryStore || bikeStore.store.toString() !== accessoryStore.store.toString()) {
-                        return res.status(400).json({ status: 400, message: 'Bike and accessory must be in the same store for booking.', data: null });
+                        return res.status(400).json({ status: 400, message: 'Car and accessory must be in the same store for booking.', data: null });
                     }
 
                     accessoriesPrice = accessory.price || 0;
                 }
             }
 
-            const adminCarPrice = await AdminCarPrice.findOne({ car: carId });
+            const adminCarPrice = await AdminCarPrice.findOne({ car: carId, mainCategory: mainCategory });
             console.log("adminCarPrice", adminCarPrice);
             let rentalPrice;
             if (adminCarPrice.autoPricing) {
@@ -1130,6 +1185,7 @@ exports.createBooking = async (req, res) => {
             const newBooking = await Booking.create({
                 user: user._id,
                 car: carExist._id,
+                mainCategory,
                 category,
                 plan,
                 destinationLocation,
@@ -1852,9 +1908,15 @@ exports.createInspectionExterior = async (req, res) => {
     }
 };
 
-exports.updateInspectionInterior = async (req, res) => {
+exports.updateCarInspectionById = async (req, res) => {
     try {
         const inspectionId = req.params.inspectionId;
+
+        const carExist = await Car.findById(req.body.car);
+        if (!carExist) {
+            return res.status(400).json({ status: 400, message: 'Car not available', data: null });
+        }
+
         const updatedInspection = await InspectionModel.findByIdAndUpdate(inspectionId, req.body, { new: true });
         if (!updatedInspection) {
             return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
@@ -1868,7 +1930,7 @@ exports.updateInspectionInterior = async (req, res) => {
 
 exports.getAllInspections = async (req, res) => {
     try {
-        const inspections = await InspectionModel.find();
+        const inspections = await InspectionModel.find().populate('car');
         return res.status(200).json({ status: 200, message: 'Inspections retrieved successfully', data: inspections });
     } catch (error) {
         console.error(error);
@@ -1879,7 +1941,7 @@ exports.getAllInspections = async (req, res) => {
 exports.getInspectionById = async (req, res) => {
     try {
         const inspectionId = req.params.inspectionId;
-        const inspection = await InspectionModel.findById(inspectionId);
+        const inspection = await InspectionModel.findById(inspectionId).populate('car');
         if (!inspection) {
             return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
         }
@@ -1907,7 +1969,7 @@ exports.updateInspectionById = async (req, res) => {
 exports.deleteInspectionById = async (req, res) => {
     try {
         const inspectionId = req.params.inspectionId;
-        const deletedInspection = await InspectionModel.findByIdAndRemove(inspectionId);
+        const deletedInspection = await InspectionModel.findOneAndDelete(inspectionId);
         if (!deletedInspection) {
             return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
         }

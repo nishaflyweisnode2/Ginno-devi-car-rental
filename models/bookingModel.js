@@ -6,6 +6,10 @@ const bookingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Car',
         },
+        mainCategory: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'MainCategory',
+        },
         category: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',
@@ -183,7 +187,7 @@ const bookingSchema = new mongoose.Schema(
         refundPreference: {
             type: String,
             enum: ['UPI', 'WALLET'],
-            default: 'UPI',
+            default: 'WALLET',
         },
         upiId: {
             type: String,

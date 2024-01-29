@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const adminCarPriceSchema = new mongoose.Schema({
-    mainCategory: [{
+    mainCategory: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'MainCategory',
-    }],
+    },
     car: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Car',

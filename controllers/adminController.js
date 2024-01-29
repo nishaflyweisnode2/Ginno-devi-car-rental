@@ -31,6 +31,7 @@ const CancelReason = require('../models/cancelReasonModel');
 const RefundCharge = require('../models/refunfChargeModel');
 const Refund = require('../models/refundModel');
 const Booking = require('../models/bookingModel');
+const Subscription = require('../models/subscription/subscriptionTenureModel');
 
 
 
@@ -2302,6 +2303,29 @@ exports.getPlanById = async (req, res) => {
     }
 };
 
+exports.getPlanByMainCategory = async (req, res) => {
+    try {
+        const mainCategory = req.params.mainCategory;
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const plans = await Plan.find({ mainCategory: mainCategory });
+
+        if (!plans || plans.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No plans found for the specified main category' });
+        }
+
+        return res.status(200).json({ status: 200, data: plans });
+    } catch (error) {
+        console.error('Error fetching plans by main category:', error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
 exports.updatePlan = async (req, res) => {
     try {
         const planId = req.params.id;
@@ -2845,5 +2869,81 @@ exports.getRefundStatusAndAmount = async (req, res) => {
             message: 'Server error while retrieving refund status and amount',
             data: null,
         });
+    }
+};
+
+exports.createSubscription = async (req, res) => {
+    try {
+        const { tenure, duration, status } = req.body;
+        const subscription = new Subscription({
+            tenure,
+            duration,
+            status
+        });
+        const savedSubscription = await subscription.save();
+        res.status(201).json(savedSubscription);
+    } catch (error) {
+        console.error('Error creating subscription:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getAllSubscriptions = async (req, res) => {
+    try {
+        const subscriptions = await Subscription.find();
+        return res.json({ status: 201, data: subscriptions });
+    } catch (error) {
+        console.error('Error fetching subscriptions:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getSubscriptionById = async (req, res) => {
+    try {
+        const subscriptionId = req.params.id;
+        const subscription = await Subscription.findById(subscriptionId);
+        if (!subscription) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+        return res.json({ status: 200, data: subscription });
+    } catch (error) {
+        console.error('Error fetching subscription by ID:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.updateSubscriptionById = async (req, res) => {
+    try {
+        const subscriptionId = req.params.id;
+        const { tenure, duration, status } = req.body;
+        const updatedSubscription = await Subscription.findByIdAndUpdate(
+            subscriptionId,
+            { tenure, duration, status },
+            { new: true }
+        );
+
+        if (!updatedSubscription) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+        return res.json({ status: 200, data: updatedSubscription });
+    } catch (error) {
+        console.error('Error updating subscription by ID:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.deleteSubscriptionById = async (req, res) => {
+    try {
+        const subscriptionId = req.params.id;
+
+        const subscription = await Subscription.findById(subscriptionId);
+        if (!subscription) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+        await Subscription.findByIdAndDelete(subscriptionId);
+        return res.json({ status: 200, message: 'Subscription deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting subscription by ID:', error);
+        return res.status(500).json({ error: 'Server error' });
     }
 };

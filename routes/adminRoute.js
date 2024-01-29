@@ -123,6 +123,7 @@ module.exports = (app) => {
     app.post('/api/v1/admin/plans', [authJwt.isAdmin], auth.createPlan);
     app.get('/api/v1/admin/plans', [authJwt.isAdmin], auth.getAllPlans);
     app.get('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.getPlanById);
+    app.get('/api/v1/admin/plans/mainCategory/:mainCategory', [authJwt.isAdmin], auth.getPlanByMainCategory);
     app.put('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.updatePlan);
     app.delete('/api/v1/admin/plans/:id', [authJwt.isAdmin], auth.deletePlanById);
     app.post('/api/v1/admin/admin-packages', [authJwt.isAdmin], auth.createAdminPackage);
@@ -152,5 +153,11 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/refund-charges/:id', [authJwt.isAdmin], auth.deleteRefundChargeById);
     app.put('/api/v1/admin/bookings/updatePaymentStatus/:bookingId', [authJwt.isAdmin], auth.updateRefundPaymentStatus);
     app.get('/api/v1/admin/booking/:bookingId/refund', [authJwt.isAdmin], auth.getRefundStatusAndAmount);
+    app.post('/api/v1/admin/subscriptions', [authJwt.isAdmin], auth.createSubscription);
+    app.get('/api/v1/admin/subscriptions', [authJwt.isAdmin], auth.getAllSubscriptions);
+    app.get('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.getSubscriptionById);
+    app.put('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.updateSubscriptionById);
+    app.delete('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.deleteSubscriptionById);
+
 
 }

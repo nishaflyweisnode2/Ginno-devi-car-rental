@@ -43,6 +43,9 @@ module.exports = (app) => {
     app.get('/api/v1/user/coupons/:id', [authJwt.verifyToken], auth.getCouponById);
     app.get('/api/v1/user/admin-packages', [authJwt.verifyToken], auth.getAllAdminPackages);
     app.get('/api/v1/user/admin-packages/:id', [authJwt.verifyToken], auth.getAdminPackageById);
+    app.get('/api/v1/user/plans', [authJwt.verifyToken], auth.getAllPlans);
+    app.get('/api/v1/user/plans/:id', [authJwt.verifyToken], auth.getPlanById);
+    app.get('/api/v1/user/plans/mainCategory/:mainCategory', [authJwt.verifyToken], auth.getPlanByMainCategory);
     app.get('/api/v1/user/car/availability', [authJwt.verifyToken], auth.checkCarAvailability);
     app.post("/api/v1/user/booking/create", [authJwt.verifyToken], auth.createBooking);
     app.get('/api/v1/user/bookings/user', [authJwt.verifyToken], auth.getBookingsByUser);
@@ -62,7 +65,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/cancel-reasons/:id', [authJwt.verifyToken], auth.getCancelReasonById);
     app.post('/api/v1/user/upload/image', [authJwt.verifyToken], overAllImage.array('image'), auth.uploadImage);
     app.post('/api/v1/user/inspections/exterior', [authJwt.verifyToken], auth.createInspectionExterior);
-    app.put('/api/v1/user/inspections/interior/:inspectionId', [authJwt.verifyToken], auth.updateInspectionInterior);
+    app.put('/api/v1/user/inspections/interior/:inspectionId', [authJwt.verifyToken], auth.updateCarInspectionById);
     app.get('/api/v1/user/inspections', [authJwt.verifyToken], auth.getAllInspections);
     app.get('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.getInspectionById);
     app.put('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.updateInspectionById);
