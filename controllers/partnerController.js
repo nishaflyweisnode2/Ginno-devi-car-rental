@@ -21,6 +21,10 @@ const AboutApps = require('../models/aboutAppModel');
 const Policy = require('../models/policiesModel');
 const AdminCarPrice = require('../models/adminCarPriceModel');
 const Booking = require('../models/bookingModel');
+const subscriptionCategoryModel = require('../models/subscription/subscriptionCategoryModel');
+const MainCategory = require('../models/rental/mainCategoryModel');
+const Category = require('../models/rental/categoryModel');
+const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
 
 
 
@@ -421,9 +425,60 @@ exports.getCityById = async (req, res) => {
     }
 };
 
+exports.getAllSubscriptionCategories = async (req, res) => {
+    try {
+        const categories = await SubscriptionCategory.find().populate('mainCategory');
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
+exports.getSubcategoriesByMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.id;
+
+        const mainCategory = await MainCategory.findById(mainCategoryId);
+
+        if (!mainCategory) {
+            return res.status(404).json({ status: 404, message: 'Main category not found' });
+        }
+
+        const subcategories = await SubscriptionCategory.find({ mainCategory: mainCategoryId }).populate('mainCategory');
+
+        const count = subcategories.length;
+
+        return res.status(200).json({ status: 200, data: count, subcategories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching subcategories', error: error.message });
+    }
+};
+
+exports.getSubscriptionCategoryById = async (req, res) => {
+    try {
+        const subscriptioncategoryId = req.params.subscriptioncategoryId;
+
+        const category = await SubscriptionCategory.findById(subscriptioncategoryId).populate('mainCategory');
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Subscription not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Subscription Category', error: error.message });
+    }
+};
+
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status } = req.body;
+        const { licenseNumber, brand, model, variant, bodyType, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -446,6 +501,11 @@ exports.createCar = async (req, res) => {
             return res.status(400).json({ message: 'ChassisNumber number already in use' });
         }
 
+        const checkBody = await subscriptionCategoryModel.findById(bodyType);
+        if (!checkBody) {
+            return res.status(404).json({ message: 'Car Body Type not found' });
+        }
+
         const checkCity = await City.findById(city);
         if (!checkCity) {
             return res.status(404).json({ message: 'City not found' });
@@ -462,6 +522,7 @@ exports.createCar = async (req, res) => {
             brand,
             model,
             variant,
+            bodyType,
             city,
             yearOfRegistration,
             fuelType,
@@ -552,6 +613,13 @@ exports.updateCarById = async (req, res) => {
             const checkCity = await City.findById(city);
             if (!checkCity) {
                 return res.status(404).json({ message: 'City not found' });
+            }
+        }
+
+        if (req.body.bodyType) {
+            const checkBody = await subscriptionCategoryModel.findById(bodyType);
+            if (!checkBody) {
+                return res.status(404).json({ message: 'Car Body Type not found' });
             }
         }
 

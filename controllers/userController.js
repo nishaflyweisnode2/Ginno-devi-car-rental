@@ -9,6 +9,7 @@ const City = require('../models/cityModel');
 const Brand = require('../models/brandModel');
 const Car = require('../models/carModel');
 const Review = require('../models/ratingModel');
+const HostReview = require('../models/hostRatingModel');
 const Policy = require('../models/policiesModel');
 const MainCategory = require('../models/rental/mainCategoryModel');
 const Category = require('../models/rental/categoryModel');
@@ -27,6 +28,8 @@ const RefundCharge = require('../models/refunfChargeModel');
 const Refund = require('../models/refundModel');
 const InspectionModel = require('../models/carInsceptionModel');
 const Image = require('../models/imageModel');
+const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingModel');
+const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
 
 
 
@@ -470,23 +473,31 @@ exports.createReview = async (req, res) => {
             return res.status(404).json({ message: 'Car not found' });
         }
 
-        if (rating < 0 || rating > 5) {
-            return res.status(400).json({ status: 400, message: 'Invalid rating. Rating should be between 0 and 5.', data: {} });
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid rating. Rating should be between 1 and 5.' });
         }
 
-        const newReview = await Review.create({ user: userId, car: carId, rating, comment });
+        const newReview = new Review({
+            user: userId,
+            car: carId,
+            rating,
+            comment
+        });
 
-        if (!car.reviews || !Array.isArray(car.reviews)) {
-            car.reviews = [];
-        }
+        await newReview.save();
 
-        newReview.numOfUserReviews = newReview.numOfUserReviews + 1;
+        const reviewsForCar = await Review.find({ car: carId });
+        const numOfUserReviews = reviewsForCar.length;
 
-        const totalRating = car.reviews.length > 0
-            ? car.reviews.reduce((sum, review) => sum + review.rating, 0)
-            : 0;
+        let totalRating = 0;
+        reviewsForCar.forEach(review => {
+            totalRating += review.rating;
+        });
 
-        newReview.averageRating = totalRating / newReview.numOfUserReviews;
+        const averageRating = totalRating / numOfUserReviews;
+
+        newReview.numOfUserReviews = numOfUserReviews;
+        newReview.averageRating = Math.round(averageRating);
 
         await newReview.save();
 
@@ -502,21 +513,108 @@ exports.getReviewsByCar = async (req, res) => {
         const { carId } = req.params;
 
         const car = await Car.findById(carId);
-
         if (!car) {
             return res.status(404).json({ status: 404, message: 'Car not found' });
         }
 
-        const reviews = await Review.findById(carId);
+        const reviews = await Review.find({ car: carId });
 
-        if (!reviews) {
-            return res.status(404).json({ status: 404, message: 'reviews not found' });
-        }
+        let totalRating = 0;
+        reviews.forEach(review => {
+            totalRating += review.rating;
+        });
+        const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
 
-        res.status(200).json({ status: 200, data: reviews });
+        res.status(200).json({ status: 200, data: { reviews, numOfUserReviews: reviews.length, averageRating } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createHostReview = async (req, res) => {
+    try {
+        const { carId, hostRating, hostComment } = req.body;
+
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (hostRating < 0 || hostRating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid hostRating. HostRating should be between 0 and 5.', data: {} });
+        }
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const existingReview = await HostReview.findOne({ user: userId, car: carId });
+        if (existingReview) {
+            return res.status(400).json({ status: 400, message: 'You have already reviewed this host' });
+        }
+
+        const review = new HostReview({
+            user: userId,
+            car: carId,
+            host: car.owner,
+            hostRating,
+            hostComment,
+        });
+
+        await review.save();
+
+        const reviewsForCar = await HostReview.find({ car: carId });
+        const numOfUserReviews = reviewsForCar.length;
+
+        let totalRating = 0;
+        reviewsForCar.forEach(review => {
+            totalRating += review.hostRating;
+        });
+
+        const averageRating = totalRating / numOfUserReviews;
+
+        review.numOfHostReviews = numOfUserReviews;
+        review.averageHostRating = Math.round(averageRating);
+
+        await review.save();
+
+        return res.status(201).json({ status: 201, message: 'Host review created successfully', data: review });
+    } catch (error) {
+        console.error('Error creating host review:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.getHostReviewById = async (req, res) => {
+    try {
+        const { hostId } = req.params;
+
+        const user = await User.findById(hostId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ owner: hostId });
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const reviews = await HostReview.find({ owner: hostId });
+
+        let totalRating = 0;
+        reviews.forEach(review => {
+            totalRating += review.hostRating;
+        });
+        const averageHostRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+        res.status(200).json({ status: 200, data: { reviews, numOfUserReviews: reviews.length, averageHostRating } });
+    } catch (error) {
+        console.error('Error fetching host review by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
     }
 };
 
@@ -1977,5 +2075,116 @@ exports.deleteInspectionById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllOptions = async (req, res) => {
+    try {
+        const options = await SubscriptionVsBuying.find();
+        return res.status(200).json({ status: 200, message: 'Options fetched successfully', data: options });
+    } catch (error) {
+        console.error('Error fetching subscription vs buying options:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getOptionById = async (req, res) => {
+    try {
+        const optionId = req.params.id;
+        const option = await SubscriptionVsBuying.findById(optionId);
+        if (!option) {
+            return res.status(404).json({ status: 404, message: 'Option not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Option fetched successfully', data: option });
+    } catch (error) {
+        console.error('Error fetching subscription vs buying option by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllSubScriptionFAQ = async (req, res) => {
+    try {
+        const faqs = await SubScriptionFAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getSubScriptionFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const faq = await SubScriptionFAQ.findById(faqId);
+
+        if (!faq) {
+            return res.status(404).json({ status: 404, message: 'SubScription FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: faq });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getMostSubscribeCar = async (req, res) => {
+    try {
+        const bestSubscribedCars = await HostReview.aggregate([
+            {
+                $group: {
+                    _id: '$car',
+                    totalReviews: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { totalReviews: -1 }
+            }
+        ]);
+
+        const bestCarIds = bestSubscribedCars.map(car => car._id);
+
+        const cars = await Car.find({ _id: { $in: bestCarIds } });
+
+        return res.status(200).json({ status: 200, data: cars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarsByMainCategory = async (req, res) => {
+    try {
+        const { mainCategory } = req.params;
+
+        const checkMainCategory = await MainCategory.findById(mainCategory);
+        if (!checkMainCategory) {
+            return res.status(404).json({ status: 404, message: 'MainCategory not found' });
+        }
+
+        const cars = await Car.find({ mainCategory });
+
+        return res.status(200).json({ status: 200, data: cars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarsByCategory = async (req, res) => {
+    try {
+        const { Category } = req.params;
+
+        const checkCategory = await Category.findById(Category);
+        if (!checkCategory) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        const cars = await Car.find({ Category });
+
+        return res.status(200).json({ status: 200, data: cars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

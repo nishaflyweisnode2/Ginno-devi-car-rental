@@ -25,6 +25,9 @@ module.exports = (app) => {
     app.put("/api/v1/partner/updateLocation", [authJwt.isPartner], auth.updateLocation);
     app.get("/api/v1/partner/city/cities", [authJwt.isPartner], auth.getAllCities);
     app.get("/api/v1/partner/city/cities/:id", [authJwt.isPartner], auth.getCityById);
+    app.get('/api/v1/partner/subscriptionCategory', [authJwt.isPartner], auth.getAllSubscriptionCategories);
+    app.get('/api/v1/partner/mainCategories/:id/subcategories', [authJwt.isPartner], auth.getSubcategoriesByMainCategory);
+    app.get('/api/v1/partner/subscriptionCategory/:subscriptioncategoryId', [authJwt.isPartner], auth.getSubscriptionCategoryById);
     app.post('/api/v1/partner/cars/add', [authJwt.isPartner], auth.createCar);
     app.get('/api/v1/partner/cars', [authJwt.isPartner], auth.getAllCars);
     app.get('/api/v1/partner/cars/:carId', [authJwt.isPartner], auth.getCarById);

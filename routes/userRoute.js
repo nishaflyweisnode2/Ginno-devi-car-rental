@@ -29,6 +29,8 @@ module.exports = (app) => {
     app.get('/api/v1/user/cars/:carId', [authJwt.verifyToken], auth.getCarById);
     app.post('/api/v1/user/review/createReview', [authJwt.verifyToken], auth.createReview);
     app.get('/api/v1/user/review/getReviewsByCar/:carId', auth.getReviewsByCar);
+    app.post('/api/v1/user/host/review', [authJwt.verifyToken], auth.createHostReview);
+    app.get('/api/v1/user/host/review/:hostId', auth.getHostReviewById);
     app.get('/api/v1/user/mainCategories', [authJwt.verifyToken], auth.getAllMainCategories);
     app.get('/api/v1/user/mainCategories/:mainCategoryId', [authJwt.verifyToken], auth.getMainCategoryById);
     app.get('/api/v1/user/categories', [authJwt.verifyToken], auth.getAllCategories);
@@ -70,7 +72,13 @@ module.exports = (app) => {
     app.get('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.getInspectionById);
     app.put('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.updateInspectionById);
     app.delete('/api/v1/user/inspections/:inspectionId', [authJwt.verifyToken], auth.deleteInspectionById);
-
+    app.get('/api/v1/user/options', [authJwt.verifyToken], auth.getAllOptions);
+    app.get('/api/v1/user/options/:id', [authJwt.verifyToken], auth.getOptionById);
+    app.get('/api/v1/user/subScription-faq', [authJwt.verifyToken], auth.getAllSubScriptionFAQ);
+    app.get('/api/v1/user/subScription-faq/:id', [authJwt.verifyToken], auth.getSubScriptionFAQById);
+    app.get('/api/v1/user/best-subscribed-cars', [authJwt.verifyToken], auth.getMostSubscribeCar);
+    app.get('/api/v1/user/cars-by-main-category/:mainCategory', [authJwt.verifyToken], auth.getCarsByMainCategory);
+    app.get('/api/v1/user/cars-by-category/:category', [authJwt.verifyToken], auth.getCarsByCategory);
 
 
 }

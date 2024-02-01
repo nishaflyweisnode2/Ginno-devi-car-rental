@@ -19,6 +19,10 @@ const carSchema = new mongoose.Schema({
     variant: {
         type: String,
     },
+    bodyType: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubscriptionCategory',
+    },
     city: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'City',

@@ -32,6 +32,8 @@ const RefundCharge = require('../models/refunfChargeModel');
 const Refund = require('../models/refundModel');
 const Booking = require('../models/bookingModel');
 const Subscription = require('../models/subscription/subscriptionTenureModel');
+const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingModel');
+const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
 
 
 
@@ -2945,5 +2947,138 @@ exports.deleteSubscriptionById = async (req, res) => {
     } catch (error) {
         console.error('Error deleting subscription by ID:', error);
         return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.createOption = async (req, res) => {
+    try {
+        const option = new SubscriptionVsBuying(req.body);
+        await option.save();
+        return res.status(201).json({ status: 201, message: 'Option created successfully', data: option });
+    } catch (error) {
+        console.error('Error creating subscription vs buying option:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllOptions = async (req, res) => {
+    try {
+        const options = await SubscriptionVsBuying.find();
+        return res.status(200).json({ status: 200, message: 'Options fetched successfully', data: options });
+    } catch (error) {
+        console.error('Error fetching subscription vs buying options:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getOptionById = async (req, res) => {
+    try {
+        const optionId = req.params.id;
+        const option = await SubscriptionVsBuying.findById(optionId);
+        if (!option) {
+            return res.status(404).json({ status: 404, message: 'Option not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Option fetched successfully', data: option });
+    } catch (error) {
+        console.error('Error fetching subscription vs buying option by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.updateOption = async (req, res) => {
+    try {
+        const optionId = req.params.id;
+        const updates = req.body;
+        const option = await SubscriptionVsBuying.findByIdAndUpdate(optionId, updates, { new: true });
+        if (!option) {
+            return res.status(404).json({ status: 404, message: 'Option not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Option updated successfully', data: option });
+    } catch (error) {
+        console.error('Error updating subscription vs buying option:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.deleteOption = async (req, res) => {
+    try {
+        const optionId = req.params.id;
+        const option = await SubscriptionVsBuying.findByIdAndDelete(optionId);
+        if (!option) {
+            return res.status(404).json({ status: 404, message: 'Option not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Option deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting subscription vs buying option:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.createSubScriptionFAQ = async (req, res) => {
+    try {
+        const { question, answer } = req.body;
+        const newFAQ = await SubScriptionFAQ.create({ question, answer });
+        return res.status(201).json({ status: 201, data: newFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllSubScriptionFAQ = async (req, res) => {
+    try {
+        const faqs = await SubScriptionFAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getSubScriptionFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const faq = await SubScriptionFAQ.findById(faqId);
+
+        if (!faq) {
+            return res.status(404).json({ status: 404, message: 'SubScription FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: faq });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateSubScriptionFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const updatedFAQ = await SubScriptionFAQ.findByIdAndUpdate(faqId, { $set: req.body }, { new: true });
+
+        if (!updatedFAQ) {
+            return res.status(404).json({ status: 404, message: 'SubScription FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteSubScriptionFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const deletedFAQ = await SubScriptionFAQ.findByIdAndDelete(faqId);
+
+        if (!deletedFAQ) {
+            return res.status(404).json({ status: 404, message: 'SubScription FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: deletedFAQ });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };

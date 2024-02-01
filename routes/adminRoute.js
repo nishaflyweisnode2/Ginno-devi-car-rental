@@ -158,6 +158,16 @@ module.exports = (app) => {
     app.get('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.getSubscriptionById);
     app.put('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.updateSubscriptionById);
     app.delete('/api/v1/admin/subscriptions/:id', [authJwt.isAdmin], auth.deleteSubscriptionById);
+    app.post('/api/v1/admin/options', [authJwt.isAdmin], auth.createOption);
+    app.get('/api/v1/admin/options', [authJwt.isAdmin], auth.getAllOptions);
+    app.get('/api/v1/admin/options/:id', [authJwt.isAdmin], auth.getOptionById);
+    app.put('/api/v1/admin/options/:id', [authJwt.isAdmin], auth.updateOption);
+    app.delete('/api/v1/admin/options/:id', [authJwt.isAdmin], auth.deleteOption);
+    app.post('/api/v1/admin/subScription-faq/create', [authJwt.isAdmin], auth.createSubScriptionFAQ);
+    app.get('/api/v1/admin/subScription-faq', [authJwt.isAdmin], auth.getAllSubScriptionFAQ);
+    app.get('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.getSubScriptionFAQById);
+    app.put('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.updateSubScriptionFAQById);
+    app.delete('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.deleteSubScriptionFAQById);
 
 
 }
