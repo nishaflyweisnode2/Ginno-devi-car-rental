@@ -30,6 +30,7 @@ const InspectionModel = require('../models/carInsceptionModel');
 const Image = require('../models/imageModel');
 const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingModel');
 const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
+const SharedCar = require('../models/shareCarModel');
 
 
 
@@ -1094,6 +1095,112 @@ exports.checkCarAvailability = async (req, res) => {
         }
 
         return res.status(200).json({ status: 200, data: availableCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
+    }
+};
+
+exports.checkSharingCarAvailability1 = async (req, res) => {
+    try {
+        const { leavingFrom, goingTo, date, seat } = req.query;
+
+        const leavingFromCoordinates = {
+            type: "Point",
+            coordinates: leavingFrom.split(',').map(parseFloat)
+        };
+        console.log("leavingFromCoordinates", leavingFromCoordinates);
+
+        const goingToCoordinates = {
+            type: "Point",
+            coordinates: goingTo.split(',').map(parseFloat)
+        };
+        console.log("goingToCoordinates", goingToCoordinates);
+
+        const sharedCars = await SharedCar.find({
+            type: "Sharing",
+            pickupCoordinates: leavingFromCoordinates,
+            dropCoordinates: goingToCoordinates,
+            availableFrom: date,
+            noOfPassenger: { $gte: seat }
+        });
+
+        console.log("sharedCars", sharedCars);
+
+        if (sharedCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No shared cars found for the specified route and date.',
+            });
+        }
+
+        const availableCars = [];
+
+        for (const sharedCar of sharedCars) {
+            const carId = sharedCar.car;
+
+            const car = await Car.findOne({
+                _id: carId,
+            });
+
+            if (car) {
+                availableCars.push(car);
+            }
+        }
+
+        if (availableCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No available cars found for the specified route, date, and seat count.',
+            });
+        }
+
+        return res.status(200).json({ status: 200, data: availableCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
+    }
+};
+
+exports.checkSharingCarAvailability = async (req, res) => {
+    try {
+        const { leavingFrom, goingTo, date, seat } = req.query;
+
+        const leavingFromCoordinates = {
+            type: "Point",
+            coordinates: leavingFrom.split(',').map(parseFloat)
+        };
+
+        const goingToCoordinates = {
+            type: "Point",
+            coordinates: goingTo.split(',').map(parseFloat)
+        };
+
+        const sharedCars = await SharedCar.find({
+            type: "Sharing",
+            pickupCoordinates: leavingFromCoordinates,
+            dropCoordinates: goingToCoordinates,
+            availableFrom: date,
+            noOfPassenger: { $gte: seat }
+        });
+
+        if (sharedCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No shared cars found for the specified route and date.',
+            });
+        }
+
+        const carIds = sharedCars.map(car => car.car);
+
+        const cars = await Car.find({ _id: { $in: carIds } });
+
+        const combinedData = sharedCars.map(sharedCar => {
+            const carDetails = cars.find(car => car._id.toString() === sharedCar.car.toString());
+            return { ...sharedCar.toObject(), carDetails };
+        });
+
+        return res.status(200).json({ status: 200, data: combinedData });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });

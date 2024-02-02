@@ -153,6 +153,22 @@ const carSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isRental: {
+        type: Boolean,
+        default: false,
+    },
+    isSubscription: {
+        type: Boolean,
+        default: false,
+    },
+    isGovernmentTendor: {
+        type: Boolean,
+        default: false,
+    },
+    isSharing: {
+        type: Boolean,
+        default: false,
+    },
     pickup: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Location',

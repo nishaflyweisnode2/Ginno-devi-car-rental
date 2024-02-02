@@ -25,6 +25,7 @@ const subscriptionCategoryModel = require('../models/subscription/subscriptionCa
 const MainCategory = require('../models/rental/mainCategoryModel');
 const Category = require('../models/rental/categoryModel');
 const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
+const SharedCar = require('../models/shareCarModel');
 
 
 
@@ -37,6 +38,15 @@ const reffralCode = async () => {
         OTP += digits[Math.floor(Math.random() * 36)];
     }
     return OTP;
+}
+
+const generateBookingCode = async () => {
+    const digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let code = '';
+    for (let i = 0; i < 7; i++) {
+        code += digits[Math.floor(Math.random() * digits.length)];
+    }
+    return code;
 }
 
 exports.signup = async (req, res) => {
@@ -2431,5 +2441,504 @@ exports.approveTripEndDetailsResendOTP = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).send({ status: 500, message: "Server error" + error.message });
+    }
+};
+
+exports.getAllMainCategories = async (req, res) => {
+    try {
+        const categories = await MainCategory.find();
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching MainCategories', error: error.message });
+    }
+};
+
+exports.getMainCategoryById = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.mainCategoryId;
+
+        const category = await MainCategory.findById(mainCategoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching Main Category', error: error.message });
+    }
+};
+
+exports.getAllCategories = async (req, res) => {
+    try {
+        const categories = await Category.find().populate('mainCategory');
+
+        const count = categories.length;
+
+        return res.status(200).json({ status: 200, data: count, categories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching categories', error: error.message });
+    }
+};
+
+exports.getCategoryByMainCategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.id;
+
+        const mainCategory = await MainCategory.findById(mainCategoryId);
+
+        if (!mainCategory) {
+            return res.status(404).json({ status: 404, message: 'Main category not found' });
+        }
+
+        const subcategories = await Category.find({ mainCategory: mainCategoryId }).populate('mainCategory');
+
+        const count = subcategories.length;
+
+        return res.status(200).json({ status: 200, data: count, subcategories });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching subcategories', error: error.message });
+    }
+};
+
+exports.getCategoryById = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await Category.findById(categoryId).populate('mainCategory');
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Category not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Error fetching category', error: error.message });
+    }
+};
+
+exports.createRentalSharedCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { mainCategory, availableFrom, availableTo, startTime, endTime } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const sharedCar = await SharedCar.create({
+            owner: partnerId,
+            mainCategory,
+            availableFrom,
+            availableTo,
+            startTime,
+            endTime,
+            type: "Rental",
+            uniqueBookinId: await generateBookingCode()
+        });
+        return res.status(201).json({ status: 201, data: sharedCar });
+    } catch (error) {
+        console.error('Error creating shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.createSubscriptionSharedCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { mainCategory, availableFrom, availableTo, startTime, endTime } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const sharedCar = await SharedCar.create({
+            owner: partnerId,
+            mainCategory,
+            availableFrom,
+            availableTo,
+            startTime,
+            endTime,
+            type: "Subscription",
+            uniqueBookinId: await generateBookingCode()
+        });
+        return res.status(201).json({ status: 201, data: sharedCar });
+    } catch (error) {
+        console.error('Error creating shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.createGovernmentTenderSharedCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { mainCategory, availableFrom, availableTo, startTime, endTime } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const sharedCar = await SharedCar.create({
+            owner: partnerId,
+            mainCategory,
+            availableFrom,
+            availableTo,
+            startTime,
+            endTime,
+            type: "GovernmentTendor",
+            uniqueBookinId: await generateBookingCode()
+        });
+        return res.status(201).json({ status: 201, data: sharedCar });
+    } catch (error) {
+        console.error('Error creating shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.createSharingSharedCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { mainCategory, car, pickupLocation, dropOffLocation, pickupCoordinates, dropCoordinates, stopCity, availableFrom, passengerPickupTime, noOfPassenger, seatprice, route } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const category = await MainCategory.findById(mainCategory);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Main Category not found' });
+        }
+
+        const checkCar = await Car.findById(car);
+        if (!checkCar) {
+            return res.status(404).json({ status: 404, message: 'car not found' });
+        }
+
+        if (((checkCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Car Not exist' });
+        }
+
+        const checkPickupLocation = await City.findById(pickupLocation);
+        if (!checkPickupLocation) {
+            return res.status(404).json({ status: 404, message: 'location not found' });
+        }
+
+        // if (((checkLocation.user).toString() == partnerId) == false) {
+        //     return res.status(403).json({ status: 403, message: 'Forbidden: Your Location Not exist' });
+        // }
+
+        const checkDropLocation = await City.findById(dropOffLocation);
+        if (!checkDropLocation) {
+            return res.status(404).json({ status: 404, message: 'location not found' });
+        }
+
+        // if (((checkLocation.user).toString() == partnerId) == false) {
+        //     return res.status(403).json({ status: 403, message: 'Forbidden: Your Location Not exist' });
+        // }
+
+
+        const sharedCar = await SharedCar.create({
+            owner: partnerId,
+            mainCategory,
+            car,
+            pickupLocation,
+            dropOffLocation,
+            pickupCoordinates,
+            dropCoordinates,
+            stopCity,
+            availableFrom,
+            passengerPickupTime,
+            seatprice,
+            route,
+            noOfPassenger,
+            type: "Sharing",
+            uniqueBookinId: await generateBookingCode()
+        });
+
+        checkCar.isSharing = true;
+        await checkCar.save();
+
+        return res.status(201).json({ status: 201, data: sharedCar });
+    } catch (error) {
+        console.error('Error creating shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllSharedCars = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const sharedCars = await SharedCar.find({ owner: partnerId }).populate('mainCategory car owner location pickupLocation dropOffLocation');
+        return res.status(200).json({ status: 200, data: sharedCars });
+    } catch (error) {
+        console.error('Error fetching shared cars:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getSharedCarById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sharedCar = await SharedCar.findById(id).populate('mainCategory car owner location pickupLocation dropOffLocation');
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+        return res.status(200).json({ status: 200, data: sharedCar });
+    } catch (error) {
+        console.error('Error fetching shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.updateSharedCarById = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const sharedCar = await SharedCar.findById(id);
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+
+        if (sharedCar.owner.toString() !== partnerId) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: You are not allowed to update this shared car' });
+        }
+
+        const updatedSharedCar = await SharedCar.findByIdAndUpdate(id, req.body, { new: true });
+
+        return res.status(200).json({ status: 200, data: updatedSharedCar });
+    } catch (error) {
+        console.error('Error updating shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.deleteSharedCarById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedSharedCar = await SharedCar.findByIdAndDelete(id);
+        if (!deletedSharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Shared car deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.addRetntalLocationAndCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+        const { car, location } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const checkCar = await Car.findById(car);
+        if (!checkCar) {
+            return res.status(404).json({ status: 404, message: 'car not found' });
+        }
+
+        if (((checkCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Car Not exist' });
+        }
+
+        const checkLocation = await Location.findById(location);
+        if (!checkLocation) {
+            return res.status(404).json({ status: 404, message: 'location not found' });
+        }
+
+        if (((checkLocation.user).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Location Not exist' });
+        }
+
+        const sharedCar = await SharedCar.findById(id);
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+
+        if (((sharedCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: You are not allowed to update this shared car' });
+        }
+
+        const updatedSharedCar = await SharedCar.findByIdAndUpdate(id, { car: car, location: location, }, { new: true });
+
+        checkCar.isRental = true;
+        await checkCar.save();
+
+        res.status(200).json({ status: 200, message: 'Shared car updated successfully', data: updatedSharedCar });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.addSubscriptionLocationAndCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+        const { car, location } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const checkCar = await Car.findById(car);
+        if (!checkCar) {
+            return res.status(404).json({ status: 404, message: 'car not found' });
+        }
+
+        if (((checkCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Car Not exist' });
+        }
+
+        const checkLocation = await Location.findById(location);
+        if (!checkLocation) {
+            return res.status(404).json({ status: 404, message: 'location not found' });
+        }
+
+        if (((checkLocation.user).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Location Not exist' });
+        }
+
+        const sharedCar = await SharedCar.findById(id);
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+
+        if (((sharedCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: You are not allowed to update this shared car' });
+        }
+
+        const updatedSharedCar = await SharedCar.findByIdAndUpdate(id, { car: car, location: location, }, { new: true });
+
+        checkCar.isSubscription = true;
+        await checkCar.save();
+
+        res.status(200).json({ status: 200, message: 'Shared car updated successfully', data: updatedSharedCar });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.addGovernmentTendorLocationAndCar = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { id } = req.params;
+        const { car, location } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const checkCar = await Car.findById(car);
+        if (!checkCar) {
+            return res.status(404).json({ status: 404, message: 'car not found' });
+        }
+
+        if (((checkCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Car Not exist' });
+        }
+
+        const checkLocation = await Location.findById(location);
+        if (!checkLocation) {
+            return res.status(404).json({ status: 404, message: 'location not found' });
+        }
+
+        if (((checkLocation.user).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: Your Location Not exist' });
+        }
+
+        const sharedCar = await SharedCar.findById(id);
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+
+        if (((sharedCar.owner).toString() == partnerId) == false) {
+            return res.status(403).json({ status: 403, message: 'Forbidden: You are not allowed to update this shared car' });
+        }
+
+        const updatedSharedCar = await SharedCar.findByIdAndUpdate(id, { car: car, location: location, }, { new: true });
+
+        checkCar.isGovernmentTendor = true;
+        await checkCar.save();
+
+        res.status(200).json({ status: 200, message: 'Shared car updated successfully', data: updatedSharedCar });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateCarFlags = async (req, res) => {
+    try {
+        const { carId } = req.params;
+        const { isRental, isSubscription, isGovernmentTendor, isSharing } = req.body;
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        car.isRental = isRental !== undefined ? isRental : car.isRental;
+        car.isSubscription = isSubscription !== undefined ? isSubscription : car.isSubscription;
+        car.isGovernmentTendor = isGovernmentTendor !== undefined ? isGovernmentTendor : car.isGovernmentTendor;
+        car.isSharing = isSharing !== undefined ? isSharing : car.isSharing;
+
+        await car.save();
+
+        return res.status(200).json({ status: 200, message: 'Car flags updated successfully', data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

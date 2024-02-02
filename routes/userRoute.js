@@ -49,6 +49,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/plans/:id', [authJwt.verifyToken], auth.getPlanById);
     app.get('/api/v1/user/plans/mainCategory/:mainCategory', [authJwt.verifyToken], auth.getPlanByMainCategory);
     app.get('/api/v1/user/car/availability', [authJwt.verifyToken], auth.checkCarAvailability);
+    app.get('/api/v1/user/car/sharing/availability', [authJwt.verifyToken], auth.checkSharingCarAvailability);
     app.post("/api/v1/user/booking/create", [authJwt.verifyToken], auth.createBooking);
     app.get('/api/v1/user/bookings/user', [authJwt.verifyToken], auth.getBookingsByUser);
     app.get('/api/v1/user/bookings/user/:bookingId', [authJwt.verifyToken], auth.getBookingsById);

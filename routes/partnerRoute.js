@@ -99,5 +99,23 @@ module.exports = (app) => {
     app.put('/api/v1/partner/bookings/:bookingId/trip-end-details', [authJwt.isPartner], auth.updateTripEndDetails);
     app.post("/api/v1/partner/bookings/trip-end-details/verify/:bookingId", [authJwt.isPartner], auth.approveTripEndDetailsVerifyOtp);
     app.post("/api/v1/partner/bookings/trip-end-details/resendOtp/:id", [authJwt.isPartner], auth.approveTripEndDetailsResendOTP);
+    app.get('/api/v1/partner/mainCategories', [authJwt.isPartner], auth.getAllMainCategories);
+    app.get('/api/v1/partner/mainCategories/:mainCategoryId', [authJwt.isPartner], auth.getMainCategoryById);
+    app.get('/api/v1/partner/categories', [authJwt.isPartner], auth.getAllCategories);
+    app.get('/api/v1/partner/mainCategories/:id/category', [authJwt.isPartner], auth.getCategoryByMainCategory);
+    app.get('/api/v1/partner/categories/:categoryId', [authJwt.isPartner], auth.getCategoryById);
+    app.post('/api/v1/partner/rental/shared/cars', [authJwt.isPartner], auth.createRentalSharedCar);
+    app.post('/api/v1/partner/subscription/shared/cars', [authJwt.isPartner], auth.createSubscriptionSharedCar);
+    app.post('/api/v1/partner/governmentTendor/shared/cars', [authJwt.isPartner], auth.createGovernmentTenderSharedCar);
+    app.post('/api/v1/partner/sharing/shared/cars', [authJwt.isPartner], auth.createSharingSharedCar);
+    app.get('/api/v1/partner/shared-cars', [authJwt.isPartner], auth.getAllSharedCars);
+    app.get('/api/v1/partner/shared-cars/:id', [authJwt.isPartner], auth.getSharedCarById);
+    app.put('/api/v1/partner/shared-cars/:id', [authJwt.isPartner], auth.updateSharedCarById);
+    app.delete('/api/v1/partner/shared-cars/:id', [authJwt.isPartner], auth.deleteSharedCarById);
+    app.put('/api/v1/partner/rental/shared-cars/add-Car-location/:id', [authJwt.isPartner], auth.addRetntalLocationAndCar);
+    app.put('/api/v1/partner/subscription/shared-cars/add-Car-location/:id', [authJwt.isPartner], auth.addSubscriptionLocationAndCar);
+    app.put('/api/v1/partner/governmentTendor/shared-cars/add-Car-location/:id', [authJwt.isPartner], auth.addGovernmentTendorLocationAndCar);
+    app.put('/api/v1/partner/cars/:carId/update-flags', [authJwt.isPartner], auth.updateCarFlags);
+
 
 }
