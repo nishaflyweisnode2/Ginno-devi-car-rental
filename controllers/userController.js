@@ -31,6 +31,10 @@ const Image = require('../models/imageModel');
 const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingModel');
 const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
 const SharedCar = require('../models/shareCarModel');
+const CallUs = require('../models/callUsModel');
+const Feedback = require('../models/feedbackModel');
+const FAQ = require('../models/faqModel');
+const Transaction = require('../models/transctionModel');
 
 
 
@@ -442,7 +446,7 @@ exports.getAllCars = async (req, res) => {
         return res.status(200).json({ status: 200, data: partnerCars });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
 
@@ -455,7 +459,7 @@ exports.getCarById = async (req, res) => {
         return res.status(200).json({ status: 200, data: car });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
 
@@ -1109,67 +1113,6 @@ exports.checkSharingCarAvailability1 = async (req, res) => {
             type: "Point",
             coordinates: leavingFrom.split(',').map(parseFloat)
         };
-        console.log("leavingFromCoordinates", leavingFromCoordinates);
-
-        const goingToCoordinates = {
-            type: "Point",
-            coordinates: goingTo.split(',').map(parseFloat)
-        };
-        console.log("goingToCoordinates", goingToCoordinates);
-
-        const sharedCars = await SharedCar.find({
-            type: "Sharing",
-            pickupCoordinates: leavingFromCoordinates,
-            dropCoordinates: goingToCoordinates,
-            availableFrom: date,
-            noOfPassenger: { $gte: seat }
-        });
-
-        console.log("sharedCars", sharedCars);
-
-        if (sharedCars.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                message: 'No shared cars found for the specified route and date.',
-            });
-        }
-
-        const availableCars = [];
-
-        for (const sharedCar of sharedCars) {
-            const carId = sharedCar.car;
-
-            const car = await Car.findOne({
-                _id: carId,
-            });
-
-            if (car) {
-                availableCars.push(car);
-            }
-        }
-
-        if (availableCars.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                message: 'No available cars found for the specified route, date, and seat count.',
-            });
-        }
-
-        return res.status(200).json({ status: 200, data: availableCars });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
-    }
-};
-
-exports.checkSharingCarAvailability = async (req, res) => {
-    try {
-        const { leavingFrom, goingTo, date, seat } = req.query;
-
-        const leavingFromCoordinates = {
-            type: "Point",
-            coordinates: leavingFrom.split(',').map(parseFloat)
-        };
 
         const goingToCoordinates = {
             type: "Point",
@@ -1197,6 +1140,86 @@ exports.checkSharingCarAvailability = async (req, res) => {
 
         const combinedData = sharedCars.map(sharedCar => {
             const carDetails = cars.find(car => car._id.toString() === sharedCar.car.toString());
+            return { ...sharedCar.toObject(), carDetails };
+        });
+
+        return res.status(200).json({ status: 200, data: combinedData });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
+    }
+};
+
+exports.checkSharingCarAvailability = async (req, res) => {
+    try {
+        const { leavingFrom, goingTo, date, seat } = req.query;
+
+        const leavingFromCoordinates = {
+            type: "Point",
+            coordinates: leavingFrom.split(',').map(parseFloat)
+        };
+
+        const goingToCoordinates = {
+            type: "Point",
+            coordinates: goingTo.split(',').map(parseFloat)
+        };
+        console.log("date", date);
+        const sharedCars = await SharedCar.find({
+            type: "Sharing",
+            pickupCoordinates: leavingFromCoordinates,
+            dropCoordinates: goingToCoordinates,
+            availableFrom: date,
+            noOfPassenger: { $gte: seat }
+        });
+
+        if (sharedCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No shared cars found for the specified route and date.',
+            });
+        }
+
+        const carIds = sharedCars.map(car => car.car);
+
+        const bookedCars = await Booking.find({
+            $and: [
+                {
+                    $or: [
+                        { pickupDate: date },
+                    ],
+                },
+                {
+                    $or: [
+                        { dropOffDate: date },
+                    ],
+                },
+                {
+                    $or: [
+                        { status: 'PENDING', isTripCompleted: false },
+                        { isSubscription: false },
+                        { isTimeExtended: true, timeExtendedDropOffTime: { $gte: date, $lte: date } },
+                    ],
+                },
+            ],
+        });
+        console.log("bookedCars", bookedCars);
+        const bookedCarIds = bookedCars.map(booking => booking.car);
+
+        const availableCarIds = carIds.filter(carId => !bookedCarIds.includes(carId));
+
+        const availableCars = await Car.find(
+            {
+                _id: { $in: availableCarIds },
+                isSharing: true
+            }
+        );
+
+        if (availableCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No shared cars found.', });
+        }
+
+        const combinedData = sharedCars.map(sharedCar => {
+            const carDetails = availableCars.find(car => car._id.toString() === sharedCar.car.toString());
             return { ...sharedCar.toObject(), carDetails };
         });
 
@@ -1416,6 +1439,8 @@ exports.createBooking = async (req, res) => {
                 uniqueBookinId: await generateBookingCode()
             });
 
+            user.coin = carExist.quackCoin
+            await user.save();
             const welcomeMessage = `Welcome, ${user.userName}! Thank you for Booking, your Booking details ${newBooking}.`;
             const welcomeNotification = new Notification({
                 recipient: user._id,
@@ -1424,6 +1449,15 @@ exports.createBooking = async (req, res) => {
             });
             await welcomeNotification.save();
 
+            const newTransaction = new Transaction({
+                user: userId,
+                amount: totalPriceWithAccessories,
+                type: 'Booking',
+                details: 'Booking creation',
+                dr: true
+            });
+
+            await newTransaction.save();
 
             return res.status(201).json({ status: 201, message: 'Booking created successfully', data: newBooking });
 
@@ -1483,6 +1517,94 @@ async function checkBikeAvailability(carId, pickupDate, dropOffDate, pickupTime,
 
     return existingBookings.length === 0;
 }
+
+exports.createBookingForSharingCar = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId, mainCategory, leavingFrom, goingTo, date, seat } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isVerified === false) {
+            return res.status(404).json({ status: 404, message: 'User can not book Car first approved account by admin', data: null });
+        }
+
+        const carExist = await Car.findById(carId);
+        if (!carExist) {
+            return res.status(400).json({ status: 400, message: 'Car not available', data: null });
+        }
+
+        const checkMainCategory = await MainCategory.findById(mainCategory);
+        if (!checkMainCategory) {
+            return res.status(404).json({ status: 404, message: 'MainCategory not found' });
+        }
+
+        const existingBooking = await Booking.findOne({
+            carId,
+            mainCategory,
+            'pickupCoordinates.coordinates': leavingFrom,
+            'dropCoordinates.coordinates': goingTo,
+            date,
+            seat
+        });
+
+        if (existingBooking) {
+            return res.status(400).json({ status: 400, message: 'Booking with the same details already exists', data: null });
+        }
+
+        const adminCarPrice = await SharedCar.findOne({ car: carId, mainCategory: mainCategory });
+        console.log("adminCarPrice", adminCarPrice);
+        if (!adminCarPrice) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+
+        let rentalPrice = adminCarPrice.seatprice;
+
+        console.log("rentalPrice", rentalPrice);
+
+
+        const totalPrice = rentalPrice * seat;
+
+        console.log("totalPrice", totalPrice);
+
+        if (isNaN(totalPrice) || totalPrice < 0) {
+            return res.status(400).json({ status: 400, message: 'Invalid totalPrice', data: null });
+        }
+
+        const roundedTotalPrice = Math.round(totalPrice);
+
+        const newBooking = new Booking({
+            user: user._id,
+            car: carId,
+            mainCategory,
+            'pickupCoordinates.type': 'Point',
+            'pickupCoordinates.coordinates': leavingFrom,
+            'dropCoordinates.type': 'Point',
+            'dropCoordinates.coordinates': goingTo,
+            date,
+            seat,
+            totalPrice: roundedTotalPrice
+        });
+
+        await newBooking.save();
+
+        const welcomeMessage = `Welcome, ${user.userName}! Thank you for Booking, your Booking details ${newBooking}.`;
+        const welcomeNotification = new Notification({
+            recipient: user._id,
+            content: welcomeMessage,
+            type: 'Booking',
+        });
+        await welcomeNotification.save();
+
+        return res.status(201).json({ status: 201, message: 'Booking created successfully', data: newBooking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while creating the booking', error: error.message });
+    }
+};
 
 exports.getBookingsByUser = async (req, res) => {
     try {
@@ -1630,9 +1752,20 @@ exports.applyCouponToBooking = async (req, res) => {
     try {
         const { bookingId, couponCode } = req.body;
 
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
         const booking = await Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.isQuackCoinApplied) {
+            return res.status(400).json({ status: 400, message: 'Quack Coin has already been applied to this booking you use any one either coupon or coin', data: null });
         }
 
         if (booking.isCouponApplied) {
@@ -1661,6 +1794,12 @@ exports.applyCouponToBooking = async (req, res) => {
 exports.removeCouponFromBooking = async (req, res) => {
     try {
         const { bookingId } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
 
         const booking = await Booking.findById(bookingId);
         if (!booking) {
@@ -1717,6 +1856,86 @@ exports.applyWalletToBooking = async (req, res) => {
         await booking.save();
 
         return res.status(200).json({ status: 200, message: 'Wallet applied successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.applyQuackCoinToBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.isCouponApplied) {
+            return res.status(400).json({ status: 400, message: 'Coupon has already been applied to this booking you use any one either coupon or coin', data: null });
+        }
+
+        if (booking.isQuackCoinApplied) {
+            return res.status(400).json({ status: 400, message: 'Quack Coin has already been applied to this booking', data: null });
+        }
+
+        if (user.coin <= 0) {
+            return res.status(400).json({ status: 400, message: 'Insufficient Coin balance', data: null });
+        }
+
+        const maxQuackCoinToUse = Math.floor(user.coin * 0.2);
+
+
+        const quackCoinToUse = Math.min(maxQuackCoinToUse, booking.totalPrice);
+
+        user.coin -= quackCoinToUse;
+        await user.save();
+
+        booking.coinAmount = quackCoinToUse;
+        booking.totalPrice -= quackCoinToUse;
+        booking.isQuackCoinApplied = true;
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Wallet applied successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.removeQuackCoinFromBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        booking.totalPrice = Math.round(booking.totalPrice + booking.coinAmount);
+
+        user.coin += booking.coinAmount;
+        await user.save();
+
+        booking.coinAmount = 0;
+
+        booking.isQuackCoinApplied = false;
+
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Coin removed successfully', data: booking });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
@@ -1786,6 +2005,7 @@ const isCarAvailableForPeriod = async (carId, pickupDate, dropOffDate, pickupTim
 
     return existingBookings.length === 0;
 };
+
 const getPricingInfo = async (carId) => {
     try {
         const car = await Car.findById(carId);
@@ -1815,6 +2035,7 @@ const getPricingInfo = async (carId) => {
         throw error;
     }
 };
+
 function calculateDurationInDays1(extendedDropOffDate, dropOffDate, extendedDropOffTime, dropOffTime) {
     const dropOffDateTime = new Date(`${dropOffDate}T${dropOffTime}:00.000Z`);
     console.log("dropOffDateTime", dropOffDateTime);
@@ -2092,7 +2313,7 @@ exports.uploadImage = async (req, res) => {
         return res.status(200).json({ status: 200, message: 'Image Upload Successfully', data: image });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
 
@@ -2293,5 +2514,149 @@ exports.getCarsByCategory = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllCallUs = async (req, res) => {
+    try {
+        const contactUsEntries = await CallUs.find();
+        return res.status(200).json({ status: 200, data: contactUsEntries });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getCallUsById = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const contactUsEntry = await CallUs.findById(contactUsId);
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: contactUsEntry });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.createFeedback = async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (rating < 1 || rating > 10) {
+            return res.status(400).json({ error: 'Rating must be between 1 and 10' });
+        }
+
+        const feedback = new Feedback({
+            user: userId,
+            rating,
+            comment
+        });
+
+        const savedFeedback = await feedback.save();
+        return res.status(201).json({ status: 201, data: savedFeedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.getAllFeedback = async (req, res) => {
+    try {
+        const feedback = await Feedback.find().populate('user', 'fullName mobileNumber email');
+        return res.status(200).json({ status: 200, data: feedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.getFeedbackById = async (req, res) => {
+    try {
+        const feedbackId = req.params.id;
+        const feedback = await Feedback.findById(feedbackId).populate('user', 'fullName mobileNumber email');
+        if (!feedback) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+        return res.status(200).json({ status: 200, data: feedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.updateFeedback = async (req, res) => {
+    try {
+        const feedbackId = req.params.id;
+        const { rating, comment } = req.body;
+
+        if (rating < 1 || rating > 10) {
+            return res.status(400).json({ error: 'Rating must be between 1 and 10' });
+        }
+
+        const updatedFeedback = await Feedback.findByIdAndUpdate(
+            feedbackId,
+            { rating, comment },
+            { new: true }
+        );
+
+        if (!updatedFeedback) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedFeedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.deleteFeedback = async (req, res) => {
+    try {
+        const feedbackId = req.params.id;
+        const deletedFeedback = await Feedback.findByIdAndDelete(feedbackId);
+        if (!deletedFeedback) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Feedback deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.getAllFAQs = async (req, res) => {
+    try {
+        const faqs = await FAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFAQById = async (req, res) => {
+    try {
+        const faqId = req.params.id;
+        const faq = await FAQ.findById(faqId);
+
+        if (!faq) {
+            return res.status(404).json({ status: 404, message: 'FAQ not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: faq });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };

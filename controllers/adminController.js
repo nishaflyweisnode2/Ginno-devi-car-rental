@@ -34,6 +34,8 @@ const Booking = require('../models/bookingModel');
 const Subscription = require('../models/subscription/subscriptionTenureModel');
 const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingModel');
 const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
+const CallUs = require('../models/callUsModel');
+const Feedback = require('../models/feedbackModel');
 
 
 
@@ -3080,5 +3082,151 @@ exports.deleteSubScriptionFAQById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.addQuackCoinByCarId = async (req, res) => {
+    try {
+        const { carId } = req.params;
+        const { quackCoin } = req.body;
+
+        const car = await Car.findById(carId);
+
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        car.quackCoin += quackCoin;
+
+        await car.save();
+
+        return res.status(200).json({ status: 200, message: 'QuackCoin added successfully', data: car });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createCallUs = async (req, res) => {
+    try {
+        const { mobileNumber, email } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const newContactUs = await CallUs.create({
+            mobileNumber,
+            email,
+        });
+
+        return res.status(201).json({ status: 201, data: newContactUs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllCallUs = async (req, res) => {
+    try {
+        const contactUsEntries = await CallUs.find();
+        return res.status(200).json({ status: 200, data: contactUsEntries });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getCallUsById = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const contactUsEntry = await CallUs.findById(contactUsId);
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: contactUsEntry });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateCallUs = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+
+        const updatedContactUsEntry = await CallUs.findByIdAndUpdate(
+            contactUsId,
+            { $set: req.body },
+            { new: true }
+        );
+
+        if (!updatedContactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteCallUs = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const deletedContactUsEntry = await CallUs.findByIdAndDelete(contactUsId);
+
+        if (!deletedContactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Contact us entry deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFeedback = async (req, res) => {
+    try {
+        const feedback = await Feedback.find().populate('user', 'fullName mobileNumber email');
+        return res.status(200).json({ status: 200, data: feedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.getFeedbackById = async (req, res) => {
+    try {
+        const feedbackId = req.params.id;
+        const feedback = await Feedback.findById(feedbackId).populate('user', 'fullName mobileNumber email');
+        if (!feedback) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+        return res.status(200).json({ status: 200, data: feedback });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.deleteFeedback = async (req, res) => {
+    try {
+        const feedbackId = req.params.id;
+        const deletedFeedback = await Feedback.findByIdAndDelete(feedbackId);
+        if (!deletedFeedback) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Feedback deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal server error' });
     }
 };

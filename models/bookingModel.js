@@ -57,6 +57,25 @@ const bookingSchema = new mongoose.Schema(
         destinationLocation: {
             type: String,
         },
+        pickupCoordinates: {
+            type: {
+                type: String,
+            },
+            coordinates: {
+                type: [Number],
+            },
+        },
+        dropCoordinates: {
+            type: {
+                type: String,
+            },
+            coordinates: {
+                type: [Number],
+            },
+        },
+        seat: {
+            type: Number,
+        },
         status: {
             type: String,
             enum: ['PENDING', 'APPROVED', 'CANCELLED', 'COMPLETED'],
@@ -124,6 +143,13 @@ const bookingSchema = new mongoose.Schema(
             type: Number,
         },
         isCouponApplied: {
+            type: Boolean,
+            default: false
+        },
+        coinAmount: {
+            type: Number,
+        },
+        isQuackCoinApplied: {
             type: Boolean,
             default: false
         },

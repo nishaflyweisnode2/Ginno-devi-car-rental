@@ -51,6 +51,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/car/availability', [authJwt.verifyToken], auth.checkCarAvailability);
     app.get('/api/v1/user/car/sharing/availability', [authJwt.verifyToken], auth.checkSharingCarAvailability);
     app.post("/api/v1/user/booking/create", [authJwt.verifyToken], auth.createBooking);
+    app.post("/api/v1/user/sharing/booking/create", [authJwt.verifyToken], auth.createBookingForSharingCar);
     app.get('/api/v1/user/bookings/user', [authJwt.verifyToken], auth.getBookingsByUser);
     app.get('/api/v1/user/bookings/user/:bookingId', [authJwt.verifyToken], auth.getBookingsById);
     app.get('/api/v1/user/bookings/completed/user', [authJwt.verifyToken], auth.getCompletedBookingsByUser);
@@ -59,6 +60,8 @@ module.exports = (app) => {
     app.post('/api/v1/user/coupon/apply-coupon', [authJwt.verifyToken], auth.applyCouponToBooking);
     app.post('/api/v1/user/coupon/remove-coupon', [authJwt.verifyToken], auth.removeCouponFromBooking);
     app.post('/api/v1/user/wallet/apply-wallet', [authJwt.verifyToken], auth.applyWalletToBooking);
+    app.post('/api/v1/user/Coin/apply-quack-coin', [authJwt.verifyToken], auth.applyQuackCoinToBooking);
+    app.post('/api/v1/user/coin/remove-quack-coin', [authJwt.verifyToken], auth.removeQuackCoinFromBooking);
     app.put('/api/v1/user/bookings/updatePaymentStatus/:bookingId', [authJwt.verifyToken], auth.updatePaymentStatus);
     app.post('/api/v1/user/bookings/:bookingId/extend', [authJwt.verifyToken], auth.extendBooking);
     app.put('/api/v1/user/bookings/:bookingId/cancel', [authJwt.verifyToken], auth.cancelBooking);
@@ -80,6 +83,15 @@ module.exports = (app) => {
     app.get('/api/v1/user/best-subscribed-cars', [authJwt.verifyToken], auth.getMostSubscribeCar);
     app.get('/api/v1/user/cars-by-main-category/:mainCategory', [authJwt.verifyToken], auth.getCarsByMainCategory);
     app.get('/api/v1/user/cars-by-category/:category', [authJwt.verifyToken], auth.getCarsByCategory);
+    app.get('/api/v1/user/call-us', [authJwt.verifyToken], auth.getAllCallUs);
+    app.get('/api/v1/user/call-us/:id', [authJwt.verifyToken], auth.getCallUsById);
+    app.post('/api/v1/user/feedback/create', [authJwt.verifyToken], auth.createFeedback);
+    app.get('/api/v1/user/feedback', [authJwt.verifyToken], auth.getAllFeedback);
+    app.get('/api/v1/user/feedback/:id', [authJwt.verifyToken], auth.getFeedbackById);
+    app.put('/api/v1/user/feedback/:id', [authJwt.verifyToken], auth.updateFeedback);
+    app.delete('/api/v1/user/feedback/:id', [authJwt.verifyToken], auth.deleteFeedback);
+    app.get('/api/v1/user/faqs', [authJwt.verifyToken], auth.getAllFAQs);
+    app.get('/api/v1/user/faqs/:id', [authJwt.verifyToken], auth.getFAQById);
 
 
 }

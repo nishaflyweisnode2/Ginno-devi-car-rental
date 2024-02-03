@@ -168,6 +168,14 @@ module.exports = (app) => {
     app.get('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.getSubScriptionFAQById);
     app.put('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.updateSubScriptionFAQById);
     app.delete('/api/v1/admin/subScription-faq/:id', [authJwt.isAdmin], auth.deleteSubScriptionFAQById);
-
+    app.post('/api/v1/admin/addQuackCoin/:carId', [authJwt.isAdmin], auth.addQuackCoinByCarId);
+    app.post('/api/v1/admin/call/us', [authJwt.isAdmin], auth.createCallUs);
+    app.get('/api/v1/admin/call-us', [authJwt.isAdmin], auth.getAllCallUs);
+    app.get('/api/v1/admin/call-us/:id', [authJwt.isAdmin], auth.getCallUsById);
+    app.put('/api/v1/admin/call-us/:id', [authJwt.isAdmin], auth.updateCallUs);
+    app.delete('/api/v1/admin/call-us/:id', [authJwt.isAdmin], auth.deleteCallUs);
+    app.get('/api/v1/admin/feedback', [authJwt.isAdmin], auth.getAllFeedback);
+    app.get('/api/v1/admin/feedback/:id', [authJwt.isAdmin], auth.getFeedbackById);
+    app.delete('/api/v1/admin/feedback/:id', [authJwt.isAdmin], auth.deleteFeedback);
 
 }
