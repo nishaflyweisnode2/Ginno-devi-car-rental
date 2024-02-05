@@ -116,6 +116,9 @@ module.exports = (app) => {
     app.put('/api/v1/partner/subscription/shared-cars/add-Car-location/:id', [authJwt.isPartner], auth.addSubscriptionLocationAndCar);
     app.put('/api/v1/partner/governmentTendor/shared-cars/add-Car-location/:id', [authJwt.isPartner], auth.addGovernmentTendorLocationAndCar);
     app.put('/api/v1/partner/cars/:carId/update-flags', [authJwt.isPartner], auth.updateCarFlags);
+    app.get('/api/v1/partner/ratings/:carId', [authJwt.isPartner], auth.getAllRatingsByCarId);
+    app.get('/api/v1/partner/ratings/:carId/rating/:rating', [authJwt.isPartner], auth.getRatingsByCarIdAndRating);
+    app.get('/api/v1/partner/get/bookings/search', [authJwt.isPartner], auth.searchBookings);
 
 
 }

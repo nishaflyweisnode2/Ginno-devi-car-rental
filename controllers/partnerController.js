@@ -26,6 +26,7 @@ const MainCategory = require('../models/rental/mainCategoryModel');
 const Category = require('../models/rental/categoryModel');
 const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
 const SharedCar = require('../models/shareCarModel');
+const Review = require('../models/ratingModel');
 
 
 
@@ -2940,5 +2941,99 @@ exports.updateCarFlags = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllRatingsByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ _id: carId, owner: userId });
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const ratings = await Review.find({ car: carId }).populate('user', 'fullName mobileNumber email image')
+            .populate('car');
+
+        return res.status(200).json({ status: 200, data: ratings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getRatingsByCarIdAndRating = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId, rating } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ _id: carId, owner: userId });
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const ratings = await Review.find({ car: carId, rating: rating })
+            .populate('user', 'fullName mobileNumber email image')
+            .populate('car');
+
+        return res.status(200).json({ status: 200, data: ratings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.searchBookings = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { mainCategory, status, startDate, endDate } = req.query;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        let query = {};
+
+        if (mainCategory) {
+            query.mainCategory = mainCategory;
+        }
+        if (status) {
+            query.status = status;
+        }
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            end.setHours(23, 59, 59, 999);
+
+            query.createdAt = { $gte: start, $lte: end };
+        }
+
+        const cars = await Car.find({ owner: user._id });
+
+        const carIds = cars.map(car => car._id);
+
+        query.car = { $in: carIds };
+
+        const bookings = await Booking.find(query)
+            .populate('car user pickupLocation dropOffLocation');
+
+        return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
     }
 };

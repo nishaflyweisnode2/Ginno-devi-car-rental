@@ -92,6 +92,13 @@ module.exports = (app) => {
     app.delete('/api/v1/user/feedback/:id', [authJwt.verifyToken], auth.deleteFeedback);
     app.get('/api/v1/user/faqs', [authJwt.verifyToken], auth.getAllFAQs);
     app.get('/api/v1/user/faqs/:id', [authJwt.verifyToken], auth.getFAQById);
+    app.get('/api/v1/user/rental/cars/mainCategory/:mainCategoryId', [authJwt.verifyToken], auth.getAllRentalCars);
+    app.get('/api/v1/user/subscription/cars/mainCategory/:mainCategoryId', [authJwt.verifyToken], auth.getAllSubscriptionCars);
+    app.get('/api/v1/user/transactions/user', [authJwt.verifyToken], auth.getTransactionDetailsByUserId);
+    app.get('/api/v1/user/income/user', [authJwt.verifyToken], auth.getIncomeDetailsByUserId);
+    app.get('/api/v1/user/Policy', [authJwt.verifyToken], auth.getAllPolicy);
+    app.get('/api/v1/user/Policy/:id', [authJwt.verifyToken], auth.getPolicyById);
+    app.get('/api/v1/user/bookings/search', [authJwt.verifyToken], auth.searchBookings);
 
 
 }

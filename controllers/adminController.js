@@ -36,6 +36,7 @@ const SubscriptionVsBuying = require('../models/subscription/subscriptionBuyingM
 const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
 const CallUs = require('../models/callUsModel');
 const Feedback = require('../models/feedbackModel');
+const Transaction = require('../models/transctionModel');
 
 
 
@@ -2827,6 +2828,16 @@ exports.updateRefundPaymentStatus = async (req, res) => {
         refundId.refundTransactionDate = new Date;
 
         await refundId.save();
+
+        const newTransaction = new Transaction({
+            user: booking.user,
+            amount: refund.totalRefundAmount,
+            type: 'Wallet',
+            details: 'Wallet add money for Booking',
+            cr: true
+        });
+
+        await newTransaction.save();
 
         return res.status(200).json({
             status: 200,
