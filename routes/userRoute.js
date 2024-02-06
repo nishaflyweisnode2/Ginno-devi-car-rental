@@ -99,6 +99,8 @@ module.exports = (app) => {
     app.get('/api/v1/user/Policy', [authJwt.verifyToken], auth.getAllPolicy);
     app.get('/api/v1/user/Policy/:id', [authJwt.verifyToken], auth.getPolicyById);
     app.get('/api/v1/user/bookings/search', [authJwt.verifyToken], auth.searchBookings);
+    app.get('/api/v1/user/locations/getAll', [authJwt.verifyToken], auth.getAllLocations);
+    app.get('/api/v1/user/locations/:locationId', [authJwt.verifyToken], auth.getLocationById);
 
 
 }
