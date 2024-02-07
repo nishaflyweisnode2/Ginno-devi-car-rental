@@ -1004,7 +1004,7 @@ exports.checkCarAvailability1 = async (req, res) => {
 
 exports.checkCarAvailability = async (req, res) => {
     try {
-        const { pickup, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
+        const { pickup, destinationLocation, mainCategory, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
 
         const [latitude, longitude] = decodeURIComponent(pickup).split(',').map(Number);
         console.log('pickup:', pickup);
@@ -1091,6 +1091,23 @@ exports.checkCarAvailability = async (req, res) => {
 
         console.log("Available cars:", availableCars);
 
+        const combinedData = [];
+        for (let car of availableCars) {
+            const adminCarPrice = await AdminCarPrice.findOne({ car: car._id, mainCategory: mainCategory });
+            let rentalPrice = 0;
+            if (adminCarPrice) {
+                rentalPrice = adminCarPrice.autoPricing ? adminCarPrice.adminHourlyRate : adminCarPrice.hostHourlyRate;
+            }
+            combinedData.push({ ...car.toObject(), rentalPrice });
+        }
+
+        if (combinedData.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No available cars found for the specified location and time window.',
+            });
+        }
+
         if (availableCars.length === 0) {
             return res.status(404).json({
                 status: 404,
@@ -1098,7 +1115,7 @@ exports.checkCarAvailability = async (req, res) => {
             });
         }
 
-        return res.status(200).json({ status: 200, data: availableCars });
+        return res.status(200).json({ status: 200, data: combinedData });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
@@ -1202,7 +1219,6 @@ exports.checkSharingCarAvailability = async (req, res) => {
                 },
             ],
         });
-        console.log("bookedCars", bookedCars);
         const bookedCarIds = bookedCars.map(booking => booking.car);
 
         const availableCarIds = carIds.filter(carId => !bookedCarIds.includes(carId));
@@ -1218,10 +1234,30 @@ exports.checkSharingCarAvailability = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'No shared cars found.', });
         }
 
-        const combinedData = sharedCars.map(sharedCar => {
+        const combinedData = [];
+
+        // const combinedData = sharedCars.map(sharedCar => {
+        //     const carDetails = availableCars.find(car => car._id.toString() === sharedCar.car.toString());
+        //     return { ...sharedCar.toObject(), carDetails };
+        // });
+
+        for (const sharedCar of sharedCars) {
             const carDetails = availableCars.find(car => car._id.toString() === sharedCar.car.toString());
-            return { ...sharedCar.toObject(), carDetails };
-        });
+            const adminCarPrice = await AdminCarPrice.findOne({ car: sharedCar.car, mainCategory: sharedCar.mainCategory });
+            console.log("****", adminCarPrice);
+
+            let rentalPrice;
+            if(adminCarPrice){
+            if (adminCarPrice.autoPricing) {
+                rentalPrice = adminCarPrice.adminHourlyRate;
+            } else {
+                rentalPrice = adminCarPrice.hostHourlyRate;
+            }
+        }
+            console.log("****", rentalPrice);
+            const carData = { ...sharedCar.toObject(), carDetails, rentalPrice };
+            combinedData.push(carData);
+        }
 
         return res.status(200).json({ status: 200, data: combinedData });
     } catch (error) {
