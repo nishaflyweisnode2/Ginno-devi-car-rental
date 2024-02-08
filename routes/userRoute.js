@@ -83,6 +83,8 @@ module.exports = (app) => {
     app.get('/api/v1/user/best-subscribed-cars', [authJwt.verifyToken], auth.getMostSubscribeCar);
     app.get('/api/v1/user/cars-by-main-category/:mainCategory', [authJwt.verifyToken], auth.getCarsByMainCategory);
     app.get('/api/v1/user/cars-by-category/:category', [authJwt.verifyToken], auth.getCarsByCategory);
+    app.get('/api/v1/user/car-features/byCar/:carId', [authJwt.verifyToken], auth.getAllCarFeaturesByCarId);
+    app.get('/api/v1/user/car-features/:carFeatureId', [authJwt.verifyToken], auth.getCarFeatureById);
     app.get('/api/v1/user/call-us', [authJwt.verifyToken], auth.getAllCallUs);
     app.get('/api/v1/user/call-us/:id', [authJwt.verifyToken], auth.getCallUsById);
     app.post('/api/v1/user/feedback/create', [authJwt.verifyToken], auth.createFeedback);

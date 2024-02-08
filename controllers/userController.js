@@ -35,6 +35,7 @@ const CallUs = require('../models/callUsModel');
 const Feedback = require('../models/feedbackModel');
 const FAQ = require('../models/faqModel');
 const Transaction = require('../models/transctionModel');
+const CarFeatures = require('../models/carFeaturesModel');
 
 
 
@@ -1247,13 +1248,13 @@ exports.checkSharingCarAvailability = async (req, res) => {
             console.log("****", adminCarPrice);
 
             let rentalPrice;
-            if(adminCarPrice){
-            if (adminCarPrice.autoPricing) {
-                rentalPrice = adminCarPrice.adminHourlyRate;
-            } else {
-                rentalPrice = adminCarPrice.hostHourlyRate;
+            if (adminCarPrice) {
+                if (adminCarPrice.autoPricing) {
+                    rentalPrice = adminCarPrice.adminHourlyRate;
+                } else {
+                    rentalPrice = adminCarPrice.hostHourlyRate;
+                }
             }
-        }
             console.log("****", rentalPrice);
             const carData = { ...sharedCar.toObject(), carDetails, rentalPrice };
             combinedData.push(carData);
@@ -2590,6 +2591,47 @@ exports.getCarsByCategory = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllCarFeaturesByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.carId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const userCars = await Car.find({ car: carId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carIds = userCars.map(car => car._id);
+        const carFeatures = await CarFeatures.find({ car: { $in: carIds } }).populate('car');
+
+        return res.status(200).json({ status: 200, data: carFeatures });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getCarFeatureById = async (req, res) => {
+    try {
+        const carFeatureId = req.params.carFeatureId;
+        const carFeature = await CarFeatures.findById(carFeatureId).populate('car');
+
+        if (!carFeature || carFeature.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Car feature not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: carFeature });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
