@@ -523,7 +523,10 @@ exports.getReviewsByCar = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Car not found' });
         }
 
-        const reviews = await Review.find({ car: carId });
+        const reviews = await Review.find({ car: carId }).populate({
+            path: 'user',
+            select: 'fullName mobileNumber email image',
+        });
 
         let totalRating = 0;
         reviews.forEach(review => {
