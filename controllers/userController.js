@@ -2581,14 +2581,14 @@ exports.getCarsByMainCategory = async (req, res) => {
 
 exports.getCarsByCategory = async (req, res) => {
     try {
-        const { Category } = req.params;
-
-        const checkCategory = await Category.findById(Category);
+        const { category } = req.params;
+        console.log(category);
+        const checkCategory = await Category.findById(category);
         if (!checkCategory) {
             return res.status(404).json({ status: 404, message: 'Category not found' });
         }
 
-        const cars = await Car.find({ Category });
+        const cars = await Car.find({ category });
 
         return res.status(200).json({ status: 200, data: cars });
     } catch (error) {
