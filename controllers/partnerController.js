@@ -27,6 +27,7 @@ const Category = require('../models/rental/categoryModel');
 const SubscriptionCategory = require('../models/subscription/subscriptionCategoryModel');
 const SharedCar = require('../models/shareCarModel');
 const Review = require('../models/ratingModel');
+const Transaction = require('../models/transctionModel');
 
 
 
@@ -2066,7 +2067,26 @@ exports.approveBookingStatus = async (req, res) => {
 
         booking.status = 'APPROVED';
 
+        const partnerWallet = await User.findOne({ _id: partnerId });
+        if (!partnerWallet) {
+            return res.status(404).json({ status: 404, message: 'Partner wallet not found' });
+        }
+
+        partnerWallet.wallet += booking.totalPrice;
+
+        await partnerWallet.save();
+
         await booking.save();
+
+        const newTransaction = new Transaction({
+            user: partnerId,
+            amount: booking.totalPrice,
+            type: 'Wallet',
+            details: 'Booking creation',
+            cr: true
+        });
+
+        await newTransaction.save();
 
         return res.status(200).json({
             status: 200,
@@ -2222,7 +2242,26 @@ exports.rejectBookingStatus = async (req, res) => {
         booking.rejectRemarks = req.body.rejectRemarks || rejectRemarks;
         booking.rejectOtp = otp
 
+        const partnerWallet = await User.findOne({ _id: partnerId });
+        if (!partnerWallet) {
+            return res.status(404).json({ status: 404, message: 'Partner wallet not found' });
+        }
+
+        partnerWallet.wallet -= booking.totalPrice;
+
+        await partnerWallet.save();
+
         await booking.save();
+
+        const newTransaction = new Transaction({
+            user: partnerId,
+            amount: booking.totalPrice,
+            type: 'Wallet',
+            details: 'Booking Refund',
+            dr: true
+        });
+
+        await newTransaction.save();
 
         return res.status(200).json({
             status: 200,
@@ -3035,5 +3074,171 @@ exports.searchBookings = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getTopBookedCarsForPartner = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const partnerCars = await Car.find({ owner: userId });
+
+        if (partnerCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the partner' });
+        }
+
+        const partnerCarIds = partnerCars.map(car => car._id);
+
+        const bookings = await Booking.aggregate([
+            { $match: { car: { $in: partnerCarIds } } },
+            { $group: { _id: '$car', count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        if (bookings.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No bookings found for the partner' });
+        }
+
+        const topBookedCarIds = bookings.map(booking => booking._id);
+
+        const topBookedCars = await Car.find({ _id: { $in: topBookedCarIds } }).populate('owner');
+
+        return res.status(200).json({ status: 200, data: topBookedCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCarBrands = async (req, res) => {
+    try {
+        const carBrands = await Brand.find();
+
+        res.status(200).json({ status: 200, data: carBrands });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+exports.getCarBrandById = async (req, res) => {
+    try {
+        const { carBrandId } = req.params;
+
+        const carBrand = await Brand.findById(carBrandId);
+
+        if (!carBrand) {
+            return res.status(404).json({ status: 404, message: 'CarBrand not found' });
+        }
+
+        res.status(200).json({ status: 200, data: carBrand });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+exports.getTransactionDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const transactions = await Transaction.find({ user: userId });
+
+        let totalCredit = 0;
+        let totalDebit = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.cr) {
+                totalCredit += transaction.amount;
+            }
+            if (transaction.dr) {
+                totalDebit += transaction.amount;
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions: transactions,
+                totalCredit: totalCredit,
+                totalDebit: totalDebit
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getIncomeDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Wallet', 'Qc', 'Booking'] } });
+
+        let totalWalletCredit = 0;
+        let totalWalletDebit = 0;
+        let totalQcCredit = 0;
+        let totalQcDebit = 0;
+        let totalBookingCredit = 0;
+        let totalBookingDebit = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) {
+                    totalWalletCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalWalletDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) {
+                    totalQcCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalQcDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Booking') {
+                if (transaction.cr) {
+                    totalBookingCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalBookingDebit += transaction.amount;
+                }
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions: transactions,
+                totalWalletCredit: totalWalletCredit,
+                totalWalletDebit: totalWalletDebit,
+                totalQcCredit: totalQcCredit,
+                totalQcDebit: totalQcDebit,
+                totalBookingDebit: totalBookingDebit,
+                totalBookingCredit: totalBookingCredit,
+                totalQcCoinBalance: user.coin,
+                totalWalletBalance: user.wallet,
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

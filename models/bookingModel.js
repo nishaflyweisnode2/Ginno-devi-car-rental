@@ -1,5 +1,21 @@
 const mongoose = require('mongoose');
 
+const upcomingPaymentSchema = new mongoose.Schema({
+    amount: {
+        type: Number,
+        required: true
+    },
+    dueDate: {
+        type: Date,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Paid'],
+        default: 'Pending'
+    }
+});
+
 const bookingSchema = new mongoose.Schema(
     {
         car: {
@@ -94,6 +110,9 @@ const bookingSchema = new mongoose.Schema(
             type: Number,
         },
         totalPrice: {
+            type: Number,
+        },
+        subscriptionMonthlyPaymentAmount: {
             type: Number,
         },
         accessoriesPrice: {
@@ -232,6 +251,10 @@ const bookingSchema = new mongoose.Schema(
         uniqueBookinId: {
             type: String,
         },
+        upcomingPayments: {
+            type: [upcomingPaymentSchema],
+            default: []
+        }
 
 
     },

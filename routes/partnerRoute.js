@@ -119,6 +119,10 @@ module.exports = (app) => {
     app.get('/api/v1/partner/ratings/:carId', [authJwt.isPartner], auth.getAllRatingsByCarId);
     app.get('/api/v1/partner/ratings/:carId/rating/:rating', [authJwt.isPartner], auth.getRatingsByCarIdAndRating);
     app.get('/api/v1/partner/get/bookings/search', [authJwt.isPartner], auth.searchBookings);
-
+    app.get('/api/v1/partner/top-booked-car', [authJwt.isPartner], auth.getTopBookedCarsForPartner);
+    app.get('/api/v1/partner/brand', [authJwt.isPartner], auth.getCarBrands);
+    app.get('/api/v1/partner/brand/:carBrandId', [authJwt.isPartner], auth.getCarBrandById);
+    app.get('/api/v1/partner/transactions/user', [authJwt.isPartner], auth.getTransactionDetailsByUserId);
+    app.get('/api/v1/partner/income/user', [authJwt.isPartner], auth.getIncomeDetailsByUserId);
 
 }

@@ -104,6 +104,9 @@ module.exports = (app) => {
     app.get('/api/v1/user/bookings/search', [authJwt.verifyToken], auth.searchBookings);
     app.get('/api/v1/user/locations/getAll', [authJwt.verifyToken], auth.getAllLocations);
     app.get('/api/v1/user/locations/:locationId', [authJwt.verifyToken], auth.getLocationById);
-
+    app.get('/api/v1/user/brand', [authJwt.verifyToken], auth.getCarBrands);
+    app.get('/api/v1/user/brand/:carBrandId', [authJwt.verifyToken], auth.getCarBrandById);
+    app.get('/api/v1/user/booking/upcoming/pending-payments', [authJwt.verifyToken], auth.getPendingUpcomingForSubscriptionPayments);
+    app.post('/api/v1/user/booking/payNextMonth', [authJwt.verifyToken], auth.upcomingPaymentsForSubscription);
 
 }

@@ -36,6 +36,7 @@ const Feedback = require('../models/feedbackModel');
 const FAQ = require('../models/faqModel');
 const Transaction = require('../models/transctionModel');
 const CarFeatures = require('../models/carFeaturesModel');
+const cron = require('node-cron');
 
 
 
@@ -1283,6 +1284,15 @@ exports.createBooking = async (req, res) => {
                 return res.status(400).json({ status: 400, message: 'Invalid subscription duration', data: null });
             }
 
+            const carCheck = await Car.findById(carId);
+            if (!carCheck) {
+                return res.status(400).json({ status: 400, message: 'Car not available', data: null });
+            }
+
+            if (!carCheck.isSubscription) {
+                return res.status(400).json({ status: 400, message: 'Car not available for Subscription', data: null });
+            }
+
             dropOffDate = new Date(requestedPickupDate);
             dropOffDate.setUTCMonth(dropOffDate.getUTCMonth() + subscriptionMonths);
             dropOffDate.setUTCHours(0, 0, 0, 0);
@@ -1469,6 +1479,7 @@ exports.createBooking = async (req, res) => {
                 depositedMoney: adminCarPrice.depositedMoney,
                 isSubscription: subscriptionMonths ? true : false,
                 subscriptionMonths,
+                subscriptionMonthlyPaymentAmount: Math.round(totalPriceWithAccessories / subscriptionMonths),
                 accessories: accessoriesId,
                 accessoriesPrice,
                 tripPackage,
@@ -1481,7 +1492,7 @@ exports.createBooking = async (req, res) => {
 
             user.coin = carExist.quackCoin
             await user.save();
-            const welcomeMessage = `Welcome, ${user.userName}! Thank you for Booking, your Booking details ${newBooking}.`;
+            const welcomeMessage = `Welcome, ${user.fullName}! Thank you for Booking, your Booking details ${newBooking}.`;
             const welcomeNotification = new Notification({
                 recipient: user._id,
                 content: welcomeMessage,
@@ -1498,6 +1509,30 @@ exports.createBooking = async (req, res) => {
             });
 
             await newTransaction.save();
+
+            if (subscriptionMonths > 1) {
+                const monthlyPaymentAmount = totalPriceWithAccessories / subscriptionMonths;
+                let currentDate = new Date(requestedPickupDate);
+                const upcomingPayments = [];
+
+                for (let i = 1; i < subscriptionMonths; i++) {
+                    const paymentDueDate = new Date(currentDate);
+                    paymentDueDate.setUTCMonth(paymentDueDate.getUTCMonth() + i);
+                    paymentDueDate.setUTCHours(0, 0, 0, 0);
+
+                    const paymentDetails = {
+                        amount: Math.round(monthlyPaymentAmount),
+                        dueDate: paymentDueDate,
+                        status: 'Pending'
+                    };
+
+                    upcomingPayments.push(paymentDetails);
+                }
+
+                newBooking.upcomingPayments = upcomingPayments;
+            }
+
+            await newBooking.save();
 
             return res.status(201).json({ status: 201, message: 'Booking created successfully', data: newBooking });
 
@@ -1631,7 +1666,7 @@ exports.createBookingForSharingCar = async (req, res) => {
 
         await newBooking.save();
 
-        const welcomeMessage = `Welcome, ${user.userName}! Thank you for Booking, your Booking details ${newBooking}.`;
+        const welcomeMessage = `Welcome, ${user.fullName}! Thank you for Booking, your Booking details ${newBooking}.`;
         const welcomeNotification = new Notification({
             recipient: user._id,
             content: welcomeMessage,
@@ -2929,7 +2964,7 @@ exports.getTransactionDetailsByUserId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const transactions = await Transaction.find({ userId: userId });
+        const transactions = await Transaction.find({ user: userId });
 
         let totalCredit = 0;
         let totalDebit = 0;
@@ -2966,7 +3001,7 @@ exports.getIncomeDetailsByUserId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const transactions = await Transaction.find({ userId: userId, type: { $in: ['Wallet', 'Qc'] } });
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Wallet', 'Qc'] } });
 
         let totalWalletCredit = 0;
         let totalWalletDebit = 0;
@@ -3109,5 +3144,151 @@ exports.getLocationById = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+// For Upcoming booking for subscription
+// cron.schedule('* * * * *', async () => {
+cron.schedule('0 0 * * *', async () => {
+    try {
+        console.log("Cron Job Started");
+
+        const upcomingBookings5Days = await Booking.find({
+            'upcomingPayments.dueDate': { $gte: new Date(), $lte: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000) },
+            'upcomingPayments.status': "Pending"
+        }).populate('user');
+
+        const upcomingBookings1Day = await Booking.find({
+            'upcomingPayments.dueDate': { $gte: new Date(), $lte: new Date(new Date().getTime() + 1 * 24 * 60 * 60 * 1000) },
+            'upcomingPayments.status': "Pending"
+        }).populate('user');
+
+        for (const booking of upcomingBookings5Days) {
+            const user = booking.user;
+            const notificationMessage = `Hello, ${user.fullName}! Your payment of ₹${booking.subscriptionMonthlyPaymentAmount.toFixed(2)} for booking ${booking.uniqueBookinId} is due soon (5 days left). Please make the payment before the due date.`;
+
+            const newNotification = new Notification({
+                recipient: user._id,
+                content: notificationMessage,
+                type: 'PaymentReminder',
+            });
+
+            await newNotification.save();
+        }
+
+        for (const booking of upcomingBookings1Day) {
+            const user = booking.user;
+            const notificationMessage = `Hello, ${user.fullName}! Your payment of ₹${booking.subscriptionMonthlyPaymentAmount.toFixed(2)} for booking ${booking.uniqueBookinId} is due tomorrow. Please make the payment before the due date.`;
+
+            const newNotification = new Notification({
+                recipient: user._id,
+                content: notificationMessage,
+                type: 'PaymentReminder',
+            });
+
+            await newNotification.save();
+        }
+
+        console.log("Cron Job End");
+
+    } catch (error) {
+        console.error('Error processing upcoming payments:', error);
+    }
+});
+
+exports.getCarBrands = async (req, res) => {
+    try {
+        const carBrands = await Brand.find();
+
+        res.status(200).json({ status: 200, data: carBrands });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+exports.getCarBrandById = async (req, res) => {
+    try {
+        const { carBrandId } = req.params;
+
+        const carBrand = await Brand.findById(carBrandId);
+
+        if (!carBrand) {
+            return res.status(404).json({ status: 404, message: 'CarBrand not found' });
+        }
+
+        res.status(200).json({ status: 200, data: carBrand });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+exports.getPendingUpcomingForSubscriptionPayments = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find({ user: userId });
+
+        if (!bookings || bookings.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Bookings not found for the user', status: 'Error' });
+        }
+
+        let pendingPayments = [];
+
+        for (const booking of bookings) {
+            if (booking.upcomingPayments && booking.upcomingPayments.length > 0) {
+                const pending = booking.upcomingPayments.filter(payment => payment.status === 'Pending');
+                pendingPayments = pendingPayments.concat(pending);
+            }
+        }
+
+        if (pendingPayments.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No pending payments found', status: 'Error' });
+        }
+
+        return res.status(200).json({ status: 200, data: pendingPayments, bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal Server Error', status: 'Error' });
+    }
+};
+
+exports.upcomingPaymentsForSubscription = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found' });
+        }
+
+        if (booking.user.toString() !== userId.toString()) {
+            return res.status(403).json({ status: 403, message: 'Unauthorized access' });
+        }
+
+        const nextPendingPayment = booking.upcomingPayments.find(payment => payment.status === 'Pending');
+        if (!nextPendingPayment) {
+            return res.status(404).json({ status: 404, message: 'Next pending payment not found' });
+        }
+
+        nextPendingPayment.status = 'Paid';
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Payment successful', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal Server Error' });
     }
 };
