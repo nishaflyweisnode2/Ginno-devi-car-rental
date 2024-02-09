@@ -2597,6 +2597,76 @@ exports.getCarsByCategory = async (req, res) => {
     }
 };
 
+exports.getCarsByPlan = async (req, res) => {
+    try {
+        const { plan } = req.params;
+
+        const checkPlan = await Plan.findById(plan);
+        if (!checkPlan) {
+            return res.status(404).json({ status: 404, message: 'Plan not found' });
+        }
+
+        const cars = await Car.find();
+
+        const availableCars = [];
+        for (const car of cars) {
+            const isBooked = await Booking.exists({
+                car: car._id,
+                status: 'PENDING',
+                isTripCompleted: false,
+            });
+
+            if (!isBooked && !car.isOnTrip) {
+                const carPrice = checkPlan.price;
+
+                const carDetails = {
+                    _id: car._id,
+                    licenseNumber: car.licenseNumber,
+                    brand: car.brand,
+                    model: car.model,
+                    variant: car.variant,
+                    yearOfRegistration: car.yearOfRegistration,
+                    fuelType: car.fuelType,
+                    transmissionType: car.transmissionType,
+                    kmDriven: car.kmDriven,
+                    chassisNumber: car.chassisNumber,
+                    sharingFrequency: car.sharingFrequency,
+                    isCarDocumentsUpload: car.isCarDocumentsUpload,
+                    isDlUpload: car.isDlUpload,
+                    status: car.status,
+                    isFastTag: car.isFastTag,
+                    isAvailable: car.isAvailable,
+                    rentalStart: car.rentalStart,
+                    rentalEnd: car.rentalEnd,
+                    rentalCount: car.rentalCount,
+                    isOnTrip: car.isOnTrip,
+                    createdAt: car.createdAt,
+                    updatedAt: car.updatedAt,
+                    carDocuments: car.carDocuments,
+                    dlBack: car.dlBack,
+                    dlFront: car.dlFront,
+                    carDocumentsText: car.carDocumentsText,
+                    dlNumber: car.dlNumber,
+                    isGovernmentTendor: car.isGovernmentTendor,
+                    isRental: car.isRental,
+                    isSharing: car.isSharing,
+                    isSubscription: car.isSubscription,
+                    quackCoin: car.quackCoin,
+                    images: car.images,
+                    price: carPrice,
+                };
+
+                availableCars.push(carDetails);
+            }
+        }
+
+        return res.status(200).json({ status: 200, data: availableCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getAllCarFeaturesByCarId = async (req, res) => {
     try {
         const userId = req.user._id;
