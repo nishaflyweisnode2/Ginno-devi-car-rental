@@ -124,5 +124,7 @@ module.exports = (app) => {
     app.get('/api/v1/partner/brand/:carBrandId', [authJwt.isPartner], auth.getCarBrandById);
     app.get('/api/v1/partner/transactions/user', [authJwt.isPartner], auth.getTransactionDetailsByUserId);
     app.get('/api/v1/partner/income/user', [authJwt.isPartner], auth.getIncomeDetailsByUserId);
+    app.get('/api/v1/partner/referral-bonus', [authJwt.isPartner], auth.getAllReferralBonuses);
+
 
 }

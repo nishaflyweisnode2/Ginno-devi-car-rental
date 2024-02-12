@@ -37,6 +37,7 @@ const SubScriptionFAQ = require('../models/subscription/subscriptionFaqModel');
 const CallUs = require('../models/callUsModel');
 const Feedback = require('../models/feedbackModel');
 const Transaction = require('../models/transctionModel');
+const ReferralBonus = require('../models/referralBonusAmountModel');
 
 
 
@@ -3239,5 +3240,64 @@ exports.deleteFeedback = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal server error' });
+    }
+};
+
+exports.createReferralBonus = async (req, res) => {
+    try {
+        const { amount } = req.body;
+
+        const newReferralBonus = await ReferralBonus.create({ amount });
+
+        return res.status(201).json({ status: 201, data: newReferralBonus });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllReferralBonuses = async (req, res) => {
+    try {
+        const referralBonuses = await ReferralBonus.find();
+
+        return res.status(200).json({ status: 200, data: referralBonuses });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateReferralBonus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount } = req.body;
+
+        const updatedReferralBonus = await ReferralBonus.findByIdAndUpdate(id, { amount }, { new: true });
+
+        if (!updatedReferralBonus) {
+            return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedReferralBonus });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteReferralBonus = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedReferralBonus = await ReferralBonus.findByIdAndDelete(id);
+
+        if (!deletedReferralBonus) {
+            return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Referral bonus configuration deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

@@ -37,6 +37,7 @@ const FAQ = require('../models/faqModel');
 const Transaction = require('../models/transctionModel');
 const CarFeatures = require('../models/carFeaturesModel');
 const cron = require('node-cron');
+const ReferralBonus = require('../models/referralBonusAmountModel');
 
 
 
@@ -70,7 +71,7 @@ const generateBookingCode = async () => {
 
 exports.signup = async (req, res) => {
     try {
-        const { fullName, mobileNumber, email, password, confirmPassword } = req.body;
+        const { fullName, mobileNumber, email, password, confirmPassword, referralCode } = req.body;
 
         if (password !== confirmPassword) {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
@@ -83,16 +84,43 @@ exports.signup = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        let referredBy;
+        if (referralCode) {
+            referredBy = await User.findOne({ refferalCode: referralCode });
+            if (!referredBy) {
+                return res.status(400).json({ status: 400, message: 'Invalid referral code' });
+            }
+        }
+
+        let referralBonusAmount = 0;
+        const referralBonus = await ReferralBonus.findOne();
+        console.log("referralBonus", referralBonus);
+        if (referralBonus) {
+            referralBonusAmount = referralBonus.amount;
+        }
+
+
         const newUser = new User({
             fullName,
             mobileNumber,
             email,
             password: hashedPassword,
             userType: "USER",
-            refferalCode: await reffralCode()
+            refferalCode: await reffralCode(),
         });
 
+        if (referredBy) {
+            newUser.referredBy.push(referredBy._id);
+        }
+
         const savedUser = await newUser.save();
+
+        if (referredBy) {
+            referredBy.wallet += referralBonusAmount;
+            await referredBy.save();
+            savedUser.wallet += referralBonusAmount;
+            await savedUser.save();
+        }
 
         const accessToken = await jwt.sign({ id: savedUser._id }, authConfig.secret, {
             expiresIn: authConfig.accessTokenTime,
@@ -3290,5 +3318,16 @@ exports.upcomingPaymentsForSubscription = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+
+exports.getAllReferralBonuses = async (req, res) => {
+    try {
+        const referralBonuses = await ReferralBonus.find();
+
+        return res.status(200).json({ status: 200, data: referralBonuses });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

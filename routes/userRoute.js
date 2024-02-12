@@ -108,5 +108,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/brand/:carBrandId', [authJwt.verifyToken], auth.getCarBrandById);
     app.get('/api/v1/user/booking/upcoming/pending-payments', [authJwt.verifyToken], auth.getPendingUpcomingForSubscriptionPayments);
     app.post('/api/v1/user/booking/payNextMonth', [authJwt.verifyToken], auth.upcomingPaymentsForSubscription);
+    app.get('/api/v1/user/referral-bonus', [authJwt.verifyToken], auth.getAllReferralBonuses);
+
 
 }

@@ -28,6 +28,7 @@ const SubscriptionCategory = require('../models/subscription/subscriptionCategor
 const SharedCar = require('../models/shareCarModel');
 const Review = require('../models/ratingModel');
 const Transaction = require('../models/transctionModel');
+const ReferralBonus = require('../models/referralBonusAmountModel');
 
 
 
@@ -3237,6 +3238,17 @@ exports.getIncomeDetailsByUserId = async (req, res) => {
                 totalWalletBalance: user.wallet,
             }
         });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllReferralBonuses = async (req, res) => {
+    try {
+        const referralBonuses = await ReferralBonus.find();
+
+        return res.status(200).json({ status: 200, data: referralBonuses });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
