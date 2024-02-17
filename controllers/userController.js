@@ -38,6 +38,7 @@ const Transaction = require('../models/transctionModel');
 const CarFeatures = require('../models/carFeaturesModel');
 const cron = require('node-cron');
 const ReferralBonus = require('../models/referralBonusAmountModel');
+const Tax = require('../models/taxModel');
 
 
 
@@ -85,11 +86,13 @@ exports.signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         let referredBy;
+        let referralUser;
         if (referralCode) {
             referredBy = await User.findOne({ refferalCode: referralCode });
             if (!referredBy) {
                 return res.status(400).json({ status: 400, message: 'Invalid referral code' });
             }
+            referralUser = referredBy;
         }
 
         let referralBonusAmount = 0;
@@ -111,6 +114,10 @@ exports.signup = async (req, res) => {
 
         if (referredBy) {
             newUser.referredBy.push(referredBy._id);
+            if (referralUser) {
+                referralUser.referredTo.push(newUser._id);
+                await referralUser.save();
+            }
         }
 
         const savedUser = await newUser.save();
@@ -1486,7 +1493,12 @@ exports.createBooking = async (req, res) => {
             const roundedBasePrice = Math.round(basePrice);
             const roundedTotalPrice = Math.round(totalPrice);
 
-            const totalPriceWithAccessories = roundedTotalPrice + accessoriesPrice + adminCarPrice.depositedMoney + tripProtctionMoney + carChoicePrice + driverPrice;
+            const taxPercentage = await Tax.findOne();
+            const taxAmountPercentage = taxPercentage.percentage;
+
+            const taxAmount = roundedTotalPrice * (taxAmountPercentage / 100);
+
+            const totalPriceWithAccessories = roundedTotalPrice + accessoriesPrice + adminCarPrice.depositedMoney + tripProtctionMoney + carChoicePrice + driverPrice + taxAmount;
 
             const newBooking = await Booking.create({
                 user: user._id,
@@ -1507,7 +1519,7 @@ exports.createBooking = async (req, res) => {
                 depositedMoney: adminCarPrice.depositedMoney,
                 isSubscription: subscriptionMonths ? true : false,
                 subscriptionMonths,
-                subscriptionMonthlyPaymentAmount: Math.round(totalPriceWithAccessories / subscriptionMonths),
+                subscriptionMonthlyPaymentAmount: Math.round(totalPriceWithAccessories / subscriptionMonths) || null,
                 accessories: accessoriesId,
                 accessoriesPrice,
                 tripPackage,
@@ -1515,10 +1527,11 @@ exports.createBooking = async (req, res) => {
                 carChoice,
                 carChoicePrice,
                 driverPrice,
-                uniqueBookinId: await generateBookingCode()
+                uniqueBookinId: await generateBookingCode(),
+                taxAmount
             });
 
-            user.coin = carExist.quackCoin
+            user.coin += carExist.quackCoin
             await user.save();
             const welcomeMessage = `Welcome, ${user.fullName}! Thank you for Booking, your Booking details ${newBooking}.`;
             const welcomeNotification = new Notification({
@@ -2087,8 +2100,14 @@ exports.removeQuackCoinFromBooking = async (req, res) => {
 
 exports.updatePaymentStatus = async (req, res) => {
     try {
+        const userId = req.user._id;
         const bookingId = req.params.bookingId;
         const { paymentStatus, referenceId } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
 
         const updatedBooking = await Booking.findOne({ _id: bookingId });
 
@@ -2112,6 +2131,16 @@ exports.updatePaymentStatus = async (req, res) => {
             car.rentalCount += 1;
 
             await car.save();
+        }
+
+        if (paymentStatus === 'FAILED') {
+            const carId = updatedBooking.car;
+
+            const car = await Car.findOne({ _id: carId });
+
+            user.coin -= car.quackCoin;
+
+            await user.save();
         }
 
         await updatedBooking.save();
@@ -2234,13 +2263,13 @@ exports.extendBooking = async (req, res) => {
         const bookingId = req.params.bookingId;
         const { extendedDropOffDate, extendedDropOffTime } = req.body;
 
-        const extendPrice = await calculateExtendPrice(bookingId, extendedDropOffDate, extendedDropOffTime);
-        console.log("extendPrice2***", extendPrice);
-
         const extendedBooking = await Booking.findById(bookingId);
         if (!extendedBooking) {
-            return res.status(404).send("Booking not found");
+            return res.status(404).send({ status: 404, message: "Booking not found" });
         }
+
+        const extendPrice = await calculateExtendPrice(bookingId, extendedDropOffDate, extendedDropOffTime);
+        console.log("extendPrice2***", extendPrice);
 
         const isAvailable = await isCarAvailableForPeriod(
             extendedBooking.car,
@@ -2251,15 +2280,21 @@ exports.extendBooking = async (req, res) => {
         );
 
         if (!isAvailable) {
-            return res.status(400).send("Car is not available for the extended period");
+            return res.status(400).send({ status: 400, message: "Car is not available for the extended period" });
         }
+
+        const taxPercentage = await Tax.findOne();
+        const taxAmountPercentage = taxPercentage.percentage;
+
+        const taxAmount = extendPrice * (taxAmountPercentage / 100);
 
         extendedBooking.isTimeExtended = true;
         extendedBooking.extendedDropOffDate = extendedDropOffDate;
         extendedBooking.extendedDropOffTime = extendedDropOffTime;
 
         extendedBooking.extendedPrice = extendPrice;
-        extendedBooking.totalExtendedPrice = extendedBooking.totalPrice + extendPrice;
+        extendedBooking.extendedTax = Math.round(taxAmount);
+        extendedBooking.totalExtendedPrice = Math.round(extendedBooking.totalPrice + extendPrice + taxAmount);
 
         await extendedBooking.save();
 
@@ -2280,8 +2315,14 @@ exports.extendBooking = async (req, res) => {
 
 exports.cancelBooking = async (req, res) => {
     try {
+        const userId = req.user._id;
         const bookingId = req.params.bookingId;
         const { refundPreference, upiId, cancelReason } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
 
         const booking = await Booking.findById(bookingId);
         if (!booking) {
@@ -2337,6 +2378,16 @@ exports.cancelBooking = async (req, res) => {
         booking.refund = savedRefund._id;
         booking.cancelReason = cancelReason;
         await booking.save();
+
+        console.log(booking.car);
+        if (booking.car) {
+            const carExist = await Car.findById(booking.car);
+
+            user.coin -= carExist.quackCoin;
+            await user.save();
+        } else {
+            console.error('QuackCoin value not found for the car associated with the booking.');
+        }
 
         return res.status(200).json({ status: 200, message: 'Booking cancelled successfully', data: booking });
     } catch (error) {
@@ -3331,3 +3382,23 @@ exports.getAllReferralBonuses = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
+exports.getDirectReferrals = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const directReferrals = await User.find({ referredBy: userId });
+
+        return res.status(200).json({ status: 200, data: directReferrals });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+

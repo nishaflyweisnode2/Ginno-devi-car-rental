@@ -38,6 +38,7 @@ const CallUs = require('../models/callUsModel');
 const Feedback = require('../models/feedbackModel');
 const Transaction = require('../models/transctionModel');
 const ReferralBonus = require('../models/referralBonusAmountModel');
+const Tax = require('../models/taxModel');
 
 
 
@@ -3296,6 +3297,65 @@ exports.deleteReferralBonus = async (req, res) => {
         }
 
         return res.status(200).json({ status: 200, message: 'Referral bonus configuration deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createTaxAmount = async (req, res) => {
+    try {
+        const { percentage } = req.body;
+
+        const TaxAmount = await Tax.create({ percentage });
+
+        return res.status(201).json({ status: 201, data: TaxAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllTaxAmount = async (req, res) => {
+    try {
+        const TaxAmount = await Tax.find();
+
+        return res.status(200).json({ status: 200, data: TaxAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateTaxAmount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { percentage } = req.body;
+
+        const updatedTaxAmount = await Tax.findByIdAndUpdate(id, { percentage }, { new: true });
+
+        if (!updatedTaxAmount) {
+            return res.status(404).json({ status: 404, message: 'Tax Amount configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedReferralBonus });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteTaxAmount = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedTaxAmount = await Tax.findByIdAndDelete(id);
+
+        if (!deletedTaxAmount) {
+            return res.status(404).json({ status: 404, message: 'Tax Amount configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Tax Amount configuration deleted successfully' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });

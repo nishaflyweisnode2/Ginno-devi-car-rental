@@ -94,7 +94,7 @@ const bookingSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['PENDING', 'APPROVED', 'CANCELLED', 'COMPLETED'],
+            enum: ['PENDING', 'APPROVED', 'CANCELLED', 'REJECT', 'COMPLETED'],
             default: 'PENDING',
         },
         tripProtctionMoney: {
@@ -107,6 +107,9 @@ const bookingSchema = new mongoose.Schema(
             type: Number,
         },
         price: {
+            type: Number,
+        },
+        taxAmount: {
             type: Number,
         },
         totalPrice: {
@@ -146,6 +149,9 @@ const bookingSchema = new mongoose.Schema(
             default: null,
         },
         extendedPrice: {
+            type: Number,
+        },
+        extendedTax: {
             type: Number,
         },
         totalExtendedPrice: {

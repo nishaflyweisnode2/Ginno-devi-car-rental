@@ -2239,7 +2239,7 @@ exports.rejectBookingStatus = async (req, res) => {
         let otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
 
 
-        booking.status = 'CANCELLED';
+        booking.status = 'REJECT';
         booking.rejectRemarks = req.body.rejectRemarks || rejectRemarks;
         booking.rejectOtp = otp
 
@@ -2263,6 +2263,14 @@ exports.rejectBookingStatus = async (req, res) => {
         });
 
         await newTransaction.save();
+
+        if (booking.status = 'REJECT') {
+            const userCheck = await User.findById(booking.user);
+            const carExist = await Car.findById(booking.car);
+
+            userCheck.coin -= carExist.quackCoin;
+            await userCheck.save();
+        }
 
         return res.status(200).json({
             status: 200,
@@ -2371,7 +2379,7 @@ exports.getRejectedBookingsForPartner = async (req, res) => {
     }
 };
 
-exports.updateTripEndDetails = async (req, res) => {
+exports.updateTripEndDetails1 = async (req, res) => {
     try {
         const bookingId = req.params.bookingId;
 
@@ -2405,6 +2413,90 @@ exports.updateTripEndDetails = async (req, res) => {
         booking.tripEndOtp = otp;
         booking.isTripCompleted = true;
         booking.status = "COMPLETED";
+
+        const updatedBooking = await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Trip end details updated successfully', data: updatedBooking });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateTripEndDetails = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+
+        if (!bookingId) {
+            return res.status(400).json({ status: 400, message: 'Booking ID is required', data: null });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.paymentStatus === 'PENDING') {
+            return res.status(400).json({ status: 400, message: 'Payment is not paid', data: null });
+        }
+
+        if (booking.isTripCompleted) {
+            return res.status(400).json({ status: 400, message: 'Trip is already marked as completed', data: null });
+        }
+
+        booking.tripEndKm = req.query.tripEndKm !== undefined ? req.query.tripEndKm : booking.tripEndKm;
+        booking.remarks = req.query.remarks !== undefined ? req.query.remarks : booking.remarks;
+
+        const totalPrice = booking.totalPrice;
+        const depositedMoney = booking.depositedMoney;
+        const amountToOwner = Math.round((totalPrice - depositedMoney) * 0.7);
+        const amountToAdmin = Math.round((totalPrice - depositedMoney) * 0.3);
+
+        const car = await Car.findById(booking.car);
+        if (car) {
+            car.kmDriven += booking.tripEndKm;
+            await car.save();
+        }
+
+        let otp = newOTP.generate(6, { alphabets: false, upperCase: false, specialChar: false });
+
+        booking.tripEndTime = new Date();
+        booking.tripEndOtp = otp;
+        booking.isTripCompleted = true;
+        booking.status = "COMPLETED";
+
+        const carOwner = await User.findById(car.owner);
+        const admin = await User.findOne({ userType: 'ADMIN' });
+
+        if (carOwner) {
+            carOwner.wallet += amountToOwner;
+            await carOwner.save();
+            const newTransaction = new Transaction({
+                user: carOwner._id,
+                amount: amountToOwner,
+                type: 'Booking',
+                details: 'Booking creation',
+                cr: true
+            });
+
+            await newTransaction.save();
+        }
+
+        if (admin) {
+            admin.wallet += amountToAdmin;
+            await admin.save();
+            const newTransaction = new Transaction({
+                user: admin._id,
+                amount: amountToAdmin,
+                type: 'Booking',
+                details: 'Booking creation',
+                cr: true
+            });
+
+            await newTransaction.save();
+        }
 
         const updatedBooking = await booking.save();
 

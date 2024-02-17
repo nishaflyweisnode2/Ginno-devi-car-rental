@@ -73,6 +73,14 @@ const userSchema = new mongoose.Schema({
         ref: 'User',
         default: null,
     }],
+    referredTo: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+    }],
+    level: {
+        type: Number,
+    },
     wallet: {
         type: Number,
         default: 0,

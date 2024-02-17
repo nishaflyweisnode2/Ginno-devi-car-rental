@@ -109,6 +109,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/booking/upcoming/pending-payments', [authJwt.verifyToken], auth.getPendingUpcomingForSubscriptionPayments);
     app.post('/api/v1/user/booking/payNextMonth', [authJwt.verifyToken], auth.upcomingPaymentsForSubscription);
     app.get('/api/v1/user/referral-bonus', [authJwt.verifyToken], auth.getAllReferralBonuses);
+    app.get('/api/v1/user/direct-referral', [authJwt.verifyToken], auth.getDirectReferrals);
 
 
 }

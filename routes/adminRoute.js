@@ -181,6 +181,10 @@ module.exports = (app) => {
     app.get('/api/v1/admin/referral-bonus', [authJwt.isAdmin], auth.getAllReferralBonuses);
     app.put('/api/v1/admin/referral-bonus/:id', [authJwt.isAdmin], auth.updateReferralBonus);
     app.delete('/api/v1/admin/referral-bonus/:id', [authJwt.isAdmin], auth.deleteReferralBonus);
+    app.post('/api/v1/admin/tax-amount', [authJwt.isAdmin], auth.createTaxAmount);
+    app.get('/api/v1/admin/tax-amount', [authJwt.isAdmin], auth.getAllTaxAmount);
+    app.put('/api/v1/admin/tax-amount/:id', [authJwt.isAdmin], auth.updateTaxAmount);
+    app.delete('/api/v1/admin/tax-amount/:id', [authJwt.isAdmin], auth.deleteTaxAmount);
 
 
 
