@@ -185,6 +185,11 @@ module.exports = (app) => {
     app.get('/api/v1/admin/tax-amount', [authJwt.isAdmin], auth.getAllTaxAmount);
     app.put('/api/v1/admin/tax-amount/:id', [authJwt.isAdmin], auth.updateTaxAmount);
     app.delete('/api/v1/admin/tax-amount/:id', [authJwt.isAdmin], auth.deleteTaxAmount);
+    app.post('/api/v1/admin/referral-levels', [authJwt.isAdmin], auth.createReferralLevel);
+    app.get('/api/v1/admin/referral-levels', [authJwt.isAdmin], auth.getAllReferralLevels);
+    app.get('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.getReferralLevelById);
+    app.put('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.updateReferralLevelById);
+    app.delete('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.deleteReferralLevelById);
 
 
 

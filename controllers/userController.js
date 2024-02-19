@@ -39,6 +39,7 @@ const CarFeatures = require('../models/carFeaturesModel');
 const cron = require('node-cron');
 const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
+const ReferralLevel = require('../models/referralLevelModel');
 
 
 
@@ -70,6 +71,110 @@ const generateBookingCode = async () => {
     return code;
 }
 
+exports.signup1 = async (req, res) => {
+    try {
+        const { fullName, mobileNumber, email, password, confirmPassword, referralCode } = req.body;
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
+        }
+
+        const existingUser = await User.findOne({ mobileNumber: mobileNumber, userType: "USER" });
+        if (existingUser) {
+            return res.status(409).json({ status: 409, message: 'User Already Registered' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        let referredBy;
+        let referralUser;
+        if (referralCode) {
+            referredBy = await User.findOne({ refferalCode: referralCode });
+            if (!referredBy) {
+                return res.status(400).json({ status: 400, message: 'Invalid referral code' });
+            }
+            referralUser = referredBy;
+        }
+
+        let referralBonusAmount = 0;
+        const referralBonus = await ReferralBonus.findOne({ type: 'UserReferral' });
+        if (referralBonus) {
+            const adminUser = await User.findOne({ userType: 'ADMIN' });
+            if (!adminUser) {
+                return res.status(404).json({ status: 404, message: 'Admin user not found' });
+            }
+
+            referralBonusAmount = Math.round(adminUser.wallet * (referralBonus.percentage / 100));
+        }
+        console.log("referralBonusAmount", referralBonusAmount);
+
+        const newUser = new User({
+            fullName,
+            mobileNumber,
+            email,
+            password: hashedPassword,
+            userType: "USER",
+            refferalCode: await reffralCode(),
+        });
+
+        if (referredBy) {
+            newUser.level = referredBy.level + 1;
+            newUser.referredBy.push(referredBy._id);
+            if (referralUser) {
+                referralUser.referredTo.push(newUser._id);
+                await referralUser.save();
+            }
+        }
+
+        const savedUser = await newUser.save();
+
+        const referralUserLevel = await User.findOne({ _id: referralUser });
+        if (!referralUserLevel) {
+            return res.status(404).json({ status: 404, message: 'referralUser user not found' });
+        }
+        const referredByUserLevel = await User.findOne({ _id: newUser._id });
+        if (!referredByUserLevel) {
+            return res.status(404).json({ status: 404, message: 'referredBy user not found' });
+        }
+        console.log("referralUserLevel", referralUserLevel._id);
+        console.log("referredByUserLevel", referredByUserLevel._id);
+        console.log("referralUserLevel", referralUserLevel.level);
+        console.log("referredByUserLevel", referredByUserLevel.level);
+
+        let referralLevelAmount = 0;
+        const referralLevel = await ReferralLevel.findOne({ type: 'UserReferral' });
+        // console.log("referralLevel", referralLevel);
+
+        // if (referralLevel) {
+        //     referralLevelAmount = referralLevel.amount;
+        // }
+
+        // if (referredBy) {
+        //     referredBy.wallet += referralBonusAmount;
+        //     await referredBy.save();
+        //     savedUser.wallet += referralBonusAmount;
+        //     await savedUser.save();
+        // }
+
+        const accessToken = await jwt.sign({ id: savedUser._id }, authConfig.secret, {
+            expiresIn: authConfig.accessTokenTime,
+        });
+
+        const welcomeMessage = `Welcome, ${savedUser.mobileNumber}! Thank you for registering.`;
+        const welcomeNotification = new Notification({
+            recipient: savedUser._id,
+            content: welcomeMessage,
+            type: 'welcome',
+        });
+        await welcomeNotification.save();
+
+        return res.status(201).json({ status: 201, data: { accessToken }, savedUser });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.signup = async (req, res) => {
     try {
         const { fullName, mobileNumber, email, password, confirmPassword, referralCode } = req.body;
@@ -96,12 +201,15 @@ exports.signup = async (req, res) => {
         }
 
         let referralBonusAmount = 0;
-        const referralBonus = await ReferralBonus.findOne();
-        console.log("referralBonus", referralBonus);
+        const referralBonus = await ReferralBonus.findOne({ type: 'UserReferral' });
         if (referralBonus) {
-            referralBonusAmount = referralBonus.amount;
+            const adminUser = await User.findOne({ userType: 'ADMIN' });
+            if (!adminUser) {
+                return res.status(404).json({ status: 404, message: 'Admin user not found' });
+            }
+            referralBonusAmount = Math.round(adminUser.wallet * (referralBonus.percentage / 100));
         }
-
+        console.log("referralBonusAmount", referralBonusAmount);
 
         const newUser = new User({
             fullName,
@@ -113,21 +221,30 @@ exports.signup = async (req, res) => {
         });
 
         if (referredBy) {
+            newUser.level = referredBy.level + 1;
             newUser.referredBy.push(referredBy._id);
             if (referralUser) {
                 referralUser.referredTo.push(newUser._id);
                 await referralUser.save();
             }
+
+            const referralLevel = await ReferralLevel.findOne({ type: 'UserReferral' });
+            if (referralLevel) {
+                const levelPercentage = referralLevel.allLevels.find(level => level.level === newUser.level.toString());
+                if (levelPercentage) {
+                    referralBonusAmount += Math.round(referralBonusAmount * (parseInt(levelPercentage.percentage) / 100));
+                    console.log("referralBonusAmount", referralBonusAmount);
+
+                }
+            }
+            console.log("referralLevel", referralLevel);
+
+            referredBy.wallet += referralBonusAmount;
+            await referredBy.save();
+            newUser.wallet += referralBonusAmount;
         }
 
         const savedUser = await newUser.save();
-
-        if (referredBy) {
-            referredBy.wallet += referralBonusAmount;
-            await referredBy.save();
-            savedUser.wallet += referralBonusAmount;
-            await savedUser.save();
-        }
 
         const accessToken = await jwt.sign({ id: savedUser._id }, authConfig.secret, {
             expiresIn: authConfig.accessTokenTime,

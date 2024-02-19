@@ -80,6 +80,7 @@ const userSchema = new mongoose.Schema({
     }],
     level: {
         type: Number,
+        default: 0,
     },
     wallet: {
         type: Number,

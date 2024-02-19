@@ -1,9 +1,15 @@
 const mongoose = require('mongoose');
 
 const ReferralBonusSchema = new mongoose.Schema({
-    amount: {
+    name: {
+        type: String,
+    },
+    type: {
+        type: String,
+        enum: ['CarReferral', 'UserReferral', 'RoyalityReward'],
+    },
+    percentage: {
         type: Number,
-        required: true,
         default: 0,
     },
 }, { timestamps: true });

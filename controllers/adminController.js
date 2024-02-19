@@ -39,6 +39,7 @@ const Feedback = require('../models/feedbackModel');
 const Transaction = require('../models/transctionModel');
 const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
+const ReferralLevel = require('../models/referralLevelModel');
 
 
 
@@ -3246,9 +3247,13 @@ exports.deleteFeedback = async (req, res) => {
 
 exports.createReferralBonus = async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { name, type, percentage } = req.body;
 
-        const newReferralBonus = await ReferralBonus.create({ amount });
+        const newReferralBonus = await ReferralBonus.create({
+            name,
+            type,
+            percentage
+        });
 
         return res.status(201).json({ status: 201, data: newReferralBonus });
     } catch (error) {
@@ -3271,9 +3276,9 @@ exports.getAllReferralBonuses = async (req, res) => {
 exports.updateReferralBonus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { amount } = req.body;
+        const { name, type, percentage } = req.body;
 
-        const updatedReferralBonus = await ReferralBonus.findByIdAndUpdate(id, { amount }, { new: true });
+        const updatedReferralBonus = await ReferralBonus.findByIdAndUpdate(id, { name, type, percentage }, { new: true });
 
         if (!updatedReferralBonus) {
             return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
@@ -3356,6 +3361,105 @@ exports.deleteTaxAmount = async (req, res) => {
         }
 
         return res.status(200).json({ status: 200, message: 'Tax Amount configuration deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createReferralLevel = async (req, res) => {
+    try {
+        const { referralBonus, allLevels } = req.body;
+
+        const checkReferralBonus = await ReferralBonus.findById(referralBonus);
+        if (!checkReferralBonus) {
+            return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
+        }
+
+        const checkReferralLevel = await ReferralLevel.findOne({ referralBonus });
+        if (checkReferralLevel) {
+            return res.status(400).json({ status: 400, message: 'Referral level configuration already exists for this referral bonus' });
+        }
+
+        const newReferralLevel = new ReferralLevel({
+            referralBonus,
+            allLevels,
+            type: checkReferralBonus.type
+        });
+
+        const savedReferralLevel = await newReferralLevel.save();
+
+        return res.status(201).json({ status: 201, data: savedReferralLevel });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllReferralLevels = async (req, res) => {
+    try {
+        const referralLevels = await ReferralLevel.find();
+
+        return res.status(200).json({ status: 200, data: referralLevels });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getReferralLevelById = async (req, res) => {
+    try {
+        const referralLevelId = req.params.referralLevelId;
+
+        const referralLevel = await ReferralLevel.findById(referralLevelId);
+
+        if (!referralLevel) {
+            return res.status(404).json({ status: 404, message: 'Referral level not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: referralLevel });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateReferralLevelById = async (req, res) => {
+    try {
+        const referralLevelId = req.params.referralLevelId;
+        const updateData = req.body;
+
+        if (updateData.referralBonus) {
+            const checkReferralBonus = await ReferralBonus.findById(referralBonus);
+            if (!checkReferralBonus) {
+                return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
+            }
+        }
+
+        const updatedReferralLevel = await ReferralLevel.findByIdAndUpdate(referralLevelId, updateData, { new: true });
+
+        if (!updatedReferralLevel) {
+            return res.status(404).json({ status: 404, message: 'Referral level not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedReferralLevel });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteReferralLevelById = async (req, res) => {
+    try {
+        const referralLevelId = req.params.referralLevelId;
+
+        const deletedReferralLevel = await ReferralLevel.findByIdAndDelete(referralLevelId);
+
+        if (!deletedReferralLevel) {
+            return res.status(404).json({ status: 404, message: 'Referral level not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Referral level deleted successfully' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
