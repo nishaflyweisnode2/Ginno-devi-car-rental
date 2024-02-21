@@ -2452,8 +2452,10 @@ exports.updateTripEndDetails = async (req, res) => {
         const totalPrice = booking.totalPrice;
         const depositedMoney = booking.depositedMoney;
         const amountToOwner = Math.round((totalPrice - depositedMoney) * 0.7);
-        const amountToAdmin = Math.round((totalPrice - depositedMoney) * 0.3);
-
+        const amountToAdmin = Math.round((totalPrice - depositedMoney) * 0.15);
+        const amountToAdminReferral = Math.round((totalPrice - depositedMoney) * 0.15);
+        console.log("amountToAdmin", amountToAdmin);
+        console.log("amountToAdminReferral", amountToAdminReferral);
         const car = await Car.findById(booking.car);
         if (car) {
             car.kmDriven += booking.tripEndKm;
@@ -2496,6 +2498,49 @@ exports.updateTripEndDetails = async (req, res) => {
             });
 
             await newTransaction.save();
+
+            const userReferralBonus = await ReferralBonus.findOne({ type: 'UserReferral' });
+            const userCarReferralBonus = await ReferralBonus.findOne({ type: 'CarReferral' });
+            const userRoyalityReferralBonus = await ReferralBonus.findOne({ type: 'RoyalityReward' });
+
+            const carReferralAmount = Math.round(amountToAdminReferral * (userCarReferralBonus.percentage / 100));
+            const userReferralAmount = Math.round(amountToAdminReferral * (userReferralBonus.percentage / 100));
+            const royaltyRewardAmount = Math.round(amountToAdminReferral * (userRoyalityReferralBonus.percentage / 100));
+            console.log("carReferralAmount", carReferralAmount);
+            console.log("userReferralAmount", userReferralAmount);
+            console.log("royaltyRewardAmount", royaltyRewardAmount);
+
+            admin.carReferral += carReferralAmount;
+            admin.userReferral += userReferralAmount;
+            admin.royaltyReward += royaltyRewardAmount;
+            await admin.save();
+
+            const carReferralTransaction = new Transaction({
+                user: admin._id,
+                amount: carReferralAmount,
+                type: 'Booking',
+                details: 'Car referral reward',
+                cr: true
+            });
+            await carReferralTransaction.save();
+
+            const userReferralTransaction = new Transaction({
+                user: admin._id,
+                amount: userReferralAmount,
+                type: 'Booking',
+                details: 'User referral reward',
+                cr: true
+            });
+            await userReferralTransaction.save();
+
+            const royaltyRewardTransaction = new Transaction({
+                user: admin._id,
+                amount: royaltyRewardAmount,
+                type: 'Booking',
+                details: 'Royalty reward',
+                cr: true
+            });
+            await royaltyRewardTransaction.save();
         }
 
         const updatedBooking = await booking.save();

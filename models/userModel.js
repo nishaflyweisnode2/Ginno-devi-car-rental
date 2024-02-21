@@ -86,6 +86,18 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    carReferral: {
+        type: Number,
+        default: 0,
+    },
+    userReferral: {
+        type: Number,
+        default: 0,
+    },
+    royaltyReward: {
+        type: Number,
+        default: 0,
+    },
     coin: {
         type: Number,
         default: 0,
