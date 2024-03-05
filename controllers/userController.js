@@ -674,6 +674,13 @@ exports.getCarById = async (req, res) => {
         if (!car) {
             return res.status(404).json({ message: 'Car not found' });
         }
+
+        const adminCarPrice = await AdminCarPrice.findOne({ car: car._id, mainCategory: req.body.mainCategory });
+        let rentalPrice = 0;
+        if (adminCarPrice) {
+            rentalPrice = adminCarPrice.autoPricing ? adminCarPrice.adminHourlyRate : adminCarPrice.hostHourlyRate;
+        }
+
         return res.status(200).json({ status: 200, data: car });
     } catch (error) {
         console.error(error);
@@ -3583,3 +3590,87 @@ exports.getDirectReferrals = async (req, res) => {
     }
 };
 
+exports.getAllPrices = async (req, res) => {
+    try {
+        const prices = await DoorstepDeliveryPrice.find();
+
+        return res.status(200).json({ status: 200, data: prices }).populate('category');
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllPricesByCategoryId = async (req, res) => {
+    try {
+        const category = req.params.id;
+        const prices = await DoorstepDeliveryPrice.find({ category }).populate('category');
+
+        return res.status(200).json({ status: 200, data: prices });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const price = await DoorstepDeliveryPrice.findById(priceId).populate('category');
+
+        if (!price) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: price });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllDriverPrice = async (req, res) => {
+    try {
+        const prices = await DriverPrice.find();
+
+        return res.status(200).json({ status: 200, data: prices }).populate('category');
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getDriverPriceByCategoryId = async (req, res) => {
+    try {
+        const category = req.params.id;
+
+        const price = await DriverPrice.find({ category }).populate('category');
+
+        if (!price) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: price });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getDriverPriceById = async (req, res) => {
+    try {
+        const priceId = req.params.id;
+
+        const price = await DriverPrice.findById(priceId).populate('category');
+
+        if (!price) {
+            return res.status(404).json({ status: 404, message: 'Price not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: price });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};

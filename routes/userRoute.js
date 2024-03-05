@@ -110,6 +110,12 @@ module.exports = (app) => {
     app.post('/api/v1/user/booking/payNextMonth', [authJwt.verifyToken], auth.upcomingPaymentsForSubscription);
     app.get('/api/v1/user/referral-bonus', [authJwt.verifyToken], auth.getAllReferralBonuses);
     app.get('/api/v1/user/direct-referral', [authJwt.verifyToken], auth.getDirectReferrals);
+    app.get('/api/v1/user/prices', [authJwt.verifyToken], auth.getAllPrices);
+    app.get('/api/v1/user/prices/byCategory/:id', [authJwt.verifyToken], auth.getAllPricesByCategoryId);
+    app.get('/api/v1/user/prices/:id', [authJwt.verifyToken], auth.getPriceById);
+    app.get('/api/v1/user/driverPrices', [authJwt.verifyToken], auth.getAllDriverPrice);
+    app.get('/api/v1/user/driverPrices/bycategory/:id', [authJwt.verifyToken], auth.getDriverPriceByCategoryId);
+    app.get('/api/v1/user/driverPrices/:id', [authJwt.verifyToken], auth.getDriverPriceById);
 
 
 }
