@@ -1654,6 +1654,9 @@ exports.createBooking = async (req, res) => {
 
             const adminCarPrice = await AdminCarPrice.findOne({ car: carId, mainCategory: mainCategory });
             console.log("adminCarPrice", adminCarPrice);
+            if (!adminCarPrice) {
+                return res.status(400).json({ status: 400, message: 'Car Price not found.', data: null });
+            }
             let rentalPrice;
             if (adminCarPrice.autoPricing) {
                 rentalPrice = adminCarPrice.adminHourlyRate;
