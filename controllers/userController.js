@@ -40,6 +40,7 @@ const cron = require('node-cron');
 const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
 const ReferralLevel = require('../models/referralLevelModel');
+const Address = require("../models/userAddressModel");
 
 
 
@@ -3675,5 +3676,138 @@ exports.getDriverPriceById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createAddress = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const { name, coordinates, type, address } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const pickupLocation = new Address({
+            user: user.id,
+            name,
+            coordinates,
+            type,
+            address,
+        });
+
+        const savedPickupLocation = await pickupLocation.save();
+
+        res.status(201).json({
+            status: 201,
+            message: 'Address created successfully',
+            data: { pickupLocation: savedPickupLocation },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllAddress = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const address = await Address.find({ user: userId });
+
+        res.status(200).json({ status: 200, data: address });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAddressById = async (req, res) => {
+    try {
+        const addressId = req.params.id;
+        const address = await Address.findById(addressId);
+
+        if (!address) {
+            return res.status(404).json({ status: 404, message: 'address not found' });
+        }
+
+        res.status(200).json({ status: 200, data: address });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateAddressById = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const addressId = req.params.id;
+        const updateFields = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const existingAddress = await Address.findById(addressId);
+
+        if (!existingAddress) {
+            return res.status(404).json({ status: 404, message: 'Address not found' });
+        }
+
+        if (existingAddress.user.toString() !== userId.toString()) {
+            return res.status(403).json({ status: 403, message: 'Unauthorized: User does not have permission to update this Address' });
+        }
+
+        const updatedAddress = await Address.findByIdAndUpdate(addressId, updateFields, { new: true });
+
+        res.status(200).json({
+            status: 200,
+            message: 'Address updated successfully',
+            data: updatedAddress,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteAddressById = async (req, res) => {
+    try {
+        const addressId = req.params.id;
+        const deletedLocation = await Address.findByIdAndDelete(addressId);
+
+        if (!deletedLocation) {
+            return res.status(404).json({ status: 404, message: 'Address not found' });
+        }
+
+        res.status(200).json({ status: 200, message: 'Address deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAddressByType = async (req, res) => {
+    try {
+        const { type } = req.params;
+
+        const locations = await Address.find({ type: type });
+        console.log(locations);
+
+        if (locations && locations.length > 0) {
+            return res.json(locations);
+        } else {
+            return res.status(404).json({ message: `No address found for type: ${type}` });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: `Failed to retrieve address for type: ${type}` });
     }
 };
