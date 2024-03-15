@@ -185,6 +185,11 @@ const carSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    //for subscription then user get car on that date
+    expecteddeliveryCar: {
+        type: String,
+        default: "2 to 4 days"
+    }
 
 
 

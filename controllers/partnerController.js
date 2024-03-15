@@ -2208,6 +2208,41 @@ exports.getApprovedBookingsForPartner = async (req, res) => {
     }
 };
 
+exports.updateCarDeliveredUser = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { bookingId } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const approvedBookings = await Booking.findOne({
+            _id: bookingId,
+            status: 'APPROVED',
+            paymentStatus: 'PAID'
+        }).populate('car');
+        console.log("approvedBookings", approvedBookings);
+
+        if (!approvedBookings) {
+            return res.status(404).json({ status: 404, message: 'Booking not found or payment not paid' });
+        }
+
+        approvedBookings.isCarDeliveredUser = true;
+        await approvedBookings.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Car delivered to User location successfully',
+            data: approvedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
 exports.rejectBookingStatus = async (req, res) => {
     try {
         const partnerId = req.user._id;

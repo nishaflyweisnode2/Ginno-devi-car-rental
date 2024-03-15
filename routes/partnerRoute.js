@@ -92,6 +92,7 @@ module.exports = (app) => {
     app.post("/api/v1/partner/bookings/verify/:bookingId", [authJwt.isPartner], auth.approveBookingVerifyOtp);
     app.post("/api/v1/partner/bookings/resendOtp/:id", [authJwt.isPartner], auth.approveBookingResendOTP);
     app.get('/api/v1/partner/approved-bookings', [authJwt.isPartner], auth.getApprovedBookingsForPartner);
+    app.put('/api/v1/partner/car/delivery/status/:bookingId', [authJwt.isPartner], auth.updateCarDeliveredUser);
     app.put('/api/v1/partner/bookings/:bookingId/reject', [authJwt.isPartner], auth.rejectBookingStatus);
     app.post("/api/v1/partner/bookings/cancleBooking/verify/:bookingId", [authJwt.isPartner], auth.rejectBookingVerifyOtp);
     app.post("/api/v1/partner/bookings/cancleBooking/resendOtp/:id", [authJwt.isPartner], auth.rejectBookingResendOTP);

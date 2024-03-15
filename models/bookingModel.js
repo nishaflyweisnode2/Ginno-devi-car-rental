@@ -260,6 +260,11 @@ const bookingSchema = new mongoose.Schema(
         upcomingPayments: {
             type: [upcomingPaymentSchema],
             default: []
+        },
+        //for subscription then user get car on that date
+        isCarDeliveredUser: {
+            type: Boolean,
+            // default: false
         }
 
 
