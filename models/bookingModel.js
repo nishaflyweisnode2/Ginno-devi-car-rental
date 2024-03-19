@@ -265,6 +265,14 @@ const bookingSchema = new mongoose.Schema(
         isCarDeliveredUser: {
             type: Boolean,
             // default: false
+        },
+        isSharingBooking: {
+            type: Boolean,
+            default: false
+        },
+        isRental: {
+            type: Boolean,
+            default: false
         }
 
 

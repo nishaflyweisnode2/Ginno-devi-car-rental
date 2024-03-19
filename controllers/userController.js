@@ -1691,6 +1691,14 @@ exports.createBooking = async (req, res) => {
             const taxAmount = roundedTotalPrice * (taxAmountPercentage / 100);
 
             const totalPriceWithAccessories = roundedTotalPrice + accessoriesPrice + adminCarPrice.depositedMoney + tripProtctionMoney + carChoicePrice + driverPrice + taxAmount;
+            let isSubscription, isRental;
+            if (subscriptionMonths != (null || undefined)) {
+                isSubscription = true;
+                isRental = false
+            } else {
+                isRental = true;
+                isSubscription = false
+            }
 
             const newBooking = await Booking.create({
                 user: user._id,
@@ -1709,7 +1717,8 @@ exports.createBooking = async (req, res) => {
                 price: roundedBasePrice,
                 totalPrice: totalPriceWithAccessories,
                 depositedMoney: adminCarPrice.depositedMoney,
-                isSubscription: subscriptionMonths ? true : false,
+                isSubscription: isSubscription,
+                isRental: isRental,
                 subscriptionMonths,
                 subscriptionMonthlyPaymentAmount: Math.round(totalPriceWithAccessories / subscriptionMonths) || null,
                 accessories: accessoriesId,
@@ -1894,7 +1903,8 @@ exports.createBookingForSharingCar = async (req, res) => {
             'dropCoordinates.coordinates': goingTo,
             date,
             seat,
-            totalPrice: roundedTotalPrice
+            totalPrice: roundedTotalPrice,
+            isSharingBooking: true
         });
 
         await newBooking.save();
