@@ -1864,7 +1864,7 @@ exports.createBookingForSharingCar = async (req, res) => {
             mainCategory,
             'pickupCoordinates.coordinates': leavingFrom,
             'dropCoordinates.coordinates': goingTo,
-            date,
+            pickupDate: date,
             seat
         });
 
@@ -1901,7 +1901,8 @@ exports.createBookingForSharingCar = async (req, res) => {
             'pickupCoordinates.coordinates': leavingFrom,
             'dropCoordinates.type': 'Point',
             'dropCoordinates.coordinates': goingTo,
-            date,
+            pickupDate: date,
+            dropOffDate: adminCarPrice.availableTo,
             seat,
             totalPrice: roundedTotalPrice,
             isSharingBooking: true

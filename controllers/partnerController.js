@@ -2840,7 +2840,7 @@ exports.createGovernmentTenderSharedCar = async (req, res) => {
 exports.createSharingSharedCar = async (req, res) => {
     try {
         const partnerId = req.user._id;
-        const { mainCategory, car, pickupLocation, dropOffLocation, pickupCoordinates, dropCoordinates, stopCity, availableFrom, passengerPickupTime, noOfPassenger, seatprice, route } = req.body;
+        const { mainCategory, car, pickupLocation, dropOffLocation, pickupCoordinates, dropCoordinates, stopCity, availableFrom, availableTo, passengerPickupTime, noOfPassenger, seatprice, route } = req.body;
 
         const user = await User.findById(partnerId);
         if (!user) {
@@ -2891,6 +2891,7 @@ exports.createSharingSharedCar = async (req, res) => {
             dropCoordinates,
             stopCity,
             availableFrom,
+            availableTo,
             passengerPickupTime,
             seatprice,
             route,
