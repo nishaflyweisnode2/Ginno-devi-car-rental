@@ -30,7 +30,7 @@ module.exports = (app) => {
     app.post('/api/v1/user/review/createReview', [authJwt.verifyToken], auth.createReview);
     app.get('/api/v1/user/review/getReviewsByCar/:carId', auth.getReviewsByCar);
     app.post('/api/v1/user/host/review', [authJwt.verifyToken], auth.createHostReview);
-    app.get('/api/v1/user/host/review/:hostId', auth.getHostReviewById);
+    app.get('/api/v1/user/host/review/:hostId', [authJwt.verifyToken], auth.getHostReviewById);
     app.get('/api/v1/user/mainCategories', [authJwt.verifyToken], auth.getAllMainCategories);
     app.get('/api/v1/user/mainCategories/:mainCategoryId', [authJwt.verifyToken], auth.getMainCategoryById);
     app.get('/api/v1/user/categories', [authJwt.verifyToken], auth.getAllCategories);
@@ -122,6 +122,10 @@ module.exports = (app) => {
     app.put('/api/v1/user/address/:id', [authJwt.verifyToken], auth.updateAddressById);
     app.delete('/api/v1/user/address/:id', [authJwt.verifyToken], auth.deleteAddressById);
     app.get('/api/v1/user/address/type/:type', [authJwt.verifyToken], auth.getAddressByType);
-
+    app.post('/api/v1/user/govt-tendor/add', [authJwt.verifyToken], auth.createTenderApplication);
+    app.get('/api/v1/user/govt-tendor', [authJwt.verifyToken], auth.getAllTenderApplications);
+    app.get('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.getTenderApplicationById);
+    app.put('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.updateTenderApplication);
+    app.delete('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.deleteTenderApplication);
 
 }

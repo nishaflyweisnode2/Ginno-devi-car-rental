@@ -29,6 +29,8 @@ const SharedCar = require('../models/shareCarModel');
 const Review = require('../models/ratingModel');
 const Transaction = require('../models/transctionModel');
 const ReferralBonus = require('../models/referralBonusAmountModel');
+const UserReview = require('../models/userRatingModel');
+const TenderApplication = require('../models/govtTendorModel');
 
 
 
@@ -3425,5 +3427,231 @@ exports.getAllReferralBonuses = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createUserReview = async (req, res) => {
+    try {
+        const { bookingId, carId, userRating, userComment } = req.body;
+
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const bookings = await Booking.findOne({ _id: bookingId })/*.populate('car user pickupLocation dropOffLocation')*/;
+        if (!bookings) {
+            return res.status(404).json({ status: 404, message: 'Bookings not found', data: null });
+        }
+
+        if (userRating < 0 || userRating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid userRating. UserRating should be between 0 and 5.', data: {} });
+        }
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const existingReview = await UserReview.findOne({ host: userId, car: carId });
+        if (existingReview) {
+            return res.status(400).json({ status: 400, message: 'You have already reviewed this host' });
+        }
+
+        const review = new UserReview({
+            user: bookings.user,
+            car: carId,
+            host: userId,
+            booking: bookingId,
+            userRating,
+            userComment,
+        });
+
+        await review.save();
+
+        const reviewsForCar = await UserReview.find({ host: userId });
+        const numOfUserReviews = reviewsForCar.length;
+
+        let totalRating = 0;
+        reviewsForCar.forEach(review => {
+            totalRating += review.userRating;
+        });
+
+        const averageRating = totalRating / numOfUserReviews;
+
+        review.numOfUserReviews = numOfUserReviews;
+        review.averageuserRating = Math.round(averageRating);
+
+        await review.save();
+
+        return res.status(201).json({ status: 201, message: 'Host review created successfully', data: review });
+    } catch (error) {
+        console.error('Error creating host review:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.getUserReviewById = async (req, res) => {
+    try {
+        const { hostId } = req.params;
+
+        const user = await User.findById(hostId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        // const car = await Car.findOne({ owner: hostId });
+        // if (!car) {
+        //     return res.status(404).json({ status: 404, message: 'Car not found' });
+        // }
+
+        const reviews = await UserReview.find({ user: hostId });
+
+        let totalRating = 0;
+        reviews.forEach(review => {
+            totalRating += review.userRating;
+        });
+        const averageUserRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+        res.status(200).json({ status: 200, data: { reviews, numOfUserReviews: reviews.length, averageUserRating } });
+    } catch (error) {
+        console.error('Error fetching host review by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.createTenderApplication = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { apply } = req.body;
+        console.log(userId);
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.findOne({ owner: userId });
+
+        const tenderApplication = new TenderApplication({
+            car: cars._id || null,
+            user: userId,
+            apply
+        });
+
+        await tenderApplication.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: 'Tender application created successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to create tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.getAllTenderApplications = async (req, res) => {
+    try {
+        const tenderApplications = await TenderApplication.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender applications retrieved successfully',
+            data: tenderApplications
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender applications',
+            error: error.message
+        });
+    }
+};
+
+exports.getTenderApplicationById = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findById(req.params.id);
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application retrieved successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.updateTenderApplication = async (req, res) => {
+    try {
+        const { carId, userId, apply } = req.body;
+
+        const tenderApplication = await TenderApplication.findByIdAndUpdate(
+            req.params.id,
+            { car: carId, user: userId, apply },
+            { new: true }
+        );
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application updated successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to update tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.deleteTenderApplication = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findByIdAndDelete(req.params.id);
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({ status: 200, message: "Delete sucessfully" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to delete tender application',
+            error: error.message
+        });
     }
 };

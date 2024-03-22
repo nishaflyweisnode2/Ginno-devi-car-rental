@@ -19,6 +19,7 @@ module.exports = (app) => {
     app.get("/api/v1/admin/profile", [authJwt.isAdmin], auth.getAllUser);
     app.get("/api/v1/admin/profile/:userId", [authJwt.isAdmin], auth.getUserById);
     app.delete('/api/v1/admin/users/profile/delete/:id', [authJwt.isAdmin], auth.deleteUser);
+    app.put("/api/v1/admin/update/user/:id", [authJwt.isAdmin], auth.updateUserById);
     app.get('/api/v1/admin/users/pending-verification', [authJwt.isAdmin], auth.getPendingVerificationUsers);
     app.put('/api/v1/admin/users/:id/update-verification-status', [authJwt.isAdmin], auth.updateVerificationStatus);
     app.get('/api/v1/admin/verified-users', [authJwt.isAdmin], auth.getVerifiedUsers);
@@ -190,6 +191,24 @@ module.exports = (app) => {
     app.get('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.getReferralLevelById);
     app.put('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.updateReferralLevelById);
     app.delete('/api/v1/admin/referral-levels/:referralLevelId', [authJwt.isAdmin], auth.deleteReferralLevelById);
+    app.get('/api/v1/admin/bookings', [authJwt.isAdmin], auth.getAllBookings);
+    app.get('/api/v1/admin/bookings/user/:id', [authJwt.isAdmin], auth.getBookingsByUser);
+    app.get('/api/v1/admin/bookings/:bookingId', [authJwt.isAdmin], auth.getBookingsById);
+    app.get('/api/v1/admin/bookings/completed/user/:id', [authJwt.isAdmin], auth.getCompletedBookingsByUser);
+    app.get('/api/v1/admin/bookings/upcoming/user/:id', [authJwt.isAdmin], auth.getUpcomingBookingsByUser);
+    app.get('/api/v1/admin/bookings/partner/:id', [authJwt.isAdmin], auth.getBookingByPartnerId);
+    app.get('/api/v1/admin/partner/top-booked-car/:id', [authJwt.isAdmin], auth.getTopBookedCarsForPartner);
+    app.get('/api/v1/admin/partner/upcoming-bookings/:id', [authJwt.isAdmin], auth.getUpcomingBookingsForPartner);
+    app.get('/api/v1/admin/partner/completed-bookings/:id', [authJwt.isAdmin], auth.getCompletedBookingsForPartner);
+    app.get('/api/v1/admin/partner/canceled-bookings/:id', [authJwt.isAdmin], auth.getCanceledBookingsForPartner);
+    app.get('/api/v1/admin/partner/paymentFalied-bookings/:id', [authJwt.isAdmin], auth.getPaymentFaliedBookingsForPartner);
+    app.get('/api/v1/admin/partner/approved-bookings/:id', [authJwt.isAdmin], auth.getApprovedBookingsForPartner);
+    app.get('/api/v1/admin/partner/rejected-bookings/:id', [authJwt.isAdmin], auth.getRejectedBookingsForPartner);
+    app.post('/api/v1/admin/govt-tendor/add', [authJwt.isAdmin], auth.createTenderApplication);
+    app.get('/api/v1/admin/govt-tendor', [authJwt.isAdmin], auth.getAllTenderApplications);
+    app.get('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.getTenderApplicationById);
+    app.put('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.updateTenderApplication);
+    app.delete('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.deleteTenderApplication);
 
 
 

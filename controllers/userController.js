@@ -41,6 +41,7 @@ const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
 const ReferralLevel = require('../models/referralLevelModel');
 const Address = require("../models/userAddressModel");
+const TenderApplication = require('../models/govtTendorModel');
 
 
 
@@ -230,6 +231,77 @@ exports.signup1 = async (req, res) => {
     }
 };
 
+exports.signup2 = async (req, res) => {
+    try {
+        const { fullName, mobileNumber, email, password, confirmPassword, referralCode } = req.body;
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
+        }
+
+        const existingUser = await User.findOne({ mobileNumber, userType: "USER" });
+        if (existingUser) {
+            return res.status(409).json({ status: 409, message: 'User Already Registered' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        let referredBy;
+        let referralBonusAmount = 0;
+
+        if (referralCode) {
+            referredBy = await User.findOne({ referralCode });
+            if (!referredBy) {
+                return res.status(400).json({ status: 400, message: 'Invalid referral code' });
+            }
+            referralBonusAmount = await calculateReferralBonus(referredBy);
+        }
+
+        const newUser = new User({
+            fullName,
+            mobileNumber,
+            email,
+            password: hashedPassword,
+            userType: "USER",
+            refferalCode: await reffralCode(),
+        });
+
+        if (referredBy) {
+            newUser.referredBy.push(referredBy._id);
+            referredBy.referredTo.push(newUser._id);
+
+            await calculateLevel(referredBy, newUser);
+            console.log("1", calculateLevel);
+            await referredBy.save();
+        }
+        console.log("2", referredBy);
+
+        if (referredBy) {
+            referredBy.wallet += referralBonusAmount;
+            await referredBy.save();
+        }
+
+        const savedUser = await newUser.save();
+
+        const accessToken = await jwt.sign({ id: savedUser._id }, authConfig.secret, {
+            expiresIn: authConfig.accessTokenTime,
+        });
+
+        const welcomeMessage = `Welcome, ${savedUser.mobileNumber}! Thank you for registering.`;
+        const welcomeNotification = new Notification({
+            recipient: savedUser._id,
+            content: welcomeMessage,
+            type: 'welcome',
+        });
+        await welcomeNotification.save();
+
+        return res.status(201).json({ status: 201, data: { accessToken }, savedUser });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.signup = async (req, res) => {
     try {
         const { fullName, mobileNumber, email, password, confirmPassword, referralCode } = req.body;
@@ -263,12 +335,10 @@ exports.signup = async (req, res) => {
             password: hashedPassword,
             userType: "USER",
             refferalCode: await reffralCode(),
-            level: referredBy ? referredBy.level + 1 : 0
         });
 
         if (referredBy) {
-            newUser.referredBy.push(referredBy._id);
-            referredBy.referredTo.push(newUser._id);
+            await calculateReferralLevels(referredBy, newUser); // Calculate referral levels for all users in chain
             await referredBy.save();
         }
 
@@ -297,6 +367,29 @@ exports.signup = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
+const calculateReferralLevels = async (referrer, newUser) => {
+    if (referrer) {
+        newUser.level = referrer.level + 1; // Increment level based on referrer
+
+        // Find or create the referral level object for the current level
+        const referralLevel = referrer.referralLevels.find(level => level.level === newUser.level);
+        if (referralLevel) {
+            referralLevel.users.push(newUser._id); // Add user to the appropriate level
+        } else {
+            referrer.referralLevels.push({ level: newUser.level, users: [newUser._id] }); // Create new level object
+        }
+
+        await referrer.save();
+
+        if (referrer.referredByUser) { // If there's a direct referrer, recursively calculate levels for all users in the chain
+            const referrerOfReferrer = await User.findById(referrer.referredByUser);
+            await calculateReferralLevels(referrerOfReferrer, newUser);
+        }
+    }
+};
+
+
 
 async function calculateReferralBonus(referredBy) {
     try {
@@ -768,7 +861,7 @@ exports.getReviewsByCar = async (req, res) => {
 
 exports.createHostReview = async (req, res) => {
     try {
-        const { carId, hostRating, hostComment } = req.body;
+        const { bookingId, carId, hostRating, hostComment } = req.body;
 
         const userId = req.user._id;
 
@@ -777,6 +870,12 @@ exports.createHostReview = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
+        if (bookingId) {
+            const bookings = await Booking.findOne({ _id: bookingId })/*.populate('car user pickupLocation dropOffLocation')*/;
+            if (!bookings) {
+                return res.status(404).json({ status: 404, message: 'Bookings not found', data: null });
+            }
+        }
         if (hostRating < 0 || hostRating > 5) {
             return res.status(400).json({ status: 400, message: 'Invalid hostRating. HostRating should be between 0 and 5.', data: {} });
         }
@@ -786,7 +885,7 @@ exports.createHostReview = async (req, res) => {
             return res.status(404).json({ message: 'Car not found' });
         }
 
-        const existingReview = await HostReview.findOne({ user: userId, car: carId });
+        const existingReview = await HostReview.findOne({ user: userId, car: carId, hostComment });
         if (existingReview) {
             return res.status(400).json({ status: 400, message: 'You have already reviewed this host' });
         }
@@ -801,7 +900,7 @@ exports.createHostReview = async (req, res) => {
 
         await review.save();
 
-        const reviewsForCar = await HostReview.find({ car: carId });
+        const reviewsForCar = await HostReview.find({ user: userId });
         const numOfUserReviews = reviewsForCar.length;
 
         let totalRating = 0;
@@ -837,7 +936,7 @@ exports.getHostReviewById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Car not found' });
         }
 
-        const reviews = await HostReview.find({ owner: hostId });
+        const reviews = await HostReview.find({ host: hostId });
 
         let totalRating = 0;
         reviews.forEach(review => {
@@ -3820,5 +3919,139 @@ exports.getAddressByType = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: `Failed to retrieve address for type: ${type}` });
+    }
+};
+
+exports.createTenderApplication = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { apply } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: userId });
+
+        const tenderApplication = new TenderApplication({
+            car: cars._id || null,
+            user: userId,
+            apply
+        });
+
+        await tenderApplication.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: 'Tender application created successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to create tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.getAllTenderApplications = async (req, res) => {
+    try {
+        const tenderApplications = await TenderApplication.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender applications retrieved successfully',
+            data: tenderApplications
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender applications',
+            error: error.message
+        });
+    }
+};
+
+exports.getTenderApplicationById = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findById(req.params.id);
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application retrieved successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.updateTenderApplication = async (req, res) => {
+    try {
+        const { carId, userId, apply } = req.body;
+
+        const tenderApplication = await TenderApplication.findByIdAndUpdate(
+            req.params.id,
+            { car: carId, user: userId, apply },
+            { new: true }
+        );
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application updated successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to update tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.deleteTenderApplication = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findByIdAndDelete(req.params.id);
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({ status: 200, message: "Delete sucessfully" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to delete tender application',
+            error: error.message
+        });
     }
 };

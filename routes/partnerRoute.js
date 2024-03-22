@@ -126,6 +126,12 @@ module.exports = (app) => {
     app.get('/api/v1/partner/transactions/user', [authJwt.isPartner], auth.getTransactionDetailsByUserId);
     app.get('/api/v1/partner/income/user', [authJwt.isPartner], auth.getIncomeDetailsByUserId);
     app.get('/api/v1/partner/referral-bonus', [authJwt.isPartner], auth.getAllReferralBonuses);
-
+    app.post('/api/v1/partner/user/review', [authJwt.isPartner], auth.createUserReview);
+    app.get('/api/v1/partner/user/review/:hostId', [authJwt.isPartner], auth.getUserReviewById);
+    app.post('/api/v1/partner/govt-tendor/add', [authJwt.isPartner], auth.createTenderApplication);
+    app.get('/api/v1/partner/govt-tendor', [authJwt.isPartner], auth.getAllTenderApplications);
+    app.get('/api/v1/partner/govt-tendor/:id', [authJwt.isPartner], auth.getTenderApplicationById);
+    app.put('/api/v1/partner/govt-tendor/:id', [authJwt.isPartner], auth.updateTenderApplication);
+    app.delete('/api/v1/partner/govt-tendor/:id', [authJwt.isPartner], auth.deleteTenderApplication);
 
 }

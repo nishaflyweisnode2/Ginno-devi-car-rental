@@ -40,6 +40,7 @@ const Transaction = require('../models/transctionModel');
 const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
 const ReferralLevel = require('../models/referralLevelModel');
+const TenderApplication = require('../models/govtTendorModel');
 
 
 
@@ -98,13 +99,12 @@ exports.signin = async (req, res) => {
 
 exports.update = async (req, res) => {
     try {
-        const { firstName, lastName, email, mobileNumber, password } = req.body;
+        const { fullName, email, mobileNumber, password } = req.body;
         const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).send({ message: "not found" });
         }
-        user.firstName = firstName || user.firstName;
-        user.lastName = lastName || user.lastName;
+        user.fullName = fullName || user.fullName;
         user.email = email || user.email;
         user.mobileNumber = mobileNumber || user.mobileNumber;
         if (req.body.password) {
@@ -189,6 +189,29 @@ exports.deleteUser = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateUserById = async (req, res) => {
+    try {
+        const { fullName, email, mobileNumber, password } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).send({ message: "not found" });
+        }
+        user.fullName = fullName || user.fullName;
+        user.email = email || user.email;
+        user.mobileNumber = mobileNumber || user.mobileNumber;
+        if (req.body.password) {
+            user.password = bcrypt.hashSync(password, 8) || user.password;
+        }
+        const updated = await user.save();
+        return res.status(200).send({ message: "updated", data: updated });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send({
+            message: "internal server error " + err.message,
+        });
     }
 };
 
@@ -3463,5 +3486,578 @@ exports.deleteReferralLevelById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllBookings = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find().populate('car user pickupLocation dropOffLocation');
+
+        // .populate({
+        //     path: 'bike',
+        //     select: 'modelName rentalPrice',
+        // })
+        // .populate({
+        //     path: 'user',
+        //     select: 'username email',
+        // })
+        // .populate({
+        //     path: 'pickupLocation dropOffLocation',
+        //     select: 'locationName address',
+        // });
+
+        return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getBookingsByUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find({ user: userId }).populate('car user pickupLocation dropOffLocation');
+
+        // .populate({
+        //     path: 'bike',
+        //     select: 'modelName rentalPrice',
+        // })
+        // .populate({
+        //     path: 'user',
+        //     select: 'username email',
+        // })
+        // .populate({
+        //     path: 'pickupLocation dropOffLocation',
+        //     select: 'locationName address',
+        // });
+
+        return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getBookingsById = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const bookingId = req.params.bookingId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find({ _id: bookingId }).populate('car user pickupLocation dropOffLocation');
+
+        if (!bookings) {
+            return res.status(404).json({ status: 404, message: 'Bookings not found', data: null });
+        }
+
+        // .populate({
+        //     path: 'bike',
+        //     select: 'modelName rentalPrice',
+        // })
+        // .populate({
+        //     path: 'user',
+        //     select: 'username email',
+        // })
+        // .populate({
+        //     path: 'pickupLocation dropOffLocation',
+        //     select: 'locationName address',
+        // });
+
+        return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCompletedBookingsByUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find({ user: userId, status: "COMPLETED" }).populate('car user pickupLocation dropOffLocation');
+
+        // .populate({
+        //     path: 'bike',
+        //     select: 'modelName rentalPrice',
+        // })
+        // .populate({
+        //     path: 'user',
+        //     select: 'username email',
+        // })
+        // .populate({
+        //     path: 'pickupLocation dropOffLocation',
+        //     select: 'locationName address',
+        // });
+
+        return res.status(200).json({ status: 200, message: 'Completed Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getUpcomingBookingsByUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookings = await Booking.find({ user: userId, pickupDate: { $gte: new Date() } }).populate('car user pickupLocation dropOffLocation');
+
+        // .populate({
+        //     path: 'bike',
+        //     select: 'modelName rentalPrice',
+        // })
+        // .populate({
+        //     path: 'user',
+        //     select: 'username email',
+        // })
+        // .populate({
+        //     path: 'pickupLocation dropOffLocation',
+        //     select: 'locationName address',
+        // });
+
+        return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getBookingByPartnerId = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: { $in: [partnerId] } });
+        if (cars.length === 0) {
+            return res.status(404).json({ message: 'No cars found for the partner' });
+        }
+
+        const bookingPromises = cars.map(async (car) => {
+            const bookings = await Booking.find({ partner: partnerId, car: car._id }).populate({
+                path: 'car',
+                populate: { path: 'owner pickup drop' }
+            }).populate('user');
+            return bookings;
+        });
+
+        const bookings = await Promise.all(bookingPromises);
+
+        const flattenedBookings = bookings.flat();
+
+        if (flattenedBookings.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No bookings found for the partner', data: null });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking retrieved successfully for the partner',
+            data: flattenedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getTopBookedCarsForPartner = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const partnerCars = await Car.find({ owner: userId });
+
+        if (partnerCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the partner' });
+        }
+
+        const partnerCarIds = partnerCars.map(car => car._id);
+
+        const bookings = await Booking.aggregate([
+            { $match: { car: { $in: partnerCarIds } } },
+            { $group: { _id: '$car', count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        if (bookings.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No bookings found for the partner' });
+        }
+
+        const topBookedCarIds = bookings.map(booking => booking._id);
+
+        const topBookedCars = await Car.find({ _id: { $in: topBookedCarIds } }).populate('owner');
+
+        return res.status(200).json({ status: 200, data: topBookedCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getUpcomingBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+        const currentDate = new Date();
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const upcomingBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            paymentStatus: 'PAID',
+            isTripCompleted: false,
+            $or: [
+                {
+                    $and: [
+                        { pickupDate: { $gte: currentDate.toISOString().split('T')[0] } },
+                        { pickupTime: { $gte: currentDate.toISOString().split('T')[1].split('.')[0] } }
+                    ]
+                },
+                {
+                    dropOffDate: { $gt: currentDate.toISOString().split('T')[0] }
+                }
+            ]
+        }).populate('user car');
+
+        for (const booking of upcomingBookings) {
+            await sendNotificationToPartner(booking, partnerId);
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Upcoming bookings retrieved successfully for the partner',
+            data: upcomingBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCompletedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const completedBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'COMPLETED',
+            paymentStatus: 'PAID',
+            isTripCompleted: true,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Completed bookings retrieved successfully for the partner',
+            data: completedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getCanceledBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const canceledBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'CANCELLED',
+            isTripCompleted: false,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Canceled bookings retrieved successfully for the partner',
+            data: canceledBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getPaymentFaliedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+        const canceledBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'PENDING',
+            paymentStatus: 'FAILED',
+            isTripCompleted: false,
+        }).populate('user car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Canceled bookings retrieved successfully for the partner',
+            data: canceledBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getApprovedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const approvedBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'APPROVED',
+            paymentStatus: 'PAID'
+        }).populate('car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Approved bookings for partner retrieved successfully',
+            data: approvedBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getRejectedBookingsForPartner = async (req, res) => {
+    try {
+        const partnerId = req.params.id;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.find({ owner: partnerId }).populate('owner pickup drop');
+
+        const bikeObjectIds = cars.map(car => car._id);
+
+
+        const rejectBookings = await Booking.find({
+            car: { $in: bikeObjectIds },
+            status: 'CANCELLED',
+        }).populate('car');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Reject bookings for partner retrieved successfully',
+            data: rejectBookings,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.createTenderApplication = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { apply } = req.body;
+        console.log(userId);
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const cars = await Car.findOne({ owner: userId });
+
+        const tenderApplication = new TenderApplication({
+            car: cars._id || null,
+            user: userId,
+            apply
+        });
+
+        await tenderApplication.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: 'Tender application created successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to create tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.getAllTenderApplications = async (req, res) => {
+    try {
+        const tenderApplications = await TenderApplication.find().populate('car user');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender applications retrieved successfully',
+            data: tenderApplications
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender applications',
+            error: error.message
+        });
+    }
+};
+
+exports.getTenderApplicationById = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findById(req.params.id).populate('car user');
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application retrieved successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to retrieve tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.updateTenderApplication = async (req, res) => {
+    try {
+        const { carId, userId, apply } = req.body;
+
+        const tenderApplication = await TenderApplication.findByIdAndUpdate(
+            req.params.id,
+            { car: carId, user: userId, apply },
+            { new: true }
+        );
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Tender application updated successfully',
+            data: tenderApplication
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to update tender application',
+            error: error.message
+        });
+    }
+};
+
+exports.deleteTenderApplication = async (req, res) => {
+    try {
+        const tenderApplication = await TenderApplication.findByIdAndDelete(req.params.id);
+
+        if (!tenderApplication) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Tender application not found'
+            });
+        }
+
+        return res.status(200).json({ status: 200, message: "Delete sucessfully" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Failed to delete tender application',
+            error: error.message
+        });
     }
 };

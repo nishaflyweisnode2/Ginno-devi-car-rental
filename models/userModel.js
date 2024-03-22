@@ -82,6 +82,17 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    referralLevels: [{
+        level: {
+            type: Number,
+            required: true
+        },
+        users: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null
+        }]
+    }],
     wallet: {
         type: Number,
         default: 0,

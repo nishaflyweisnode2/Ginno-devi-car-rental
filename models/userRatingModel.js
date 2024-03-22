@@ -17,19 +17,19 @@ const reviewSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking',
     },
-    hostRating: {
+    userRating: {
         type: Number,
         min: 1,
         max: 5,
     },
-    hostComment: {
+    userComment: {
         type: String,
     },
-    numOfHostReviews: {
+    numOfUserReviews: {
         type: Number,
         default: 0,
     },
-    averageHostRating: {
+    averageUserRating: {
         type: Number,
         default: 0,
     },
@@ -39,6 +39,6 @@ const reviewSchema = new mongoose.Schema({
     },
 });
 
-const Review = mongoose.model('HostReview', reviewSchema);
+const Review = mongoose.model('UserReview', reviewSchema);
 
 module.exports = Review;
