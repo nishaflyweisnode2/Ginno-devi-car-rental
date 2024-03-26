@@ -62,7 +62,7 @@ const userSchema = new mongoose.Schema({
     },
     userType: {
         type: String,
-        enum: ["ADMIN", "USER", "PARTNER"],
+        enum: ["ADMIN", "USER", "PARTNER", "SUB-ADMIN"],
         default: "USER"
     },
     refferalCode: {
@@ -73,19 +73,9 @@ const userSchema = new mongoose.Schema({
         ref: 'User',
         default: null,
     }],
-    referredTo: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null,
-    }],
-    level: {
-        type: Number,
-        default: 0,
-    },
     referralLevels: [{
         level: {
             type: Number,
-            required: true
         },
         users: [{
             type: mongoose.Schema.Types.ObjectId,
@@ -119,6 +109,42 @@ const userSchema = new mongoose.Schema({
     },
     socialType: {
         type: String,
+    },
+    isDashBoard: {
+        type: Boolean,
+        default: false
+    },
+    isPrivacyPolicy: {
+        type: Boolean,
+        default: false
+    },
+    isOnBoardingManage: {
+        type: Boolean,
+        default: false
+    },
+    isCarManagement: {
+        type: Boolean,
+        default: false
+    },
+    isTermAndConditions: {
+        type: Boolean,
+        default: false
+    },
+    ismanageCustomer: {
+        type: Boolean,
+        default: false
+    },
+    isPushNotification: {
+        type: Boolean,
+        default: false
+    },
+    isManagePromoCode: {
+        type: Boolean,
+        default: false
+    },
+    isRoleAccessManage: {
+        type: Boolean,
+        default: false
     },
 
 }, { timestamps: true });

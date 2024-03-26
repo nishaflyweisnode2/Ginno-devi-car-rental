@@ -209,7 +209,16 @@ module.exports = (app) => {
     app.get('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.getTenderApplicationById);
     app.put('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.updateTenderApplication);
     app.delete('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.deleteTenderApplication);
-
-
+    app.post('/api/v1/admin/tds-amount', [authJwt.isAdmin], auth.createTdsAmount);
+    app.get('/api/v1/admin/tds-amount', [authJwt.isAdmin], auth.getAllTdsAmount);
+    app.put('/api/v1/admin/tds-amount/:id', [authJwt.isAdmin], auth.updateTdsAmount);
+    app.delete('/api/v1/admin/tds-amount/:id', [authJwt.isAdmin], auth.deleteTdsAmount);
+    app.post('/api/v1/admin/notifications', [authJwt.isAdmin], auth.createNotification);
+    app.put('/api/v1/admin/notifications/:notificationId', [authJwt.isAdmin], auth.markNotificationAsRead);
+    app.get('/api/v1/admin/notifications/user/:userId', [authJwt.isAdmin], auth.getNotificationsForUser);
+    app.get('/api/v1/admin/notifications/user', [authJwt.isAdmin], auth.getAllNotificationsForUser);
+    app.delete('/api/v1/admin/notifications/delete/all', [authJwt.isAdmin], auth.deleteAllNotifications);
+    app.delete('/api/v1/admin/notifications/delete/:id', [authJwt.isAdmin], auth.deleteNotificationById);
+    app.put('/api/v1/admin/users/:userId/roles', [authJwt.isAdmin], auth.updateUserRoles);
 
 }

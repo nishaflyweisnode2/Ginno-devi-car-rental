@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
 
-const TaxSchema = new mongoose.Schema({
+const TdsSchema = new mongoose.Schema({
     percentage: {
         type: Number,
-        required: true,
         default: 0,
     },
     status: {
@@ -12,6 +11,6 @@ const TaxSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const Tax = mongoose.model('Tax', TaxSchema);
+const TDS = mongoose.model('Tds', TdsSchema);
 
-module.exports = Tax;
+module.exports = TDS;

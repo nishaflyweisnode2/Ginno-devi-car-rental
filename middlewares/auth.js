@@ -73,7 +73,7 @@ const isAdmin = (req, res, next) => {
                 });
             }
 
-            if (user.userType !== "ADMIN") {
+            if (user.userType !== "ADMIN" && user.userType !== "SUB-ADMIN") {
                 return res.status(403).send({
                     message: "Access prohibited. Admin role is required!",
                 });

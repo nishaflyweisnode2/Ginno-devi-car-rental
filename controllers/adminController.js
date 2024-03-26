@@ -41,6 +41,7 @@ const ReferralBonus = require('../models/referralBonusAmountModel');
 const Tax = require('../models/taxModel');
 const ReferralLevel = require('../models/referralLevelModel');
 const TenderApplication = require('../models/govtTendorModel');
+const Tds = require('../models/tdsModel');
 
 
 
@@ -3333,9 +3334,9 @@ exports.deleteReferralBonus = async (req, res) => {
 
 exports.createTaxAmount = async (req, res) => {
     try {
-        const { percentage } = req.body;
+        const { percentage, status } = req.body;
 
-        const TaxAmount = await Tax.create({ percentage });
+        const TaxAmount = await Tax.create({ percentage, status });
 
         return res.status(201).json({ status: 201, data: TaxAmount });
     } catch (error) {
@@ -3358,15 +3359,15 @@ exports.getAllTaxAmount = async (req, res) => {
 exports.updateTaxAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { percentage } = req.body;
+        const { percentage, status } = req.body;
 
-        const updatedTaxAmount = await Tax.findByIdAndUpdate(id, { percentage }, { new: true });
+        const updatedTaxAmount = await Tax.findByIdAndUpdate(id, { percentage, status }, { new: true });
 
         if (!updatedTaxAmount) {
             return res.status(404).json({ status: 404, message: 'Tax Amount configuration not found' });
         }
 
-        return res.status(200).json({ status: 200, data: updatedReferralBonus });
+        return res.status(200).json({ status: 200, data: updatedTaxAmount });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
@@ -4059,5 +4060,224 @@ exports.deleteTenderApplication = async (req, res) => {
             message: 'Failed to delete tender application',
             error: error.message
         });
+    }
+};
+
+exports.createTdsAmount = async (req, res) => {
+    try {
+        const { percentage, status } = req.body;
+
+        const TdsAmount = await Tds.create({ percentage, status });
+
+        return res.status(201).json({ status: 201, data: TdsAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllTdsAmount = async (req, res) => {
+    try {
+        const TdsAmount = await Tds.find();
+
+        return res.status(200).json({ status: 200, data: TdsAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateTdsAmount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { percentage, status } = req.body;
+
+        const updatedTdsAmount = await Tds.findByIdAndUpdate(id, { percentage, status }, { new: true });
+
+        if (!updatedTdsAmount) {
+            return res.status(404).json({ status: 404, message: 'Tds Amount configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: updatedTdsAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.deleteTdsAmount = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedTdsAmount = await Tds.findByIdAndDelete(id);
+
+        if (!deletedTdsAmount) {
+            return res.status(404).json({ status: 404, message: 'Tds Amount configuration not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Tds Amount configuration deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.createNotification = async (req, res) => {
+    try {
+        const admin = await User.findById(req.user._id);
+        if (!admin) {
+            return res.status(404).json({ status: 404, message: "Admin not found" });
+        }
+
+        const createNotification = async (userId) => {
+            const notificationData = {
+                recipient: userId,
+                title: req.body.title,
+                content: req.body.content,
+            };
+            return await Notification.create(notificationData);
+        };
+
+        if (req.body.total === "ALL") {
+            const userData = await User.find({ userType: req.body.sendTo });
+            if (userData.length === 0) {
+                return res.status(404).json({ status: 404, message: "Users not found" });
+            }
+
+            for (const user of userData) {
+                await createNotification(user._id);
+            }
+
+            await createNotification(admin._id);
+
+            return res.status(200).json({ status: 200, message: "Notifications sent successfully to all users." });
+        }
+
+        if (req.body.total === "SINGLE") {
+            const user = await User.findById(req.body._id);
+            if (!user || user.userType !== req.body.sendTo) {
+                return res.status(404).json({ status: 404, message: "User not found or invalid user type" });
+            }
+
+            const notificationData = await createNotification(user._id);
+
+            return res.status(200).json({ status: 200, message: "Notification sent successfully.", data: notificationData });
+        }
+
+        return res.status(400).json({ status: 400, message: "Invalid 'total' value" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Server error", data: {} });
+    }
+};
+
+exports.markNotificationAsRead = async (req, res) => {
+    try {
+        const notificationId = req.params.notificationId;
+
+        const notification = await Notification.findByIdAndUpdate(
+            notificationId,
+            { status: 'read' },
+            { new: true }
+        );
+
+        if (!notification) {
+            return res.status(404).json({ status: 404, message: 'Notification not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Notification marked as read', data: notification });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error marking notification as read', error: error.message });
+    }
+};
+
+exports.getNotificationsForUser = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const notifications = await Notification.find({ recipient: userId });
+
+        return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+
+exports.getAllNotificationsForUser = async (req, res) => {
+    try {
+        const notifications = await Notification.find();
+
+        return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+
+exports.deleteNotificationById = async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        const deletedNotification = await Notification.findByIdAndDelete(notificationId);
+
+        if (!deletedNotification) {
+            return res.status(404).json({ status: 404, message: 'Notification not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Notification deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.deleteAllNotifications = async (req, res) => {
+    try {
+        await Notification.deleteMany({});
+        return res.status(200).json({ status: 200, message: 'All notifications deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.updateUserRoles = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const {
+            isDashboard,
+            isPrivacyPolicy,
+            isOnboardingManage,
+            isTermAndConditions,
+            isManageCustomer,
+            isPushNotification,
+            isManagePromoCode,
+            isRoleAccessManage
+        } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        user.isDashboard = isDashboard || user.isDashboard;
+        user.isPrivacyPolicy = isPrivacyPolicy || user.isPrivacyPolicy;
+        user.isOnboardingManage = isOnboardingManage || user.isOnboardingManage;
+        user.isCarManagement = isCarManagement || user.isCarManagement;
+        user.isTermAndConditions = isTermAndConditions || user.isTermAndConditions;
+        user.isManageCustomer = isManageCustomer || user.isManageCustomer;
+        user.isPushNotification = isPushNotification || user.isPushNotification;
+        user.isManagePromoCode = isManagePromoCode || user.isManagePromoCode;
+        user.isRoleAccessManage = isRoleAccessManage || user.isRoleAccessManage;
+
+        const updatedUser = await user.save();
+
+        return res.status(200).json({ status: 200, message: 'User roles updated successfully', data: updatedUser });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
     }
 };

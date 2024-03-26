@@ -127,5 +127,9 @@ module.exports = (app) => {
     app.get('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.getTenderApplicationById);
     app.put('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.updateTenderApplication);
     app.delete('/api/v1/user/govt-tendor/:id', [authJwt.verifyToken], auth.deleteTenderApplication);
+    app.put('/api/v1/user/notifications/:notificationId', [authJwt.verifyToken], auth.markNotificationAsRead);
+    app.put('/api/v1/user/notifications/markAll/read', [authJwt.verifyToken], auth.markAllNotificationsAsRead);
+    app.get('/api/v1/user/notifications/user/:userId', [authJwt.verifyToken], auth.getNotificationsForUser);
+    app.get('/api/v1/user/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
 
 }
