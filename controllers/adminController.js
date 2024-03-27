@@ -42,6 +42,7 @@ const Tax = require('../models/taxModel');
 const ReferralLevel = require('../models/referralLevelModel');
 const TenderApplication = require('../models/govtTendorModel');
 const Tds = require('../models/tdsModel');
+const GPSData = require('../models/gpsModel');
 
 
 
@@ -4279,5 +4280,309 @@ exports.updateUserRoles = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.createGPSData = async (req, res) => {
+    try {
+        const { carId, longitude, latitude } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(carId)) {
+            return res.status(400).json({ status: 400, message: 'Invalid carId' });
+        }
+
+        const car = await Car.findOne({ _id: carId });
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const gpsData = new GPSData({
+            carId,
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude]
+            }
+        });
+
+        await gpsData.save();
+
+        return res.status(201).json({ status: 201, message: 'GPS data created successfully', data: gpsData });
+    } catch (error) {
+        console.error('Error creating GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllCarGPSLocations1 = async (req, res) => {
+    try {
+        const allGPSLocations = await GPSData.find().populate('carId');
+
+        return res.status(200).json({ status: 200, data: allGPSLocations });
+    } catch (error) {
+        console.error('Error fetching GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllCarGPSLocations = async (req, res) => {
+    try {
+        const gpsDataByCar = await GPSData.aggregate([
+            {
+                $group: {
+                    _id: '$carId',
+                    locations: { $push: '$location' }
+                }
+            }
+        ]);
+
+        const formattedGPSData = await Promise.all(gpsDataByCar.map(async (carData) => {
+            const car = await Car.findById(carData._id);
+            return {
+                carId: carData._id,
+                carDetails: car,
+                locations: carData.locations
+            };
+        }));
+
+        return res.status(200).json({ status: 200, data: formattedGPSData });
+    } catch (error) {
+        console.error('Error retrieving GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getGPSDataForCar = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const gpsData = await GPSData.find({ carId });
+
+        return res.status(200).json({ status: 200, data: gpsData });
+    } catch (error) {
+        console.error('Error retrieving GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.deleteGPSDataForCar = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        await GPSData.deleteMany({ carId });
+
+        return res.status(200).json({ status: 200, message: 'GPS data deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllDirectReferralUsers = async (req, res) => {
+    try {
+        const users = await User.find();
+
+        if (!users || users.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No users found',
+                data: [],
+            });
+        }
+
+        const usersWithReferralData = [];
+
+        for (const user of users) {
+            const userReferralData = {
+                _id: user._id,
+                fullName: user.fullName,
+                mobileNumber: user.mobileNumber,
+                email: user.email,
+                referralLevels: user.referralLevels,
+                wallet: user.wallet,
+                createdAt: user.createdAt
+            };
+
+            usersWithReferralData.push(userReferralData);
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Users with referral data retrieved successfully',
+            data: usersWithReferralData,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getDirectReferralUsersByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (!user.referralLevels || user.referralLevels.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No direct referral users found',
+                data: [],
+            });
+        }
+
+        const directReferralUsers = [];
+        const level1Referrals = user.referralLevels.find(level => level.level === 1);
+        if (level1Referrals && level1Referrals.users.length > 0) {
+            for (const referralId of level1Referrals.users) {
+                const referralUser = await User.findById(referralId);
+                if (referralUser) {
+                    directReferralUsers.push(referralUser);
+                }
+            }
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Direct referral users found',
+            data: directReferralUsers,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllUserReferralDetails = async (req, res) => {
+    try {
+        const users = await User.find().populate({
+            path: 'referralLevels.users',
+            model: 'User'
+        });
+
+        if (!users || users.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No users found',
+                data: [],
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Referral users details populated',
+            data: users,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getReferralDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId)
+            .populate({
+                path: 'referralLevels.users',
+                model: 'User'
+            });
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (!user.referralLevels || user.referralLevels.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No referral users found',
+                data: [],
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Referral users details populated',
+            data: user,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllUserReferralIncome = async (req, res) => {
+    try {
+        const users = await User.find();
+
+        if (!users || users.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No users found',
+                data: [],
+            });
+        }
+
+        const levelWiseIncome = [];
+
+        for (const user of users) {
+            if (user.referralLevels && user.referralLevels.length > 0) {
+                for (const level of user.referralLevels) {
+                    const levelTransactions = await Transaction.find({ user: { $in: level.users } });
+
+                    const totalIncome = levelTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+
+                    levelWiseIncome.push({ userId: user._id, level: level.level, totalIncome });
+                }
+            }
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Level-wise income calculated',
+            data: levelWiseIncome,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getReferralIncomeByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (!user.referralLevels || user.referralLevels.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No referral users found',
+                data: [],
+            });
+        }
+
+        const levelWiseIncome = [];
+
+        for (const level of user.referralLevels) {
+            const levelTransactions = await Transaction.find({ user: { $in: level.users } });
+            const totalIncome = levelTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+            levelWiseIncome.push({ level: level.level, totalIncome });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Level-wise income calculated',
+            data: levelWiseIncome,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };

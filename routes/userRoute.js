@@ -22,6 +22,9 @@ module.exports = (app) => {
     app.put("/api/v1/user/edit-profile", [authJwt.verifyToken], auth.editProfile);
     app.get("/api/v1/user/profile", [authJwt.verifyToken], auth.getUserProfile);
     app.get("/api/v1/user/profile/:userId", [authJwt.verifyToken], auth.getUserProfileById);
+    app.get('/api/v1/user/direct-referrals', [authJwt.verifyToken], auth.getDirectReferralUsers);
+    app.get('/api/v1/user/all-referrals', [authJwt.verifyToken], auth.getReferralDetails);
+    app.get('/api/v1/user/level-wise-income',[authJwt.verifyToken], auth.getReferralIncome);
     app.put("/api/v1/user/updateLocation", [authJwt.verifyToken], auth.updateLocation);
     app.get("/api/v1/user/city/cities", [authJwt.verifyToken], auth.getAllCities);
     app.get("/api/v1/user/city/cities/:id", [authJwt.verifyToken], auth.getCityById);

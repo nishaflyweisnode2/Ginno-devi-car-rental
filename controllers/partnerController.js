@@ -32,6 +32,7 @@ const ReferralBonus = require('../models/referralBonusAmountModel');
 const UserReview = require('../models/userRatingModel');
 const TenderApplication = require('../models/govtTendorModel');
 const Tds = require('../models/tdsModel');
+const GPSData = require('../models/gpsModel');
 
 
 
@@ -3745,5 +3746,105 @@ exports.getAllNotificationsForUser = async (req, res) => {
         return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
     } catch (error) {
         return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+
+exports.createGPSData = async (req, res) => {
+    try {
+        const { carId, longitude, latitude } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(carId)) {
+            return res.status(400).json({ status: 400, message: 'Invalid carId' });
+        }
+
+        const car = await Car.findOne({ _id: carId, owner: userId });
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found' });
+        }
+
+        const gpsData = new GPSData({
+            carId,
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude]
+            }
+        });
+
+        await gpsData.save();
+
+        return res.status(201).json({ status: 201, message: 'GPS data created successfully', data: gpsData });
+    } catch (error) {
+        console.error('Error creating GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllCarGPSLocations1 = async (req, res) => {
+    try {
+        const allGPSLocations = await GPSData.find().populate('carId');
+
+        return res.status(200).json({ status: 200, data: allGPSLocations });
+    } catch (error) {
+        console.error('Error fetching GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllCarGPSLocations = async (req, res) => {
+    try {
+        const gpsDataByCar = await GPSData.aggregate([
+            {
+                $group: {
+                    _id: '$carId',
+                    locations: { $push: '$location' }
+                }
+            }
+        ]);
+
+        const formattedGPSData = await Promise.all(gpsDataByCar.map(async (carData) => {
+            const car = await Car.findById(carData._id);
+            return {
+                carId: carData._id,
+                carDetails: car,
+                locations: carData.locations
+            };
+        }));
+
+        return res.status(200).json({ status: 200, data: formattedGPSData });
+    } catch (error) {
+        console.error('Error retrieving GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getGPSDataForCar = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const gpsData = await GPSData.find({ carId });
+
+        return res.status(200).json({ status: 200, data: gpsData });
+    } catch (error) {
+        console.error('Error retrieving GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.deleteGPSDataForCar = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        await GPSData.deleteMany({ carId });
+
+        return res.status(200).json({ status: 200, message: 'GPS data deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting GPS data:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
     }
 };

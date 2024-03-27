@@ -220,5 +220,14 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/notifications/delete/all', [authJwt.isAdmin], auth.deleteAllNotifications);
     app.delete('/api/v1/admin/notifications/delete/:id', [authJwt.isAdmin], auth.deleteNotificationById);
     app.put('/api/v1/admin/users/:userId/roles', [authJwt.isAdmin], auth.updateUserRoles);
-
+    app.post('/api/v1/admin/cars/gps', [authJwt.isAdmin], auth.createGPSData);
+    app.get('/api/v1/admin/cars/getall/gps', [authJwt.isAdmin], auth.getAllCarGPSLocations);
+    app.get('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.getGPSDataForCar);
+    app.delete('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.deleteGPSDataForCar);
+    app.get('/api/v1/user/direct-referrals/all', [authJwt.verifyToken], auth.getAllDirectReferralUsers);
+    app.get('/api/v1/user/direct-referrals/:id', [authJwt.verifyToken], auth.getDirectReferralUsersByUserId);
+    app.get('/api/v1/user/all-referrals/all', [authJwt.verifyToken], auth.getAllUserReferralDetails);
+    app.get('/api/v1/user/all-referrals/:id', [authJwt.verifyToken], auth.getReferralDetailsByUserId);
+    app.get('/api/v1/user/level-wise-income/all', [authJwt.verifyToken], auth.getAllUserReferralIncome);
+    app.get('/api/v1/user/level-wise-income/:id', [authJwt.verifyToken], auth.getReferralIncomeByUserId);
 }

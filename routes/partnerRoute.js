@@ -137,6 +137,9 @@ module.exports = (app) => {
     app.put('/api/v1/partner/notifications/markAll/read', [authJwt.isPartner], auth.markAllNotificationsAsRead);
     app.get('/api/v1/partner/notifications/user/:notificationId', [authJwt.isPartner], auth.getNotificationsById);
     app.get('/api/v1/partner/all/notifications/user', [authJwt.isPartner], auth.getAllNotificationsForUser);
-
+    app.post('/api/v1/partner/cars/gps', [authJwt.isPartner], auth.createGPSData);
+    app.get('/api/v1/partner/cars/getall/gps', [authJwt.isPartner], auth.getAllCarGPSLocations);
+    app.get('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.getGPSDataForCar);
+    app.delete('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.deleteGPSDataForCar);
 
 }
