@@ -33,6 +33,7 @@ const UserReview = require('../models/userRatingModel');
 const TenderApplication = require('../models/govtTendorModel');
 const Tds = require('../models/tdsModel');
 const GPSData = require('../models/gpsModel');
+const ReferralLevel = require('../models/referralLevelModel');
 
 
 
@@ -2605,7 +2606,7 @@ exports.updateTripEndDetails = async (req, res) => {
     }
 };
 
-exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
+exports.approveTripEndDetailsVerifyOtp1 = async (req, res) => {
     try {
         const partnerId = req.user._id;
         const bookingId = req.params.bookingId;
@@ -2648,6 +2649,249 @@ exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
         return res.status(500).send({ error: "Internal server error" + err.message });
     }
 };
+
+const distributeReferralRewards1 = async (userId, bookingId, referralAmount) => {
+    try {
+        const bookingUser = await User.findById(userId);
+        if (!bookingUser) {
+            console.error('Booking user not found');
+            return;
+        }
+
+        const bookingUserReferralLevels = bookingUser.referralLevels;
+        console.log('bookingUserReferralLevels', bookingUserReferralLevels);
+
+        const bookingUserRewards = calculateReferralRewards(bookingUserReferralLevels, referralAmount);
+        console.log('bookingUserRewards', bookingUserRewards);
+
+        await distributeRewards(bookingUser._id, bookingUserRewards, bookingId);
+
+        for (const referralLevel of bookingUserReferralLevels) {
+            for (const referralId of referralLevel.users) {
+                const referralUser = await User.findById(referralId);
+                if (!referralUser) {
+                    console.error(`User ${referralId} not found`);
+                    continue;
+                }
+
+                const referralUserReferralLevels = referralUser.referralLevels;
+                const referralUserRewards = calculateReferralRewards(referralUserReferralLevels, referralAmount);
+
+                await distributeRewards(referralUser._id, referralUserRewards, bookingId);
+            }
+        }
+
+        console.log('Referral rewards distributed successfully');
+    } catch (error) {
+        console.error('Error distributing referral rewards:', error);
+    }
+};
+
+const distributeReferralRewards = async (userId, bookingId, referralAmount) => {
+    try {
+        const bookingUser = await User.findById(userId);
+        if (!bookingUser) {
+            console.error('Booking user not found');
+            return;
+        }
+
+        const bookingUserReferralLevels = bookingUser.referralLevels;
+        console.log('bookingUserReferralLevels', bookingUserReferralLevels);
+
+        const bookingUserRewards = await calculateReferralRewards(bookingUserReferralLevels, referralAmount);
+        console.log('bookingUserRewards', bookingUserRewards);
+
+        if (!Array.isArray(bookingUserRewards)) {
+            console.error('Invalid rewards for booking user:', bookingUserRewards);
+            return;
+        }
+
+        await distributeRewards(bookingUser._id, bookingUserRewards, bookingId);
+
+        for (const referralLevel of bookingUserReferralLevels) {
+            for (const referralId of referralLevel.users) {
+                const referralUser = await User.findById(referralId);
+                if (!referralUser) {
+                    console.error(`User ${referralId} not found`);
+                    continue;
+                }
+
+                const referralUserReferralLevels = referralUser.referralLevels;
+                const referralUserRewards = await calculateReferralRewards(referralUserReferralLevels, referralAmount);
+
+                if (!Array.isArray(referralUserRewards)) {
+                    console.error(`Invalid rewards for referral user ${referralId}:`, referralUserRewards);
+                    continue;
+                }
+
+                await distributeRewards(referralUser._id, referralUserRewards, bookingId);
+            }
+        }
+
+        console.log('Referral rewards distributed successfully');
+    } catch (error) {
+        console.error('Error distributing referral rewards:', error);
+    }
+};
+
+
+
+const calculateReferralRewards1 = (referralLevels, referralAmount) => {
+    const rewards = [];
+    referralLevels.forEach(level => {
+        const reward = {
+            level: level.level,
+            amount: referralAmount * (level.users.length),
+        };
+        rewards.push(reward);
+    });
+    console.log('rewards', rewards);
+
+    return rewards;
+};
+
+const calculateReferralRewards = async (referralLevels, referralAmount) => {
+    const rewards = [];
+    for (const level of referralLevels) {
+        console.log('level', level);
+
+        const levelBonus = await getLevelBonus(level.level, level.type);
+        console.log('levelBonus', levelBonus);
+
+        if (typeof levelBonus !== 'undefined') {
+            const reward = {
+                level: level.level,
+                type: level.type,
+                amount: referralAmount * (level.users.length) * (levelBonus / 100),
+            };
+            rewards.push(reward);
+        } else {
+            console.error(`Level bonus not found for level ${level.level} and type ${level.type}`);
+        }
+    }
+    console.log('rewards', rewards);
+
+    return rewards;
+};
+
+
+const getLevelBonus = async (level, type = 'CarReferral') => {
+    try {
+        console.log('level***', level);
+        console.log('type***', type);
+
+        const referralLevel = await ReferralLevel.findOne({ level: level.toString(), type });
+        console.log('referralLevel', referralLevel);
+
+        return referralLevel ? referralLevel.percentage : 0;
+    } catch (error) {
+        console.error('Error fetching level bonus:', error);
+        return 0;
+    }
+};
+
+const distributeRewards1 = async (userId, rewards, bookingId) => {
+    for (const reward of rewards) {
+        const user = await User.findById(userId);
+        if (user) {
+            user.wallet += reward.amount;
+            console.log('user.wallet', user.wallet);
+
+            await user.save();
+
+            const transaction = new Transaction({
+                user: userId,
+                amount: reward.amount,
+                type: 'Referral',
+                details: `Referral bonus for level ${reward.level} for booking ${bookingId}`,
+                cr: true,
+            });
+            await transaction.save();
+        }
+    }
+};
+
+const distributeRewards = async (userId, rewards, bookingId) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            console.error(`User with ID ${userId} not found`);
+            return;
+        }
+
+        for (const reward of rewards) {
+            if (isNaN(reward.amount)) {
+                console.error(`Invalid amount for reward: ${reward.amount}`);
+                continue;
+            }
+
+            user.wallet += reward.amount;
+            console.log('user.wallet', user.wallet);
+
+            const transaction = new Transaction({
+                user: userId,
+                amount: reward.amount,
+                type: 'Referral',
+                details: `Referral bonus for level ${reward.level} for booking ${bookingId}`,
+                cr: true,
+            });
+
+            await transaction.save();
+        }
+
+        await user.save();
+        console.log('Rewards distributed successfully for user', userId);
+    } catch (error) {
+        console.error('Error distributing rewards:', error);
+    }
+};
+
+
+exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const bookingId = req.params.bookingId;
+        const { otp } = req.body;
+
+        const findUser = await User.findById(partnerId);
+        if (!findUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const adminUser = await User.findOne({ userType: 'ADMIN' });
+        const referralAmount = adminUser.userReferral || 0;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const userId = booking.user;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        if (booking.tripEndOtp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            bookingId,
+            { isTripEndOtp: true },
+            { new: true }
+        );
+
+        await distributeReferralRewards(userId, bookingId, referralAmount);
+
+        return res.status(200).send({ status: 200, message: "OTP verified successfully", data: updatedBooking });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).send({ error: "Internal server error" + err.message });
+    }
+};
+
 
 exports.approveTripEndDetailsResendOTP = async (req, res) => {
     try {

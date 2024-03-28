@@ -273,6 +273,10 @@ const bookingSchema = new mongoose.Schema(
         isRental: {
             type: Boolean,
             default: false
+        },
+        isAmountDistribute: {
+            type: Boolean,
+            default: false
         }
 
 
