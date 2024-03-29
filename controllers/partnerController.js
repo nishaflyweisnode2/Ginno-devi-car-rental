@@ -2650,43 +2650,6 @@ exports.approveTripEndDetailsVerifyOtp1 = async (req, res) => {
     }
 };
 
-const distributeReferralRewards1 = async (userId, bookingId, referralAmount) => {
-    try {
-        const bookingUser = await User.findById(userId);
-        if (!bookingUser) {
-            console.error('Booking user not found');
-            return;
-        }
-
-        const bookingUserReferralLevels = bookingUser.referralLevels;
-        console.log('bookingUserReferralLevels', bookingUserReferralLevels);
-
-        const bookingUserRewards = calculateReferralRewards(bookingUserReferralLevels, referralAmount);
-        console.log('bookingUserRewards', bookingUserRewards);
-
-        await distributeRewards(bookingUser._id, bookingUserRewards, bookingId);
-
-        for (const referralLevel of bookingUserReferralLevels) {
-            for (const referralId of referralLevel.users) {
-                const referralUser = await User.findById(referralId);
-                if (!referralUser) {
-                    console.error(`User ${referralId} not found`);
-                    continue;
-                }
-
-                const referralUserReferralLevels = referralUser.referralLevels;
-                const referralUserRewards = calculateReferralRewards(referralUserReferralLevels, referralAmount);
-
-                await distributeRewards(referralUser._id, referralUserRewards, bookingId);
-            }
-        }
-
-        console.log('Referral rewards distributed successfully');
-    } catch (error) {
-        console.error('Error distributing referral rewards:', error);
-    }
-};
-
 const distributeReferralRewards = async (userId, bookingId, referralAmount) => {
     try {
         const bookingUser = await User.findById(userId);
@@ -2696,10 +2659,8 @@ const distributeReferralRewards = async (userId, bookingId, referralAmount) => {
         }
 
         const bookingUserReferralLevels = bookingUser.referralLevels;
-        console.log('bookingUserReferralLevels', bookingUserReferralLevels);
 
         const bookingUserRewards = await calculateReferralRewards(bookingUserReferralLevels, referralAmount);
-        console.log('bookingUserRewards', bookingUserRewards);
 
         if (!Array.isArray(bookingUserRewards)) {
             console.error('Invalid rewards for booking user:', bookingUserRewards);
@@ -2734,35 +2695,17 @@ const distributeReferralRewards = async (userId, bookingId, referralAmount) => {
     }
 };
 
-
-
-const calculateReferralRewards1 = (referralLevels, referralAmount) => {
-    const rewards = [];
-    referralLevels.forEach(level => {
-        const reward = {
-            level: level.level,
-            amount: referralAmount * (level.users.length),
-        };
-        rewards.push(reward);
-    });
-    console.log('rewards', rewards);
-
-    return rewards;
-};
-
 const calculateReferralRewards = async (referralLevels, referralAmount) => {
     const rewards = [];
     for (const level of referralLevels) {
-        console.log('level', level);
 
-        const levelBonus = await getLevelBonus(level.level, level.type);
-        console.log('levelBonus', levelBonus);
+        const levelBonus = await getLevelBonus(level.level, type = 'CarReferral');
 
         if (typeof levelBonus !== 'undefined') {
             const reward = {
                 level: level.level,
-                type: level.type,
-                amount: referralAmount * (level.users.length) * (levelBonus / 100),
+                type: 'CarReferral',
+                amount: Math.round(referralAmount * (level.users.length) * (levelBonus / 100)),
             };
             rewards.push(reward);
         } else {
@@ -2774,40 +2717,31 @@ const calculateReferralRewards = async (referralLevels, referralAmount) => {
     return rewards;
 };
 
-
 const getLevelBonus = async (level, type = 'CarReferral') => {
     try {
         console.log('level***', level);
         console.log('type***', type);
 
         const referralLevel = await ReferralLevel.findOne({ level: level.toString(), type });
-        console.log('referralLevel', referralLevel);
 
-        return referralLevel ? referralLevel.percentage : 0;
+        if (referralLevel) {
+            const levelInfo = referralLevel.allLevels.find(info => info.level === level.toString());
+
+            if (levelInfo) {
+                const levelPercentage = parseFloat(levelInfo.percentage);
+                console.log('levelPercentage', levelPercentage);
+
+                return isNaN(levelPercentage) ? 0 : levelPercentage;
+            } else {
+                console.error(`Percentage not found for level ${level}`);
+                return 0;
+            }
+        } else {
+            return 0;
+        }
     } catch (error) {
         console.error('Error fetching level bonus:', error);
         return 0;
-    }
-};
-
-const distributeRewards1 = async (userId, rewards, bookingId) => {
-    for (const reward of rewards) {
-        const user = await User.findById(userId);
-        if (user) {
-            user.wallet += reward.amount;
-            console.log('user.wallet', user.wallet);
-
-            await user.save();
-
-            const transaction = new Transaction({
-                user: userId,
-                amount: reward.amount,
-                type: 'Referral',
-                details: `Referral bonus for level ${reward.level} for booking ${bookingId}`,
-                cr: true,
-            });
-            await transaction.save();
-        }
     }
 };
 
@@ -2827,6 +2761,7 @@ const distributeRewards = async (userId, rewards, bookingId) => {
 
             user.wallet += reward.amount;
             console.log('user.wallet', user.wallet);
+            console.log('user._id', user._id);
 
             const transaction = new Transaction({
                 user: userId,
@@ -2845,7 +2780,6 @@ const distributeRewards = async (userId, rewards, bookingId) => {
         console.error('Error distributing rewards:', error);
     }
 };
-
 
 exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
     try {
@@ -2891,7 +2825,6 @@ exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
         return res.status(500).send({ error: "Internal server error" + err.message });
     }
 };
-
 
 exports.approveTripEndDetailsResendOTP = async (req, res) => {
     try {
