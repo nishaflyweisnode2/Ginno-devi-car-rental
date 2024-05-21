@@ -81,7 +81,7 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
         }
 
-        const existingUser = await User.findOne({ mobileNumber, userType: "USER" });
+        const existingUser = await User.findOne({ mobileNumber, /*userType: "USER"*/ });
         if (existingUser) {
             return res.status(409).json({ status: 409, message: 'User Already Registered' });
         }
@@ -110,6 +110,8 @@ exports.signup = async (req, res) => {
             userType: "USER",
             refferalCode: await reffralCode(),
             referredBy: referredBy ? referredBy._id : null,
+            role: "USER",
+            currentRole: "USER"
 
         });
 
@@ -364,20 +366,26 @@ exports.loginWithPhone = async (req, res) => {
             return res.status(400).json({ status: 400, message: "Invalid mobile number length" });
         }
 
-        const user = await User.findOne({ mobileNumber, userType: "USER" });
+        const user = await User.findOne({ mobileNumber, userType: { $in: ["PARTNER", "USER"] } });
 
         if (!user) {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
         const userObj = {
-            otp: newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false }),
-            otpExpiration: new Date(Date.now() + 60 * 1000),
+            otp: otp,
+            otpExpiration: otpExpiration,
             accountVerification: false,
+            role: ["PARTNER", "USER"],
+            currentRole: "USER"
         };
 
         const updatedUser = await User.findOneAndUpdate(
-            { mobileNumber, userType: "USER" },
+            {
+                mobileNumber, userType: { $in: ["PARTNER", "USER"] }
+            },
             userObj,
             { new: true }
         );
@@ -418,7 +426,10 @@ exports.verifyOtp = async (req, res) => {
             otp: updated.otp,
             mobileNumber: updated.mobileNumber,
             token: accessToken,
-            completeProfile: updated.completeProfile
+            completeProfile: updated.completeProfile,
+            role: ["PARTNER", "USER"],
+            currentRole: "USER"
+
         }
         return res.status(200).send({ status: 200, message: "logged in successfully", data: obj });
     } catch (err) {
@@ -430,7 +441,7 @@ exports.verifyOtp = async (req, res) => {
 exports.resendOTP = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await User.findOne({ _id: id, userType: "USER" });
+        const user = await User.findOne({ _id: id, userType: { $in: ["PARTNER", "USER"] } });
         if (!user) {
             return res.status(404).send({ status: 404, message: "User not found" });
         }
@@ -465,7 +476,7 @@ exports.socialLogin = async (req, res) => {
                 accessToken,
             });
         } else {
-            const user = await userModel.create({ firstname, lastname, email, socialType, userType: "Distributor" });
+            const user = await userModel.create({ firstname, lastname, email, socialType, userType: { $in: ["PARTNER", "USER"] } });
 
             if (user) {
                 const accessToken = jwt.sign({ id: user.id, email: user.email }, process.env.SECRETK, { expiresIn: "365d" });
@@ -1875,7 +1886,7 @@ exports.createBooking = async (req, res) => {
                 taxAmount
             });
 
-            user.coin += carExist.quackCoin
+            // user.coin += carExist.quackCoin
             await user.save();
             const welcomeMessage = `Welcome, ${user.fullName}! Thank you for Booking, your Booking details ${newBooking}.`;
             const welcomeNotification = new Notification({
@@ -2484,9 +2495,13 @@ exports.updatePaymentStatus = async (req, res) => {
 
             const car = await Car.findOne({ _id: carId });
 
-            user.coin -= car.quackCoin;
+            if (isQuackCoinApplied === true) {
+                user.coin -= updatedBooking.coinAmount;
+                // car.quackCoin += updatedBooking.coinAmount;
+                // await car.save();
+                await user.save();
+            }
 
-            await user.save();
         }
 
         await updatedBooking.save();
@@ -2728,9 +2743,10 @@ exports.cancelBooking = async (req, res) => {
         console.log(booking.car);
         if (booking.car) {
             const carExist = await Car.findById(booking.car);
-
-            user.coin -= carExist.quackCoin;
-            await user.save();
+            if (isQuackCoinApplied === true) {
+                user.coin -= booking.coinAmount;
+                await user.save();
+            }
         } else {
             console.error('QuackCoin value not found for the car associated with the booking.');
         }
@@ -4174,5 +4190,43 @@ exports.getAllNotificationsForUser = async (req, res) => {
         return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
     } catch (error) {
         return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+// app.post('/withdraw',
+async (req, res) => {
+    const { userId, amount, balanceType } = req.body;
+
+    const validBalanceTypes = ['wallet', 'carReferral', 'userReferral', 'royaltyReward', 'coin'];
+
+    if (!userId || !amount || !balanceType) {
+        return res.status(400).json({ error: 'UserId, amount, and balanceType are required' });
+    }
+
+    if (amount <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than zero' });
+    }
+
+    if (!validBalanceTypes.includes(balanceType)) {
+        return res.status(400).json({ error: 'Invalid balance type' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user[balanceType] < amount) {
+            return res.status(400).json({ error: `Insufficient balance in ${balanceType}` });
+        }
+
+        user[balanceType] -= amount;
+        await user.save();
+
+        return res.status(200).json({ message: 'Withdrawal successful', [balanceType]: user[balanceType] });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };

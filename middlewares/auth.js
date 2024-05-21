@@ -29,7 +29,7 @@ const verifyToken = (req, res, next) => {
                         message: "The user that this token belongs to does not exist",
                     });
                 }
-                if (user.userType !== "USER") {
+                if (user.userType !== "USER" && user.userType !== "PARTNER") {
                     return res.status(403).send({
                         message: "Access prohibited. USER role is required!",
                     });
@@ -117,7 +117,7 @@ const isPartner = (req, res, next) => {
                 });
             }
 
-            if (user.userType !== "PARTNER") {
+            if (user.userType !== "PARTNER" && user.userType !== "USER") {
                 return res.status(403).send({
                     message: "Access prohibited. Partner role is required!",
                 });

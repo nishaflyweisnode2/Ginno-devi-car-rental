@@ -141,5 +141,8 @@ module.exports = (app) => {
     app.get('/api/v1/partner/cars/getall/gps', [authJwt.isPartner], auth.getAllCarGPSLocations);
     app.get('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.getGPSDataForCar);
     app.delete('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.deleteGPSDataForCar);
+    app.put('/api/v1/partner/switchRole/:roleId', [authJwt.verifyToken], auth.switchRole)
+    app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
 
+    
 }

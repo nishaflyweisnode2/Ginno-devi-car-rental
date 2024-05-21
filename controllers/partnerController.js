@@ -65,7 +65,7 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
         }
 
-        const existingUser = await User.findOne({ mobileNumber: mobileNumber, userType: "PARTNER" });
+        const existingUser = await User.findOne({ mobileNumber: mobileNumber,userType: { $in: ["PARTNER", "USER"] } });
         if (existingUser) {
             return res.status(409).json({ status: 409, message: 'User Already Registered' });
         }
@@ -78,7 +78,9 @@ exports.signup = async (req, res) => {
             email,
             password: hashedPassword,
             userType: "PARTNER",
-            refferalCode: await reffralCode()
+            refferalCode: await reffralCode(),
+            role: ["PARTNER", "USER"],
+            currentRole: "PARTNER"
         });
 
         const savedUser = await newUser.save();
@@ -110,7 +112,7 @@ exports.loginWithPhone = async (req, res) => {
             return res.status(400).json({ status: 400, message: "Mobile number or email is required" });
         }
 
-        let query = { userType: "PARTNER" };
+        let query = { userType: { $in: ["PARTNER", "USER"] } };
 
         if (mobileNumber) {
             if (mobileNumber.replace(/\D/g, '').length !== 10) {
@@ -133,10 +135,14 @@ exports.loginWithPhone = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
         const userObj = {
-            otp: newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false }),
-            otpExpiration: new Date(Date.now() + 60 * 1000),
+            otp: otp,
+            otpExpiration: otpExpiration,
             accountVerification: false,
+            role: ["PARTNER", "USER"],
+            currentRole: "PARTNER"
         };
 
         const updatedUser = await User.findOneAndUpdate(
@@ -182,7 +188,8 @@ exports.verifyOtp = async (req, res) => {
             otp: updated.otp,
             mobileNumber: updated.mobileNumber,
             token: accessToken,
-            completeProfile: updated.completeProfile
+            completeProfile: updated.completeProfile,
+            role: "PARTNER"
         }
         return res.status(200).send({ status: 200, message: "logged in successfully", data: obj });
     } catch (err) {
@@ -194,7 +201,7 @@ exports.verifyOtp = async (req, res) => {
 exports.resendOTP = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await User.findOne({ _id: id, userType: "PARTNER" });
+        const user = await User.findOne({ _id: id, userType: { $in: ["PARTNER", "USER"] } });
         if (!user) {
             return res.status(404).send({ status: 404, message: "User not found" });
         }
@@ -229,7 +236,7 @@ exports.socialLogin = async (req, res) => {
                 accessToken,
             });
         } else {
-            const user = await userModel.create({ firstname, lastname, email, socialType, userType: "PARTNER" });
+            const user = await userModel.create({ firstname, lastname, email, socialType, userType: { $in: ["PARTNER", "USER"] } });
 
             if (user) {
                 const accessToken = jwt.sign({ id: user.id, email: user.email }, process.env.SECRETK, { expiresIn: "365d" });
@@ -2490,10 +2497,12 @@ exports.updateTripEndDetails = async (req, res) => {
         booking.remarks = req.query.remarks !== undefined ? req.query.remarks : booking.remarks;
 
         const totalPrice = booking.totalPrice;
+        console.log("totalPrice", totalPrice);
         const depositedMoney = booking.depositedMoney;
         const amountToOwner = Math.round((totalPrice - depositedMoney) * 0.7);
         const amountToAdmin = Math.round((totalPrice - depositedMoney) * 0.15);
         const amountToAdminReferral = Math.round((totalPrice - depositedMoney) * 0.15);
+        console.log("amountToOwner", amountToOwner);
         console.log("amountToAdmin", amountToAdmin);
         console.log("amountToAdminReferral", amountToAdminReferral);
         const car = await Car.findById(booking.car);
@@ -4023,5 +4032,55 @@ exports.deleteGPSDataForCar = async (req, res) => {
     } catch (error) {
         console.error('Error deleting GPS data:', error);
         return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.switchRole = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const roleId = req.params.roleId;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        let roleIndex = -1;
+        for (let i = 0; i < user.role.length; i++) {
+            if (user.role[i] === roleId) {
+                roleIndex = i;
+                break;
+            }
+        }
+
+        if (roleIndex === -1) {
+            return res.status(404).json({ status: 404, message: 'Role not found for this user' });
+        }
+
+        user.currentRole = roleId;
+        await user.save();
+
+        return res.status(200).json({ status: 200, message: 'User role switched successfully', data: user });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getCurrentRole = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        console.log(partnerId);
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const currentRoleId = user.currentRole;
+
+        return res.status(200).json({ status: 200, message: 'Current role retrieved successfully', currentRoleId });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
