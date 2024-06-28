@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, overAllImage } = require('../middlewares/imageUpload');
+const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, overAllImage, userProfileUpload, cheque } = require('../middlewares/imageUpload');
 
 
 
@@ -24,8 +24,11 @@ module.exports = (app) => {
     app.get("/api/v1/user/profile/:userId", [authJwt.verifyToken], auth.getUserProfileById);
     app.get('/api/v1/user/direct-referrals', [authJwt.verifyToken], auth.getDirectReferralUsers);
     app.get('/api/v1/user/all-referrals', [authJwt.verifyToken], auth.getReferralDetails);
-    app.get('/api/v1/user/level-wise-income',[authJwt.verifyToken], auth.getReferralIncome);
+    app.get('/api/v1/user/level-wise-income', [authJwt.verifyToken], auth.getReferralIncome);
     app.put("/api/v1/user/updateLocation", [authJwt.verifyToken], auth.updateLocation);
+    app.put("/api/v1/user/upload-id-picture", [authJwt.verifyToken], userProfileUpload.single('image'), auth.uploadIdPicture);
+    app.put("/api/v1/user/update-documents", [authJwt.verifyToken], auth.updateDocuments);
+    app.put('/api/v1/user/updateBankDetails', [authJwt.verifyToken], cheque.single('image'), auth.updateBankDetails);
     app.get("/api/v1/user/city/cities", [authJwt.verifyToken], auth.getAllCities);
     app.get("/api/v1/user/city/cities/:id", [authJwt.verifyToken], auth.getCityById);
     app.get('/api/v1/user/cars', [authJwt.verifyToken], auth.getAllCars);

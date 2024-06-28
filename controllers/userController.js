@@ -762,6 +762,100 @@ exports.updateLocation = async (req, res) => {
     }
 };
 
+exports.uploadIdPicture = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: { 'uploadId.frontImage': req.file.path } },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Uploaded successfully', data: updatedUser.uploadId.frontImage });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to upload profile picture', error: error.message });
+    }
+};
+exports.updateDocuments = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { uploadId } = req.body;
+
+        const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
+        const isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
+
+        const updateFields = {
+            'uploadId.frontImage': uploadId.frontImage || null,
+            'uploadId.backImage': uploadId.backImage || null,
+            'uploadId.aadharCardNo': uploadId.aadharCardNo || null,
+            'uploadId.panNumber': uploadId.panNumber || null,
+            'uploadId.panImage': uploadId.panImage || null,
+            'uploadId.panName': uploadId.panName || null,
+            'uploadId.isPanCardUpload': isPanCardUpload,
+            'uploadId.isAadharCardUpload': isAadharCardUpload,
+        };
+
+        const updatedUser = await User.findOneAndUpdate(
+            { _id: userId },
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (updatedUser) {
+            return res.status(200).json({ status: 200, message: 'Documents updated successfully', data: updatedUser });
+        } else {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+    } catch (error) {
+        console.error("Error updating documents:", error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+exports.updateBankDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { bankName, accountNumber, reAccountNumber, accountHolderName, ifscCode } = req.body;
+
+        const userData = await User.findOne({ _id: userId });
+        if (!userData) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
+        let existingDetails = await User.findOne({ _id: userId });
+
+        if (existingDetails) {
+            if (req.file) {
+                existingDetails.bankDetails.cheque = req.file.path;
+                existingDetails.bankDetails.isUploadbankDetails = true;
+            }
+
+            if (bankName) existingDetails.bankDetails.bankName = bankName;
+            if (accountNumber) existingDetails.bankDetails.accountNumber = accountNumber;
+            if (reAccountNumber) existingDetails.bankDetails.reAccountNumber = reAccountNumber;
+            if (accountHolderName) existingDetails.bankDetails.accountHolderName = accountHolderName;
+            if (ifscCode) existingDetails.bankDetails.ifscCode = ifscCode;
+
+            existingDetails.bankDetails.isUploadbankDetails = true;
+
+        }
+        const updatedCar = await existingDetails.save();
+
+        return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getAllCities = async (req, res) => {
     try {
         const cities = await City.find();

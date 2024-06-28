@@ -65,6 +65,61 @@ const userSchema = new mongoose.Schema({
         enum: ["ADMIN", "USER", "PARTNER", "SUB-ADMIN"],
         default: "USER"
     },
+    uploadId: {
+        aadharCardNo: {
+          type: String,
+          default: null,
+        },
+        frontImage: {
+          type: String,
+          default: null,
+        },
+        backImage: {
+          type: String,
+          default: null,
+        },
+        isAadharCardUpload: {
+          type: Boolean,
+          default: false
+        },
+        panNumber: {
+          type: String
+        },
+        panName: {
+          type: String
+        },
+        panImage: {
+          type: String
+        },
+        isPanCardUpload: {
+          type: Boolean,
+          default: false
+        },
+      },
+      bankDetails: {
+        bankName: {
+            type: String,
+        },
+        accountNumber: {
+            type: String,
+        },
+        reAccountNumber: {
+            type: String,
+        },
+        accountHolderName: {
+            type: String,
+        },
+        ifscCode: {
+            type: String,
+        },
+        cheque: {
+            type: String,
+        },
+        isUploadbankDetails: {
+            type: Boolean,
+            default: false,
+        },
+    },
     refferalCode: {
         type: String,
     },
