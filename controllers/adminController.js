@@ -50,14 +50,22 @@ const GPSData = require('../models/gpsModel');
 
 
 exports.registration = async (req, res) => {
-    const { phone, email } = req.body;
     try {
+        const lastUser = await User.findOne().sort({ userId: -1 });
+        let newUserId = 1000000;
+
+        if (lastUser) {
+            newUserId = parseInt(lastUser.userId) + 1;
+        }
+
+        const { phone, email } = req.body;
         req.body.email = email.split(" ").join("").toLowerCase();
         let user = await User.findOne({ $and: [{ $or: [{ email: req.body.email }, { phone: phone }] }], userType: "ADMIN" });
         if (!user) {
             req.body.password = bcrypt.hashSync(req.body.password, 8);
             req.body.userType = "ADMIN";
             req.body.accountVerification = true;
+            req.body.userID = newUserId.toString();
             const userCreate = await User.create(req.body);
             return res.status(200).send({ message: "registered successfully ", data: userCreate, });
         } else {
@@ -149,6 +157,40 @@ exports.getAllUser = async (req, res) => {
     }
 };
 
+exports.getAllUserByType = async (req, res) => {
+    try {
+        const { userType, currentRole } = req.query;
+
+        let users;
+        if (userType) {
+            users = await User.find({ userType: userType }).populate('city');
+        } else {
+            users = await User.find({ currentRole: currentRole }).populate('city');
+        }
+        if (!users || users.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Users not found' });
+        }
+
+        const formattedUsers = users.map(user => ({
+            _id: user._id,
+            user: user,
+            memberSince: user.createdAt.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'numeric',
+                year: 'numeric',
+            }),
+        }));
+
+        return res.status(200).json({
+            status: 200,
+            data: formattedUsers,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getUserById = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -196,11 +238,13 @@ exports.deleteUser = async (req, res) => {
 
 exports.updateUserById = async (req, res) => {
     try {
-        const { fullName, email, mobileNumber, password } = req.body;
+        const { fullName, email, mobileNumber, password, documentVerification, documentRemarks } = req.body;
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).send({ message: "not found" });
         }
+        user.documentVerification = documentVerification || user.documentVerification;
+        user.documentRemarks = documentRemarks || user.documentRemarks;
         user.fullName = fullName || user.fullName;
         user.email = email || user.email;
         user.mobileNumber = mobileNumber || user.mobileNumber;
@@ -214,6 +258,122 @@ exports.updateUserById = async (req, res) => {
         return res.status(500).send({
             message: "internal server error " + err.message,
         });
+    }
+};
+
+exports.uploadProfilePicture = async (req, res) => {
+    try {
+        const userId = req.params.id
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, { image: req.file.path, completeProfile: true }, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Profile Picture Uploaded successfully', data: updatedUser });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to upload profile picture', error: error.message });
+    }
+};
+
+exports.uploadIdPicture = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: { 'uploadId.frontImage': req.file.path } },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Uploaded successfully', data: updatedUser.uploadId.frontImage });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to upload profile picture', error: error.message });
+    }
+};
+
+exports.updateDocuments = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { uploadId } = req.body;
+
+        const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
+        const isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
+
+        const updateFields = {
+            'uploadId.frontImage': uploadId.frontImage || null,
+            'uploadId.backImage': uploadId.backImage || null,
+            'uploadId.aadharCardNo': uploadId.aadharCardNo || null,
+            'uploadId.panNumber': uploadId.panNumber || null,
+            'uploadId.panImage': uploadId.panImage || null,
+            'uploadId.panName': uploadId.panName || null,
+            'uploadId.isPanCardUpload': isPanCardUpload,
+            'uploadId.isAadharCardUpload': isAadharCardUpload,
+        };
+
+        const updatedUser = await User.findOneAndUpdate(
+            { _id: userId },
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (updatedUser) {
+            return res.status(200).json({ status: 200, message: 'Documents updated successfully', data: updatedUser });
+        } else {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+    } catch (error) {
+        console.error("Error updating documents:", error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.updateBankDetails = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { bankName, accountNumber, reAccountNumber, accountHolderName, ifscCode } = req.body;
+
+        const userData = await User.findOne({ _id: userId });
+        if (!userData) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
+        let existingDetails = await User.findOne({ _id: userId });
+
+        if (existingDetails) {
+            if (req.file) {
+                existingDetails.bankDetails.cheque = req.file.path;
+                existingDetails.bankDetails.isUploadbankDetails = true;
+            }
+
+            if (bankName) existingDetails.bankDetails.bankName = bankName;
+            if (accountNumber) existingDetails.bankDetails.accountNumber = accountNumber;
+            if (reAccountNumber) existingDetails.bankDetails.reAccountNumber = reAccountNumber;
+            if (accountHolderName) existingDetails.bankDetails.accountHolderName = accountHolderName;
+            if (ifscCode) existingDetails.bankDetails.ifscCode = ifscCode;
+
+            existingDetails.bankDetails.isUploadbankDetails = true;
+
+        }
+        const updatedCar = await existingDetails.save();
+
+        return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
 

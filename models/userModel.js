@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
+    userId: {
+        type: String,
+    },
     fullName: {
         type: String,
     },
@@ -67,36 +70,36 @@ const userSchema = new mongoose.Schema({
     },
     uploadId: {
         aadharCardNo: {
-          type: String,
-          default: null,
+            type: String,
+            default: null,
         },
         frontImage: {
-          type: String,
-          default: null,
+            type: String,
+            default: null,
         },
         backImage: {
-          type: String,
-          default: null,
+            type: String,
+            default: null,
         },
         isAadharCardUpload: {
-          type: Boolean,
-          default: false
+            type: Boolean,
+            default: false
         },
         panNumber: {
-          type: String
+            type: String
         },
         panName: {
-          type: String
+            type: String
         },
         panImage: {
-          type: String
+            type: String
         },
         isPanCardUpload: {
-          type: Boolean,
-          default: false
+            type: Boolean,
+            default: false
         },
-      },
-      bankDetails: {
+    },
+    bankDetails: {
         bankName: {
             type: String,
         },
@@ -210,6 +213,14 @@ const userSchema = new mongoose.Schema({
     currentRole: {
         type: String,
         enum: ["ADMIN", "USER", "PARTNER", "SUB-ADMIN"],
+    },
+    documentVerification: {
+        type: String,
+        enum: ['PENDING', 'APPROVED', 'CANCELLED', 'HOLD'],
+        default: 'PENDING'
+    },
+    documentRemarks: {
+        type: String,
     },
 
 }, { timestamps: true });

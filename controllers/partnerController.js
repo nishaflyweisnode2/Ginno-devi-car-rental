@@ -61,6 +61,13 @@ exports.signup = async (req, res) => {
     try {
         const { fullName, mobileNumber, email, password, confirmPassword } = req.body;
 
+        const lastUser = await User.findOne().sort({ userId: -1 });
+        let newUserId = 1000000;
+
+        if (lastUser) {
+            newUserId = parseInt(lastUser.userId) + 1;
+        }
+
         if (password !== confirmPassword) {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
         }
@@ -73,6 +80,7 @@ exports.signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = new User({
+            userId: newUserId.toString(),
             fullName,
             mobileNumber,
             email,

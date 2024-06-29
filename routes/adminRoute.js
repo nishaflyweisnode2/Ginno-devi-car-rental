@@ -5,7 +5,8 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage } = require('../middlewares/imageUpload');
+const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque
+} = require('../middlewares/imageUpload');
 
 
 
@@ -17,9 +18,14 @@ module.exports = (app) => {
     app.post("/api/v1/admin/login", auth.signin);
     app.put("/api/v1/admin/update", [authJwt.isAdmin], auth.update);
     app.get("/api/v1/admin/profile", [authJwt.isAdmin], auth.getAllUser);
+    app.get("/api/v1/admin/profile/by-userType", [authJwt.isAdmin], auth.getAllUserByType);
     app.get("/api/v1/admin/profile/:userId", [authJwt.isAdmin], auth.getUserById);
     app.delete('/api/v1/admin/users/profile/delete/:id', [authJwt.isAdmin], auth.deleteUser);
     app.put("/api/v1/admin/update/user/:id", [authJwt.isAdmin], auth.updateUserById);
+    app.put("/api/v1/admin/upload-profile-picture/:id", [authJwt.isAdmin], profileImage.single('image'), auth.uploadProfilePicture);
+    app.put("/api/v1/admin/upload-id-picture/:id", [authJwt.isAdmin], userProfileUpload.single('image'), auth.uploadIdPicture);
+    app.put("/api/v1/admin/update-documents/:id", [authJwt.isAdmin], auth.updateDocuments);
+    app.put('/api/v1/admin/updateBankDetails/:id', [authJwt.isAdmin], cheque.single('image'), auth.updateBankDetails);
     app.get('/api/v1/admin/users/pending-verification', [authJwt.isAdmin], auth.getPendingVerificationUsers);
     app.put('/api/v1/admin/users/:id/update-verification-status', [authJwt.isAdmin], auth.updateVerificationStatus);
     app.get('/api/v1/admin/verified-users', [authJwt.isAdmin], auth.getVerifiedUsers);
