@@ -130,9 +130,65 @@ exports.update = async (req, res) => {
     }
 };
 
-exports.getAllUser = async (req, res) => {
+exports.getAllUser1 = async (req, res) => {
     try {
         const users = await User.find().populate('city');
+        if (!users || users.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Users not found' });
+        }
+
+        const formattedUsers = users.map(user => ({
+            _id: user._id,
+            user: user,
+            memberSince: user.createdAt.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'numeric',
+                year: 'numeric',
+            }),
+        }));
+
+        return res.status(200).json({
+            status: 200,
+            data: formattedUsers,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+exports.getAllUser = async (req, res) => {
+    try {
+        const { date, kyc, vehicleNo, location, userName } = req.query;
+        let filter = {};
+
+        if (date) {
+            const dateObj = new Date(date);
+            filter.createdAt = {
+                $gte: new Date(dateObj.setHours(0, 0, 0, 0)),
+                $lt: new Date(dateObj.setHours(23, 59, 59, 999))
+            };
+        }
+
+        if (kyc) {
+            filter.documentVerification = kyc;
+        }
+
+        if (vehicleNo) {
+            filter['cars.licenseNumber'] = vehicleNo;
+        }
+
+        // if (location) {
+        //     filter['city.name'] = location;
+        // }
+        if (location) {
+            filter.city = location;
+        }
+
+        if (userName) {
+            filter.fullName = { $regex: userName, $options: 'i' };
+        }
+
+        const users = await User.find(filter).populate('cars.car');
         if (!users || users.length === 0) {
             return res.status(404).json({ status: 404, message: 'Users not found' });
         }
@@ -307,11 +363,13 @@ exports.uploadIdPicture = async (req, res) => {
 
 exports.updateDocuments = async (req, res) => {
     try {
-        const userId = req.params.id;
-        const { uploadId } = req.body;
+        const userId = req.user._id;
+        const { uploadId, drivingLicense, bankDetails } = req.body;
 
         const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
         const isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
+        const isDrivingLicenseUpload = !!(drivingLicense.frontImage && drivingLicense.backImage && drivingLicense.drivingLicenseNo);
+        const isUploadbankDetails = !!(bankDetails.bankName && bankDetails.accountNo && bankDetails.reAccountNumber && bankDetails.ifscCode && bankDetails.accountHolderName && bankDetails.cheque);
 
         const updateFields = {
             'uploadId.frontImage': uploadId.frontImage || null,
@@ -322,6 +380,19 @@ exports.updateDocuments = async (req, res) => {
             'uploadId.panName': uploadId.panName || null,
             'uploadId.isPanCardUpload': isPanCardUpload,
             'uploadId.isAadharCardUpload': isAadharCardUpload,
+            'drivingLicense.frontImage': drivingLicense.frontImage || null,
+            'drivingLicense.backImage': drivingLicense.backImage || null,
+            'drivingLicense.drivingLicenseNo': drivingLicense.drivingLicenseNo || null,
+            'drivingLicense.isDrivingLicenseUpload': isDrivingLicenseUpload,
+            'bankDetails.bankName': bankDetails.bankName || null,
+            'bankDetails.accountNo': bankDetails.accountNo || null,
+            'bankDetails.reAccountNumber': bankDetails.reAccountNumber || null,
+            'bankDetails.ifscCode': bankDetails.ifscCode || null,
+            'bankDetails.accountHolderName': bankDetails.accountHolderName || null,
+            'bankDetails.cheque': bankDetails.cheque || null,
+            'bankDetails.isUploadbankDetails': isUploadbankDetails,
+
+
         };
 
         const updatedUser = await User.findOneAndUpdate(
@@ -427,6 +498,36 @@ exports.getVerifiedUsers = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Failed to retrieve verified users', error: error.message });
+    }
+};
+
+exports.registrationPartnerByAdmin = async (req, res) => {
+    try {
+        const lastUser = await User.findOne().sort({ userId: -1 });
+        let newUserId = 1000000;
+
+        if (lastUser) {
+            newUserId = parseInt(lastUser.userId) + 1;
+        }
+
+        const { mobileNumber, email, userType } = req.body;
+        req.body.email = email.split(" ").join("").toLowerCase();
+        let user = await User.findOne({ $and: [{ $or: [{ email: req.body.email }, { mobileNumber: mobileNumber }] }], userType: userType });
+        console.log(user);
+        if (!user) {
+            req.body.password = bcrypt.hashSync(req.body.password, 8);
+            req.body.userType = userType;
+            req.body.accountVerification = true;
+            req.body.status = true;
+            req.body.userID = newUserId.toString();
+            const userCreate = await User.create(req.body);
+            return res.status(200).send({ message: "registered successfully ", data: userCreate, });
+        } else {
+            return res.status(409).send({ message: "Already Exist", data: [] });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -920,6 +1021,9 @@ exports.createCar = async (req, res) => {
 
         const savedCar = await newCar.save();
 
+        user.cars.push({ car: savedCar._id, licenseNumber });
+        await user.save();
+
         return res.status(201).json({ status: 201, data: savedCar });
     } catch (error) {
         console.error(error);
@@ -1043,10 +1147,22 @@ exports.updateCarById = async (req, res) => {
 
 exports.deleteCarById = async (req, res) => {
     try {
+
+        const userId = req.user._id;
+
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
         const deletedCar = await Car.findByIdAndDelete(req.params.carId);
         if (!deletedCar) {
             return res.status(404).json({ message: 'Car not found' });
         }
+
+        // user.cars = user.cars.filter(car => car.car.toString() !== req.params.carId);
+        // await user.save();
+
         return res.status(200).json({ status: 200, message: 'Car deleted successfully' });
     } catch (error) {
         console.error(error);

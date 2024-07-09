@@ -72,7 +72,7 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Passwords and ConfirmPassword do not match' });
         }
 
-        const existingUser = await User.findOne({ mobileNumber: mobileNumber,userType: { $in: ["PARTNER", "USER"] } });
+        const existingUser = await User.findOne({ mobileNumber: mobileNumber, userType: { $in: ["PARTNER", "USER"] } });
         if (existingUser) {
             return res.status(409).json({ status: 409, message: 'User Already Registered' });
         }
@@ -568,6 +568,9 @@ exports.createCar = async (req, res) => {
 
         const savedCar = await newCar.save();
 
+        user.cars.push({ car: savedCar._id, licenseNumber });
+        await user.save();
+
         return res.status(201).json({ status: 201, data: savedCar });
     } catch (error) {
         console.error(error);
@@ -691,6 +694,10 @@ exports.deleteCarById = async (req, res) => {
         if (!deletedCar) {
             return res.status(404).json({ message: 'Car not found' });
         }
+
+        user.cars = user.cars.filter(car => car.car.toString() !== req.params.carId,);
+        await user.save();
+
         return res.status(200).json({ status: 200, message: 'Car deleted successfully' });
     } catch (error) {
         console.error(error);

@@ -106,6 +106,9 @@ const userSchema = new mongoose.Schema({
         accountNumber: {
             type: String,
         },
+        accountNo: {
+            type: String,
+        },
         reAccountNumber: {
             type: String,
         },
@@ -121,6 +124,24 @@ const userSchema = new mongoose.Schema({
         isUploadbankDetails: {
             type: Boolean,
             default: false,
+        },
+    },
+    drivingLicense: {
+        drivingLicenseNo: {
+            type: String,
+            default: null,
+        },
+        frontImage: {
+            type: String,
+            default: null,
+        },
+        backImage: {
+            type: String,
+            default: null,
+        },
+        isDrivingLicenseUpload: {
+            type: Boolean,
+            default: false
         },
     },
     refferalCode: {
@@ -162,6 +183,10 @@ const userSchema = new mongoose.Schema({
         default: 0,
     },
     isVerified: {
+        type: Boolean,
+        default: false
+    },
+    status: {
         type: Boolean,
         default: false
     },
@@ -222,6 +247,15 @@ const userSchema = new mongoose.Schema({
     documentRemarks: {
         type: String,
     },
+    cars: [{
+        car: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Car',
+        },
+        licenseNumber: {
+            type: String,
+        },
+    }],
 
 }, { timestamps: true });
 

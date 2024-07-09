@@ -793,13 +793,16 @@ exports.uploadIdPicture = async (req, res) => {
         return res.status(500).json({ message: 'Failed to upload profile picture', error: error.message });
     }
 };
+
 exports.updateDocuments = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { uploadId } = req.body;
+        const { uploadId, drivingLicense, bankDetails } = req.body;
 
         const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
         const isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
+        const isDrivingLicenseUpload = !!(drivingLicense.frontImage && drivingLicense.backImage && drivingLicense.drivingLicenseNo);
+        const isUploadbankDetails = !!(bankDetails.bankName && bankDetails.accountNo && bankDetails.reAccountNumber && bankDetails.ifscCode && bankDetails.accountHolderName && bankDetails.cheque);
 
         const updateFields = {
             'uploadId.frontImage': uploadId.frontImage || null,
@@ -810,6 +813,19 @@ exports.updateDocuments = async (req, res) => {
             'uploadId.panName': uploadId.panName || null,
             'uploadId.isPanCardUpload': isPanCardUpload,
             'uploadId.isAadharCardUpload': isAadharCardUpload,
+            'drivingLicense.frontImage': drivingLicense.frontImage || null,
+            'drivingLicense.backImage': drivingLicense.backImage || null,
+            'drivingLicense.drivingLicenseNo': drivingLicense.drivingLicenseNo || null,
+            'drivingLicense.isDrivingLicenseUpload': isDrivingLicenseUpload,
+            'bankDetails.bankName': bankDetails.bankName || null,
+            'bankDetails.accountNo': bankDetails.accountNo || null,
+            'bankDetails.reAccountNumber': bankDetails.reAccountNumber || null,
+            'bankDetails.ifscCode': bankDetails.ifscCode || null,
+            'bankDetails.accountHolderName': bankDetails.accountHolderName || null,
+            'bankDetails.cheque': bankDetails.cheque || null,
+            'bankDetails.isUploadbankDetails': isUploadbankDetails,
+
+
         };
 
         const updatedUser = await User.findOneAndUpdate(
@@ -828,6 +844,7 @@ exports.updateDocuments = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
 exports.updateBankDetails = async (req, res) => {
     try {
         const userId = req.user._id;

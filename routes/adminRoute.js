@@ -29,6 +29,7 @@ module.exports = (app) => {
     app.get('/api/v1/admin/users/pending-verification', [authJwt.isAdmin], auth.getPendingVerificationUsers);
     app.put('/api/v1/admin/users/:id/update-verification-status', [authJwt.isAdmin], auth.updateVerificationStatus);
     app.get('/api/v1/admin/verified-users', [authJwt.isAdmin], auth.getVerifiedUsers);
+    app.post("/api/v1/admin/partner/registration", auth.registrationPartnerByAdmin);
     app.post("/api/v1/admin/city/cities", [authJwt.isAdmin], cityImage.single('image'), auth.createCity);
     app.get("/api/v1/admin/city/cities", [authJwt.isAdmin], auth.getAllCities);
     app.get("/api/v1/admin/city/cities/:id", [authJwt.isAdmin], auth.getCityById);
