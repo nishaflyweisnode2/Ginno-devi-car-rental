@@ -137,5 +137,20 @@ module.exports = (app) => {
     app.put('/api/v1/user/notifications/markAll/read', [authJwt.verifyToken], auth.markAllNotificationsAsRead);
     app.get('/api/v1/user/notifications/user/:userId', [authJwt.verifyToken], auth.getNotificationsForUser);
     app.get('/api/v1/user/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
-
+    app.get('/api/v1/user/accessories/categories', [authJwt.verifyToken], auth.getAllAccessoryCategories);
+    app.get('/api/v1/user/accessories/categories/:categoryId', [authJwt.verifyToken], auth.getAccessoryCategoryById);
+    app.get('/api/v1/user/accessories', [authJwt.verifyToken], auth.getAllAccessories);
+    app.get('/api/v1/user/accessories/:accessoryId', [authJwt.verifyToken], auth.getAccessoryById);
+    app.get('/api/v1/user/accessories/category/:categoryId', [authJwt.verifyToken], auth.getAllAccessoriesByCategoryId);
+    app.post('/api/v1/user/accessories/order', [authJwt.verifyToken], auth.createOrder);
+    app.get('/api/v1/user/order', [authJwt.verifyToken], auth.getAllOrders);
+    app.get('/api/v1/user/order/:orderId', [authJwt.verifyToken], auth.getOrderById);
+    app.put('/api/v1/user/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
+    app.delete('/api/v1/user/order/:orderId', [authJwt.verifyToken], auth.deleteOrder);
+    app.post('/api/v1/user/wallet/addWallet', [authJwt.verifyToken], auth.addMoney);
+    app.post('/api/v1/user/wallet/removeWallet', [authJwt.verifyToken], auth.removeMoney);
+    app.get('/api/v1/user/wallet/getwallet', [authJwt.verifyToken], auth.getWallet);
+    app.get("/api/v1/user/allTransactionUser", [authJwt.verifyToken], auth.allTransactionUser);
+    app.get("/api/v1/user/allcreditTransactionUser", [authJwt.verifyToken], auth.allcreditTransactionUser);
+    app.get("/api/v1/user/allDebitTransactionUser", [authJwt.verifyToken], auth.allDebitTransactionUser);
 }

@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque
+const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage
 } = require('../middlewares/imageUpload');
 
 
@@ -231,10 +231,38 @@ module.exports = (app) => {
     app.get('/api/v1/admin/cars/getall/gps', [authJwt.isAdmin], auth.getAllCarGPSLocations);
     app.get('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.getGPSDataForCar);
     app.delete('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.deleteGPSDataForCar);
-    app.get('/api/v1/user/direct-referrals/all', [authJwt.verifyToken], auth.getAllDirectReferralUsers);
-    app.get('/api/v1/user/direct-referrals/:id', [authJwt.verifyToken], auth.getDirectReferralUsersByUserId);
-    app.get('/api/v1/user/all-referrals/all', [authJwt.verifyToken], auth.getAllUserReferralDetails);
-    app.get('/api/v1/user/all-referrals/:id', [authJwt.verifyToken], auth.getReferralDetailsByUserId);
-    app.get('/api/v1/user/level-wise-income/all', [authJwt.verifyToken], auth.getAllUserReferralIncome);
-    app.get('/api/v1/user/level-wise-income/:id', [authJwt.verifyToken], auth.getReferralIncomeByUserId);
+    app.get('/api/v1/user/direct-referrals/all', [authJwt.isAdmin], auth.getAllDirectReferralUsers);
+    app.get('/api/v1/user/direct-referrals/:id', [authJwt.isAdmin], auth.getDirectReferralUsersByUserId);
+    app.get('/api/v1/user/all-referrals/all', [authJwt.isAdmin], auth.getAllUserReferralDetails);
+    app.get('/api/v1/user/all-referrals/:id', [authJwt.isAdmin], auth.getReferralDetailsByUserId);
+    app.get('/api/v1/user/level-wise-income/all', [authJwt.isAdmin], auth.getAllUserReferralIncome);
+    app.get('/api/v1/user/level-wise-income/:id', [authJwt.isAdmin], auth.getReferralIncomeByUserId);
+    app.get('/api/v1/admin/transactions/user/:id', [authJwt.isAdmin], auth.getTransactionDetailsByUserId);
+    app.get('/api/v1/admin/income/user/:id', [authJwt.verifyToken], auth.getIncomeDetailsByUserId);
+    app.get('/api/v1/admin/all-ratings', [authJwt.isAdmin], auth.getAllRatingsForCars);
+    app.get('/api/v1/admin/ratings/:carId', [authJwt.isAdmin], auth.getAllRatingsByCarId);
+    app.get('/api/v1/admin/ratings/:carId/rating/:rating', [authJwt.isAdmin], auth.getRatingsByCarIdAndRating);
+    app.put('/api/v1/admin/rating/update', [authJwt.isAdmin], auth.updateReview);
+    app.get('/api/v1/admin/user/all-review', [authJwt.isAdmin], auth.getUserAllReview);
+    app.get('/api/v1/admin/user/review/:hostId', [authJwt.isAdmin], auth.getUserReviewById);
+    app.put('/api/v1/admin/user/review', [authJwt.isAdmin], auth.updateUserReview);
+    app.post('/api/v1/admin/accessories/categories', [authJwt.isAdmin], accessoryCategoryImage.single('image'), auth.createAccessoryCategory);
+    app.get('/api/v1/admin/accessories/categories', [authJwt.isAdmin], auth.getAllAccessoryCategories);
+    app.get('/api/v1/admin/accessories/categories/:categoryId', [authJwt.isAdmin], auth.getAccessoryCategoryById);
+    app.put('/api/v1/admin/accessories/categories/:categoryId', [authJwt.isAdmin], accessoryCategoryImage.single('image'), auth.updateAccessoryCategory);
+    app.delete('/api/v1/admin/accessories/categories/:categoryId', [authJwt.isAdmin], auth.deleteAccessoryCategory);
+    app.post('/api/v1/admin/accessories/add', [authJwt.isAdmin], accessoryImage.single('image'), auth.createAccessory);
+    app.get('/api/v1/admin/accessories', [authJwt.isAdmin], auth.getAllAccessories);
+    app.get('/api/v1/admin/accessories/:accessoryId', [authJwt.isAdmin], auth.getAccessoryById);
+    app.put('/api/v1/admin/accessories/:accessoryId', [authJwt.isAdmin], accessoryImage.single('image'), auth.updateAccessory);
+    app.delete('/api/v1/admin/accessories/:accessoryId', [authJwt.isAdmin], auth.deleteAccessory);
+    app.get('/api/v1/admin/accessories/category/:categoryId', [authJwt.isAdmin], auth.getAllAccessoriesByCategoryId);
+    app.get('/api/v1/admin/order', [authJwt.isAdmin], auth.getAllOrders);
+    app.get('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.getOrderById);
+    app.put('/api/v1/admin/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
+    app.delete('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.deleteOrder);
+    app.get('/api/v1/admin/allcount', [authJwt.isAdmin], auth.getAllCounts);
+
+
+
 }

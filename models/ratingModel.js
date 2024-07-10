@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 
 const reviewSchema = new mongoose.Schema({
     user: {
@@ -33,6 +34,8 @@ const reviewSchema = new mongoose.Schema({
         default: Date.now,
     },
 });
+
+reviewSchema.plugin(mongoosePaginate);
 
 const Review = mongoose.model('Review', reviewSchema);
 

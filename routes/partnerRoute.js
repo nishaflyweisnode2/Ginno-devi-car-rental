@@ -143,6 +143,15 @@ module.exports = (app) => {
     app.delete('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.deleteGPSDataForCar);
     app.put('/api/v1/partner/switchRole/:roleId', [authJwt.verifyToken], auth.switchRole)
     app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
-
+    app.get('/api/v1/partner/accessories/categories', [authJwt.verifyToken], auth.getAllAccessoryCategories);
+    app.get('/api/v1/partner/accessories/categories/:categoryId', [authJwt.verifyToken], auth.getAccessoryCategoryById);
+    app.get('/api/v1/partner/accessories', [authJwt.verifyToken], auth.getAllAccessories);
+    app.get('/api/v1/partner/accessories/:accessoryId', [authJwt.verifyToken], auth.getAccessoryById);
+    app.get('/api/v1/partner/accessories/category/:categoryId', [authJwt.verifyToken], auth.getAllAccessoriesByCategoryId);
+    app.post('/api/v1/partner/accessories/order', [authJwt.verifyToken], auth.createOrder);
+    app.get('/api/v1/partner/order', [authJwt.verifyToken], auth.getAllOrders);
+    app.get('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.getOrderById);
+    app.put('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
+    app.delete('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.deleteOrder);
     
 }

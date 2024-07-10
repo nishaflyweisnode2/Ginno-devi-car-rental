@@ -8,6 +8,11 @@ const faqSchema = new mongoose.Schema(
         answer: {
             type: String,
         },
+        userType: {
+            type: String,
+            enum: ["ADMIN", "USER", "PARTNER", "SUB-ADMIN"],
+            // default: "USER"
+        },
     },
     { timestamps: true }
 );

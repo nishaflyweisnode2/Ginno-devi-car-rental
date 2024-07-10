@@ -34,6 +34,10 @@ const TenderApplication = require('../models/govtTendorModel');
 const Tds = require('../models/tdsModel');
 const GPSData = require('../models/gpsModel');
 const ReferralLevel = require('../models/referralLevelModel');
+const AccessoryCategory = require('../models/accessory/accessoryCategoryModel')
+const Accessory = require('../models/accessory/accessoryModel')
+const Order = require('../models/orderModel');
+const Address = require("../models/userAddressModel");
 
 
 
@@ -4097,5 +4101,289 @@ exports.getCurrentRole = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllAccessoryCategories = async (req, res) => {
+    try {
+        const categories = await AccessoryCategory.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessory categories retrieved successfully',
+            data: categories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAccessoryCategoryById = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+        const category = await AccessoryCategory.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Accessory category not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory category retrieved successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllAccessories = async (req, res) => {
+    try {
+
+        const accessories = await Accessory.find().populate('category');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessories retrieved successfully',
+            data: accessories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAccessoryById = async (req, res) => {
+    try {
+        const accessoryId = req.params.accessoryId;
+
+        const accessory = await Accessory.findById(accessoryId).populate('category');
+
+        if (!accessory) {
+            return res.status(404).json({ status: 404, message: 'Accessory not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory retrieved successfully', data: accessory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllAccessoriesByCategoryId = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await AccessoryCategory.findById(categoryId);
+        if (!category) {
+            return res.status(400).json({ status: 400, message: 'Invalid accessory category ID', data: null });
+        }
+
+        const accessories = await Accessory.find({ category: categoryId });
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessories retrieved successfully by category ID',
+            data: accessories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.createOrder = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const { items, shippingAddress, paymentMethod } = req.body;
+
+        const address = await Address.findById({ _id: shippingAddress, user: userId });
+        if (!address) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Address not found for this User',
+                data: null,
+            });
+        }
+
+        let totalPrice = 0;
+        for (const item of items) {
+            const accessory = await Accessory.findById(item.accessory);
+            if (!accessory) {
+                return res.status(404).json({
+                    status: 404,
+                    message: `Accessory not found for ID: ${item.accessory}`,
+                    data: null,
+                });
+            }
+            item.price = accessory.price || 0;
+            totalPrice += item.price * item.quantity;
+        }
+
+        const newOrder = await Order.create({
+            user: userId,
+            items,
+            totalPrice,
+            shippingAddress,
+            paymentMethod,
+        });
+
+        // const welcomeMessage = `Welcome, ${user.mobileNumber}! Thank you for Order your order amount is ${newOrder.totalPrice} and your payment method ${newOrder.paymentMethod}`;
+        // const welcomeNotification = new Notification({
+        //     recipient: newOrder.user._id,
+        //     content: welcomeMessage,
+        //     type: 'welcome',
+        // });
+        // await welcomeNotification.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: 'Order created successfully',
+            data: newOrder,
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.getAllOrders = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const orders = await Order.find({ user: userId }).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Orders retrieved successfully',
+            data: orders,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.getOrderById = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findById(orderId).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!order) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order retrieved successfully',
+            data: order,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.updateOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { paymentStatus } = req.body;
+
+        const updatedOrder = await Order.findByIdAndUpdate(
+            orderId,
+            { paymentStatus },
+            { new: true }
+        ).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!updatedOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        for (const item of updatedOrder.items) {
+            if (item.accessory) {
+                await Accessory.findByIdAndUpdate(item.accessory._id, { $inc: { stock: -1 } });
+            }
+        }
+
+        const welcomeMessage = `your order is successfully.`;
+        const welcomeNotification = new Notification({
+            recipient: updatedOrder.user._id,
+            content: welcomeMessage,
+            type: 'welcome',
+        });
+        await welcomeNotification.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order updated successfully',
+            data: updatedOrder,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const deletedOrder = await Order.findByIdAndDelete(orderId).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!deletedOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order deleted successfully',
+            data: deletedOrder,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
     }
 };

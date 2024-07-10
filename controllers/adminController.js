@@ -43,7 +43,12 @@ const ReferralLevel = require('../models/referralLevelModel');
 const TenderApplication = require('../models/govtTendorModel');
 const Tds = require('../models/tdsModel');
 const GPSData = require('../models/gpsModel');
-
+const Review = require('../models/ratingModel');
+const UserReview = require('../models/userRatingModel');
+const AccessoryCategory = require('../models/accessory/accessoryCategoryModel')
+const Accessory = require('../models/accessory/accessoryModel')
+const Order = require('../models/orderModel');
+const Address = require("../models/userAddressModel");
 
 
 
@@ -158,7 +163,7 @@ exports.getAllUser1 = async (req, res) => {
 };
 exports.getAllUser = async (req, res) => {
     try {
-        const { date, kyc, vehicleNo, location, userName } = req.query;
+        const { date, kyc, vehicleNo, location, userName, sort } = req.query;
         let filter = {};
 
         if (date) {
@@ -188,7 +193,34 @@ exports.getAllUser = async (req, res) => {
             filter.fullName = { $regex: userName, $options: 'i' };
         }
 
-        const users = await User.find(filter).populate('cars.car');
+        let sortOptions = {};
+
+        if (sort) {
+            switch (sort) {
+                case 'carNameAsc':
+                    sortOptions['cars.car.model'] = 1;
+                    break;
+                case 'carNameDesc':
+                    sortOptions['cars.car.model'] = -1;
+                    break;
+                case 'hostNameAsc':
+                    sortOptions['fullName'] = 1;
+                    break;
+                case 'hostNameDesc':
+                    sortOptions['fullName'] = -1;
+                    break;
+                case 'ratingHighToLow':
+                    sortOptions['rating'] = -1;
+                    break;
+                case 'ratingLowToHigh':
+                    sortOptions['rating'] = 1;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        const users = await User.find(filter).populate('cars.car').sort(sortOptions);
         if (!users || users.length === 0) {
             return res.status(404).json({ status: 404, message: 'Users not found' });
         }
@@ -1810,8 +1842,8 @@ exports.deleteTermAndConditionById = async (req, res) => {
 
 exports.createFAQ = async (req, res) => {
     try {
-        const { question, answer } = req.body;
-        const newFAQ = await FAQ.create({ question, answer });
+        const { question, answer, userType } = req.body;
+        const newFAQ = await FAQ.create({ question, answer, userType });
         return res.status(201).json({ status: 201, data: newFAQ });
     } catch (error) {
         console.error(error);
@@ -4866,5 +4898,703 @@ exports.getReferralIncomeByUserId = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getTransactionDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const transactions = await Transaction.find({ user: userId });
+
+        let totalCredit = 0;
+        let totalDebit = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.cr) {
+                totalCredit += transaction.amount;
+            }
+            if (transaction.dr) {
+                totalDebit += transaction.amount;
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions: transactions,
+                totalCredit: totalCredit,
+                totalDebit: totalDebit
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getIncomeDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Wallet', 'Qc'] } });
+
+        let totalWalletCredit = 0;
+        let totalWalletDebit = 0;
+        let totalQcCredit = 0;
+        let totalQcDebit = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) {
+                    totalWalletCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalWalletDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) {
+                    totalQcCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalQcDebit += transaction.amount;
+                }
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions: transactions,
+                totalWalletCredit: totalWalletCredit,
+                totalWalletDebit: totalWalletDebit,
+                totalQcCredit: totalQcCredit,
+                totalQcDebit: totalQcDebit,
+                totalQcCoinBalance: user.coin,
+                totalWalletBalance: user.wallet,
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllRatingsForCars = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const { page = 1, limit = 10 } = req.query;
+
+        const options = {
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
+            populate: [
+                { path: 'user', select: 'fullName mobileNumber email image' },
+                { path: 'car' }
+            ]
+        };
+
+        const ratings = await Review.paginate({}, options);
+
+        return res.status(200).json({ status: 200, data: ratings.docs, totalPages: ratings.totalPages, currentPage: ratings.page });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllRatingsByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ _id: carId });
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const ratings = await Review.find({ car: carId }).populate('user', 'fullName mobileNumber email image')
+            .populate('car');
+
+        return res.status(200).json({ status: 200, data: ratings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getRatingsByCarIdAndRating = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { carId, rating } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const car = await Car.findOne({ _id: carId, });
+        if (!car) {
+            return res.status(404).json({ message: 'Car not found' });
+        }
+
+        const ratings = await Review.find({ car: carId, rating: rating })
+            .populate('user', 'fullName mobileNumber email image')
+            .populate('car');
+
+        return res.status(200).json({ status: 200, data: ratings });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.updateReview = async (req, res) => {
+    try {
+        const { reviewId, rating, comment } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const review = await Review.findOne({ _id: reviewId });
+        if (!review) {
+            return res.status(404).json({ status: 404, message: 'Review not found or not authorized' });
+        }
+
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid rating. Rating should be between 1 and 5.' });
+        }
+
+        review.rating = rating;
+        review.comment = comment || review.comment;
+
+        await review.save();
+
+        const reviewsForCar = await Review.find({ car: review.car });
+        const numOfUserReviews = reviewsForCar.length;
+
+        let totalRating = 0;
+        reviewsForCar.forEach(review => {
+            totalRating += review.rating;
+        });
+
+        const averageRating = totalRating / numOfUserReviews;
+
+        review.numOfUserReviews = numOfUserReviews;
+        review.averageRating = Math.round(averageRating);
+
+        await review.save();
+
+        res.status(200).json({ status: 200, message: 'Review updated successfully', data: review });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getUserAllReview = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const reviews = await UserReview.find();
+
+        let totalRating = 0;
+        reviews.forEach(review => {
+            totalRating += review.userRating;
+        });
+        const averageUserRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+        res.status(200).json({ status: 200, data: { reviews, numOfUserReviews: reviews.length, averageUserRating } });
+    } catch (error) {
+        console.error('Error fetching host review by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.getUserReviewById = async (req, res) => {
+    try {
+        const { hostId } = req.params;
+
+        const user = await User.findById(hostId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const reviews = await UserReview.find({ user: hostId });
+
+        let totalRating = 0;
+        reviews.forEach(review => {
+            totalRating += review.userRating;
+        });
+        const averageUserRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+        res.status(200).json({ status: 200, data: { reviews, numOfUserReviews: reviews.length, averageUserRating } });
+    } catch (error) {
+        console.error('Error fetching host review by ID:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.updateUserReview = async (req, res) => {
+    try {
+        const { reviewId, userRating, userComment } = req.body;
+
+        const userId = req.user._id;
+
+        const review = await UserReview.findOne({ _id: reviewId, host: userId });
+        if (!review) {
+            return res.status(404).json({ status: 404, message: 'Review not found' });
+        }
+
+        if (userRating < 0 || userRating > 5) {
+            return res.status(400).json({ status: 400, message: 'Invalid userRating. UserRating should be between 0 and 5.' });
+        }
+
+        review.userRating = userRating;
+        review.userComment = userComment;
+
+        await review.save();
+
+        const reviewsForCar = await UserReview.find({ host: userId });
+        const numOfUserReviews = reviewsForCar.length;
+
+        let totalRating = 0;
+        reviewsForCar.forEach(r => {
+            totalRating += r.userRating;
+        });
+
+        const averageRating = totalRating / numOfUserReviews;
+
+        review.numOfUserReviews = numOfUserReviews;
+        review.averageuserRating = Math.round(averageRating);
+
+        await review.save();
+
+        return res.status(200).json({ status: 200, message: 'Review updated successfully', data: review });
+    } catch (error) {
+        console.error('Error updating review:', error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+
+exports.createAccessoryCategory = async (req, res) => {
+    try {
+        const { name, description, status } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const existingCategory = await AccessoryCategory.findOne({ name });
+        if (existingCategory) {
+            return res.status(400).json({ status: 400, message: 'Accessory category with this name already exists', data: null });
+        }
+
+        const newCategory = await AccessoryCategory.create({ name, description, status, image: req.file.path, });
+
+        return res.status(201).json({ status: 201, message: 'Accessory category created successfully', data: newCategory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllAccessoryCategories = async (req, res) => {
+    try {
+        const categories = await AccessoryCategory.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessory categories retrieved successfully',
+            data: categories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAccessoryCategoryById = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+        const category = await AccessoryCategory.findById(categoryId);
+
+        if (!category) {
+            return res.status(404).json({ status: 404, message: 'Accessory category not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory category retrieved successfully', data: category });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateAccessoryCategory = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+        const { name, description, status } = req.body;
+
+        let imagePath;
+
+        if (req.file) {
+            imagePath = req.file.path;
+        }
+
+        const updatedCategory = await AccessoryCategory.findByIdAndUpdate(
+            categoryId,
+            { name, description, status, image: imagePath },
+            { new: true }
+        );
+
+        if (!updatedCategory) {
+            return res.status(404).json({ status: 404, message: 'Accessory category not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory category updated successfully', data: updatedCategory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.deleteAccessoryCategory = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const deletedCategory = await AccessoryCategory.findByIdAndDelete(categoryId);
+
+        if (!deletedCategory) {
+            return res.status(404).json({ status: 404, message: 'Accessory category not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory category deleted successfully', data: deletedCategory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.createAccessory = async (req, res) => {
+    try {
+        const { name, description, categoryId, price, stock, size, status } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ status: 400, error: "Image file is required" });
+        }
+
+        const category = await AccessoryCategory.findById(categoryId);
+        if (!category) {
+            return res.status(400).json({ status: 400, message: 'Invalid accessory category ID', data: null });
+        }
+
+        const newAccessory = await Accessory.create({
+            name,
+            description,
+            category: categoryId,
+            price,
+            stock,
+            image: req.file.path,
+            size,
+            status
+        });
+
+        return res.status(201).json({ status: 201, message: 'Accessory created successfully', data: newAccessory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllAccessories = async (req, res) => {
+    try {
+        const accessories = await Accessory.find().populate('category');
+
+        if (!accessories) {
+            return res.status(404).json({ status: 404, message: 'Accessory not found', data: null });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessories retrieved successfully',
+            data: accessories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAccessoryById = async (req, res) => {
+    try {
+        const accessoryId = req.params.accessoryId;
+        const accessory = await Accessory.findById(accessoryId).populate('category');
+
+        if (!accessory) {
+            return res.status(404).json({ status: 404, message: 'Accessory not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory retrieved successfully', data: accessory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateAccessory = async (req, res) => {
+    try {
+        const accessoryId = req.params.accessoryId;
+        const { name, description, categoryId, price, stock, size, status } = req.body;
+
+        let imagePath;
+
+        if (req.file) {
+            imagePath = req.file.path;
+        }
+
+        const category = await AccessoryCategory.findById(categoryId);
+        if (!category) {
+            return res.status(400).json({ status: 400, message: 'Invalid accessory category ID', data: null });
+        }
+
+        const updatedAccessory = await Accessory.findByIdAndUpdate(
+            accessoryId,
+            { name, description, categoryId, price, stock, size, status, image: imagePath, },
+            { new: true }
+        ).populate('category');
+
+        if (!updatedAccessory) {
+            return res.status(404).json({ status: 404, message: 'Accessory not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory updated successfully', data: updatedAccessory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.deleteAccessory = async (req, res) => {
+    try {
+        const accessoryId = req.params.accessoryId;
+
+        const deletedAccessory = await Accessory.findByIdAndDelete(accessoryId);
+
+        if (!deletedAccessory) {
+            return res.status(404).json({ status: 404, message: 'Accessory not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Accessory deleted successfully', data: deletedAccessory });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllAccessoriesByCategoryId = async (req, res) => {
+    try {
+        const categoryId = req.params.categoryId;
+
+        const category = await AccessoryCategory.findById(categoryId);
+        if (!category) {
+            return res.status(400).json({ status: 400, message: 'Invalid accessory category ID', data: null });
+        }
+
+        const accessories = await Accessory.find({ category: categoryId });
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Accessories retrieved successfully by category ID',
+            data: accessories,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find().populate('user').populate('items.accessory').populate('shippingAddress');
+
+        const orderCount = await Order.countDocuments();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Orders retrieved successfully',
+            count: orderCount,
+            data: orders,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.getOrderById = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findById(orderId).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!order) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order retrieved successfully',
+            data: order,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.updateOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { status } = req.body;
+
+        const updatedOrder = await Order.findByIdAndUpdate(
+            orderId,
+            { status },
+            { new: true }
+        ).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!updatedOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        for (const item of updatedOrder.items) {
+            if (item.accessory) {
+                await Accessory.findByIdAndUpdate(item.accessory._id, { $inc: { stock: -1 } });
+            }
+        }
+
+        const welcomeMessage = `your order is successfully.`;
+        const welcomeNotification = new Notification({
+            recipient: updatedOrder.user._id,
+            content: welcomeMessage,
+            type: 'welcome',
+        });
+        await welcomeNotification.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order updated successfully',
+            data: updatedOrder,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const deletedOrder = await Order.findByIdAndDelete(orderId).populate('user').populate('items.accessory').populate('shippingAddress');
+
+        if (!deletedOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Order not found',
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Order deleted successfully',
+            data: deletedOrder,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
+exports.getAllCounts = async (req, res) => {
+    try {
+        const userCount = await User.countDocuments();
+        const orderCount = await Order.countDocuments();
+        const accessoryCount = await Accessory.countDocuments();
+        const carCount = await Car.countDocuments();
+        const bookingCount = await Booking.countDocuments();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Counts retrieved successfully',
+            data: {
+                users: userCount,
+                orders: orderCount,
+                accessories: accessoryCount,
+                cars: carCount,
+                bookings: bookingCount
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
     }
 };
