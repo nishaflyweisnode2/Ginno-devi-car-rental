@@ -1072,7 +1072,7 @@ exports.getAllAddedCars = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        const partnerCars = await Car.find({ owner: userId });
+        const partnerCars = await Car.find({ owner: userId }).populate('city owner brand');
 
         return res.status(200).json({ status: 200, data: partnerCars });
     } catch (error) {
@@ -1090,7 +1090,7 @@ exports.getAllCars = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        const partnerCars = await Car.find();
+        const partnerCars = await Car.find().populate('city owner brand');
 
         return res.status(200).json({ status: 200, data: partnerCars });
     } catch (error) {
@@ -1101,7 +1101,7 @@ exports.getAllCars = async (req, res) => {
 
 exports.getCarById = async (req, res) => {
     try {
-        const car = await Car.findById(req.params.carId);
+        const car = await Car.findById(req.params.carId).populate('city owner brand');
         if (!car) {
             return res.status(404).json({ message: 'Car not found' });
         }
