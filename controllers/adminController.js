@@ -395,7 +395,7 @@ exports.uploadIdPicture = async (req, res) => {
 
 exports.updateDocuments = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.params.id;
         const { uploadId, drivingLicense, bankDetails } = req.body;
 
         const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
