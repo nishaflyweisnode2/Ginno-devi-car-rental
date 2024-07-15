@@ -1142,21 +1142,21 @@ exports.updateCarById = async (req, res) => {
         }
 
         if (req.body.licenseNumber) {
-            const existingCarWithLicenseNumber = await Car.findOne({ licenseNumber });
+            const existingCarWithLicenseNumber = await Car.findOne({ licenseNumber: req.body.licenseNumber });
             if (existingCarWithLicenseNumber) {
                 return res.status(400).json({ message: 'License number already in use' });
             }
         }
 
         if (req.body.city) {
-            const checkCity = await City.findById(city);
+            const checkCity = await City.findById(req.body.city);
             if (!checkCity) {
                 return res.status(404).json({ message: 'City not found' });
             }
         }
 
         if (req.body.brand) {
-            const carBrand = await Brand.findById(brand);
+            const carBrand = await Brand.findById(req.body.brand);
             if (!carBrand) {
                 return res.status(404).json({ status: 404, message: 'CarBrand not found' });
             }

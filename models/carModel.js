@@ -189,7 +189,12 @@ const carSchema = new mongoose.Schema({
     expecteddeliveryCar: {
         type: String,
         default: "2 to 4 days"
-    }
+    },
+    carVerification: {
+        type: String,
+        enum: ['PENDING', 'APPROVED', 'CANCELLED', 'HOLD'],
+        default: 'PENDING'
+    },
 
 
 
