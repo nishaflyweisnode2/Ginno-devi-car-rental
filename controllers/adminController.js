@@ -1002,7 +1002,7 @@ exports.deleteCarImageById = async (req, res) => {
 
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status } = req.body;
+        const { licenseNumber, brand, model, variant, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -1048,7 +1048,8 @@ exports.createCar = async (req, res) => {
             kmDriven,
             chassisNumber,
             sharingFrequency,
-            status
+            status,
+            seat
         });
 
         const savedCar = await newCar.save();
