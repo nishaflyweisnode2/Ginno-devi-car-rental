@@ -52,6 +52,7 @@ const carSchema = new mongoose.Schema({
     },
     carDocumentsText: {
         type: String,
+        default: null
     },
     carDocuments: {
         type: String,

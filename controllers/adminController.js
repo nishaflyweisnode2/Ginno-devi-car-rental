@@ -251,9 +251,9 @@ exports.getAllUserByType = async (req, res) => {
 
         let users;
         if (userType) {
-            users = await User.find({ userType: userType }).populate('city');
+            users = await User.find({ userType: userType }).populate('city').populate('cars.car');
         } else {
-            users = await User.find({ currentRole: currentRole }).populate('city');
+            users = await User.find({ currentRole: currentRole }).populate('city').populate('cars.car');
         }
         if (!users || users.length === 0) {
             return res.status(404).json({ status: 404, message: 'Users not found' });
@@ -1206,6 +1206,7 @@ exports.deleteCarById = async (req, res) => {
 exports.updateCarDocuments = async (req, res) => {
     try {
         const { carId } = req.params;
+        const { carDocumentsText } = req.body;
 
         const existingCar = await Car.findById(carId);
 
@@ -1217,6 +1218,8 @@ exports.updateCarDocuments = async (req, res) => {
             existingCar.carDocuments = req.file.path;
             existingCar.isCarDocumentsUpload = true;
         }
+
+        existingCar.carDocumentsText = carDocumentsText;
 
         const updatedCar = await existingCar.save();
 
