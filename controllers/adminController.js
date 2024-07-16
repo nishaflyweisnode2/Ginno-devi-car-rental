@@ -2501,12 +2501,11 @@ exports.createAdminCarPrice = async (req, res) => {
         await adminCarPrice.save();
 
         const carObject = await Car.findById(car);
-
         if (!carObject) {
             return res.status(404).json({ status: 404, message: 'Car not found' });
         }
 
-        carObject.adminCarPrice.push(adminCarPrice._id);
+        carObject.adminCarPrice = adminCarPrice._id;
         await carObject.save();
 
         return res.status(201).json({ status: 201, message: 'AdminCarPrice created successfully', data: adminCarPrice });
