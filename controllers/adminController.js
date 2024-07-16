@@ -1559,7 +1559,7 @@ exports.createPolicy = async (req, res) => {
     }
 };
 
-exports.getAllPolicies = async (req, res) => {
+exports.getAllFulfilmentPolicy = async (req, res) => {
     try {
         const policies = await FulfilmentPolicy.find();
         return res.status(200).json({ status: 200, data: policies });
@@ -5162,7 +5162,7 @@ exports.getUserReviewById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        const reviews = await UserReview.find({ user: hostId });
+        const reviews = await UserReview.find({ $and: [{ $or: [{ user: hostId, }, { car: hostId, }, { host: hostId, }, { booking: hostId, }] }] });
 
         let totalRating = 0;
         reviews.forEach(review => {

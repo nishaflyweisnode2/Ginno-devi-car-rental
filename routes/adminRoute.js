@@ -70,7 +70,7 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/locations/:locationId', [authJwt.isAdmin], auth.deleteLocationById);
     app.get('/api/v1/admin/locations/type/:type', [authJwt.isAdmin], auth.getLocationsByType);
     app.post('/api/v1/admin/policies', [authJwt.isAdmin], auth.createPolicy);
-    app.get('/api/v1/admin/policies', [authJwt.isAdmin], auth.getAllPolicies);
+    app.get('/api/v1/admin/policies', [authJwt.isAdmin], auth.getAllFulfilmentPolicy);
     app.get('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.getPolicyById);
     app.put('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.updatePolicy);
     app.delete('/api/v1/admin/policies/:id', [authJwt.isAdmin], auth.deletePolicy);
