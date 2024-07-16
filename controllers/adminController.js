@@ -5050,7 +5050,13 @@ exports.getAllRatingsByCarId = async (req, res) => {
         const ratings = await Review.find({ car: carId }).populate('user', 'fullName mobileNumber email image')
             .populate('car');
 
-        return res.status(200).json({ status: 200, data: ratings });
+            let totalRating = 0;
+            ratings.forEach(review => {
+                totalRating += review.rating;
+            });
+            const averageUserRating = ratings.length > 0 ? totalRating / ratings.length : 0;
+
+        return res.status(200).json({ status: 200, data: ratings, numOfCarReviews: ratings.length, averageUserRating  });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Internal Server Error' });
