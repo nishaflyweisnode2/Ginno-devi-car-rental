@@ -5183,7 +5183,7 @@ exports.updateUserReview = async (req, res) => {
 
         const userId = req.user._id;
 
-        const review = await UserReview.findOne({ _id: reviewId, host: userId });
+        const review = await UserReview.findOne({ _id: reviewId });
         if (!review) {
             return res.status(404).json({ status: 404, message: 'Review not found' });
         }
