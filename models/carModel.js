@@ -196,6 +196,10 @@ const carSchema = new mongoose.Schema({
         enum: ['PENDING', 'APPROVED', 'CANCELLED', 'HOLD'],
         default: 'PENDING'
     },
+    adminCarPrice: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AdminCarPrice',
+    },
 
 
 
