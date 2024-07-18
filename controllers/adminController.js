@@ -3469,7 +3469,7 @@ exports.addQuackCoinByCarId = async (req, res) => {
 
 exports.createCallUs = async (req, res) => {
     try {
-        const { mobileNumber, email } = req.body;
+        const { mobileNumber, email, reason } = req.body;
         const userId = req.user._id;
 
         const user = await User.findById(userId);
@@ -3480,6 +3480,7 @@ exports.createCallUs = async (req, res) => {
         const newContactUs = await CallUs.create({
             mobileNumber,
             email,
+            reason
         });
 
         return res.status(201).json({ status: 201, data: newContactUs });

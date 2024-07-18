@@ -7,6 +7,9 @@ const contactUsSchema = new mongoose.Schema({
     email: {
         type: String,
     },
+    reason: {
+        type: String,
+    },
 });
 
 const ContactUs = mongoose.model('CallUs', contactUsSchema);
