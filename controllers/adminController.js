@@ -163,7 +163,7 @@ exports.getAllUser1 = async (req, res) => {
 };
 exports.getAllUser = async (req, res) => {
     try {
-        const { date, kyc, vehicleNo, location, userName, sort } = req.query;
+        const { date, kyc, vehicleNo, location, userName, sort, userType, currentRole } = req.query;
         let filter = {};
 
         if (date) {
@@ -186,11 +186,17 @@ exports.getAllUser = async (req, res) => {
         //     filter['city.name'] = location;
         // }
         if (location) {
-            filter.city = location;
+            filter.city = { $regex: location, $options: 'i' };;
         }
 
         if (userName) {
             filter.fullName = { $regex: userName, $options: 'i' };
+        }
+        if (userType) {
+            filter.userType = { $regex: userType, $options: 'i' };
+        }
+        if (currentRole) {
+            filter.currentRole = { $regex: currentRole, $options: 'i' };
         }
 
         let sortOptions = {};
@@ -960,7 +966,7 @@ exports.getCarImageById = async (req, res) => {
     }
 };
 
-exports.updateCarImageById = async (req, res) => {
+exports.updateCarImageTipsById = async (req, res) => {
     try {
         const { carImageId } = req.params;
         const { tips, referenceImg, url } = req.body;
@@ -1233,6 +1239,7 @@ exports.updateCarDocuments = async (req, res) => {
 exports.updateDLDetails = async (req, res) => {
     try {
         const { carId } = req.params;
+        const { dlNumber } = req.body;
         const existingCar = await Car.findById(carId);
         if (!existingCar) {
             return res.status(404).json({ message: 'Car not found' });
@@ -1248,6 +1255,8 @@ exports.updateDLDetails = async (req, res) => {
             existingCar.dlBack = dlBack[0].path;
             existingCar.isDlUpload = true;
         }
+
+        existingCar.dlNumber = dlNumber;
 
         const updatedCar = await existingCar.save();
 
@@ -2202,7 +2211,7 @@ exports.createCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find();
+        const categories = await Category.find().populate('mainCategory');
 
         const count = categories.length;
 
@@ -2313,7 +2322,7 @@ exports.createSubscriptionCategory = async (req, res) => {
 
 exports.getAllSubscriptionCategories = async (req, res) => {
     try {
-        const categories = await SubscriptionCategory.find();
+        const categories = await SubscriptionCategory.find().populate('mainCategory');
 
         const count = categories.length;
 
@@ -5051,13 +5060,13 @@ exports.getAllRatingsByCarId = async (req, res) => {
         const ratings = await Review.find({ car: carId }).populate('user', 'fullName mobileNumber email image')
             .populate('car');
 
-            let totalRating = 0;
-            ratings.forEach(review => {
-                totalRating += review.rating;
-            });
-            const averageUserRating = ratings.length > 0 ? totalRating / ratings.length : 0;
+        let totalRating = 0;
+        ratings.forEach(review => {
+            totalRating += review.rating;
+        });
+        const averageUserRating = ratings.length > 0 ? totalRating / ratings.length : 0;
 
-        return res.status(200).json({ status: 200, data: ratings, numOfCarReviews: ratings.length, averageUserRating  });
+        return res.status(200).json({ status: 200, data: ratings, numOfCarReviews: ratings.length, averageUserRating });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Internal Server Error' });

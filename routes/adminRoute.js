@@ -48,7 +48,7 @@ module.exports = (app) => {
     app.post('/api/v1/admin/carImages', [authJwt.isAdmin], referenceImage.array('image'), auth.createCarImage);
     app.get('/api/v1/admin/carImages', [authJwt.isAdmin], auth.getAllCarImages);
     app.get('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.getCarImageById);
-    app.put('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], referenceImage.array('image'), auth.updateCarImageById);
+    app.put('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], referenceImage.array('image'), auth.updateCarImageTipsById);
     app.delete('/api/v1/admin/carImages/:carImageId', [authJwt.isAdmin], auth.deleteCarImageById);
     app.post('/api/v1/admin/cars/add', [authJwt.isAdmin], auth.createCar);
     app.get('/api/v1/admin/cars', [authJwt.isAdmin], auth.getAllAddedCars);
