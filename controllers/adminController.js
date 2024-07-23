@@ -5630,6 +5630,7 @@ exports.getAllCounts = async (req, res) => {
 
 exports.getAllCarCounts = async (req, res) => {
     try {
+        const carCount = await Car.countDocuments();
         const rentalCount = await Car.countDocuments({ isRental: true });
         const subscriptionCount = await Car.countDocuments({ isSubscription: true });
         const governmentTenderCount = await Car.countDocuments({ isGovernmentTendor: true });
@@ -5639,6 +5640,7 @@ exports.getAllCarCounts = async (req, res) => {
             status: 200,
             message: 'Counts retrieved successfully',
             data: {
+                totalRegistredCar: carCount,
                 rentalCars: rentalCount,
                 subscriptionCars: subscriptionCount,
                 governmentTenderCars: governmentTenderCount,
