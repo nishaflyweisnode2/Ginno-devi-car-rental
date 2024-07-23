@@ -262,6 +262,7 @@ module.exports = (app) => {
     app.put('/api/v1/admin/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
     app.delete('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.deleteOrder);
     app.get('/api/v1/admin/allcount', [authJwt.isAdmin], auth.getAllCounts);
+    app.get('/api/v1/admin/carallcount', [authJwt.isAdmin], auth.getAllCarCounts);
 
 
 

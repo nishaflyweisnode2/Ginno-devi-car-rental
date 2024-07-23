@@ -5627,3 +5627,30 @@ exports.getAllCounts = async (req, res) => {
         });
     }
 };
+
+exports.getAllCarCounts = async (req, res) => {
+    try {
+        const rentalCount = await Car.countDocuments({ isRental: true });
+        const subscriptionCount = await Car.countDocuments({ isSubscription: true });
+        const governmentTenderCount = await Car.countDocuments({ isGovernmentTendor: true });
+        const sharingCount = await Car.countDocuments({ isSharing: true });
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Counts retrieved successfully',
+            data: {
+                rentalCars: rentalCount,
+                subscriptionCars: subscriptionCount,
+                governmentTenderCars: governmentTenderCount,
+                sharingCars: sharingCount
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
