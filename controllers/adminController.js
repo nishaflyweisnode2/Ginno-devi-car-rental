@@ -193,7 +193,7 @@ exports.getAllUser = async (req, res) => {
             filter.fullName = { $regex: userName, $options: 'i' };
         }
         if (userType) {
-            filter.userType = { $regex: userType, $options: 'i' };
+            filter.userType = userType;
         }
         if (currentRole) {
             filter.currentRole = { $regex: currentRole, $options: 'i' };
