@@ -18,6 +18,7 @@ module.exports = (app) => {
     app.post("/api/v1/admin/login", auth.signin);
     app.put("/api/v1/admin/update", [authJwt.isAdmin], auth.update);
     app.get("/api/v1/admin/profile", [authJwt.isAdmin], auth.getAllUser);
+    app.get("/api/v1/admin/profile", [authJwt.isAdmin], auth.getUserProfile);
     app.get("/api/v1/admin/profile/by-userType", [authJwt.isAdmin], auth.getAllUserByType);
     app.get("/api/v1/admin/profile/:userId", [authJwt.isAdmin], auth.getUserById);
     app.delete('/api/v1/admin/users/profile/delete/:id', [authJwt.isAdmin], auth.deleteUser);
@@ -204,6 +205,7 @@ module.exports = (app) => {
     app.get('/api/v1/admin/bookings/completed/user/:id', [authJwt.isAdmin], auth.getCompletedBookingsByUser);
     app.get('/api/v1/admin/bookings/upcoming/user/:id', [authJwt.isAdmin], auth.getUpcomingBookingsByUser);
     app.get('/api/v1/admin/bookings/partner/:id', [authJwt.isAdmin], auth.getBookingByPartnerId);
+    app.get('/api/v1/admin/partner/top-all-booked-car', [authJwt.isAdmin], auth.getAllTopBookedCars);
     app.get('/api/v1/admin/partner/top-booked-car/:id', [authJwt.isAdmin], auth.getTopBookedCarsForPartner);
     app.get('/api/v1/admin/partner/upcoming-bookings/:id', [authJwt.isAdmin], auth.getUpcomingBookingsForPartner);
     app.get('/api/v1/admin/partner/completed-bookings/:id', [authJwt.isAdmin], auth.getCompletedBookingsForPartner);

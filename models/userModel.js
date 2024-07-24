@@ -205,6 +205,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isManageCustomer: {
+        type: Boolean,
+        default: false
+    },
+    isDashboard: {
+        type: Boolean,
+        default: false
+    },
     isCarManagement: {
         type: Boolean,
         default: false

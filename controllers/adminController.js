@@ -56,6 +56,7 @@ const Address = require("../models/userAddressModel");
 
 exports.registration = async (req, res) => {
     try {
+        const { phone, email } = req.body;
         const lastUser = await User.findOne().sort({ userId: -1 });
         let newUserId = 1000000;
 
@@ -63,16 +64,17 @@ exports.registration = async (req, res) => {
             newUserId = parseInt(lastUser.userId) + 1;
         }
 
-        const { phone, email } = req.body;
         req.body.email = email.split(" ").join("").toLowerCase();
-        let user = await User.findOne({ $and: [{ $or: [{ email: req.body.email }, { phone: phone }] }], userType: "ADMIN" });
+        let user = await User.findOne({ email: req.body.email, phone: phone, userType: "ADMIN" });
+
         if (!user) {
             req.body.password = bcrypt.hashSync(req.body.password, 8);
             req.body.userType = "ADMIN";
             req.body.accountVerification = true;
-            req.body.userID = newUserId.toString();
+            req.body.userId = newUserId.toString();
+
             const userCreate = await User.create(req.body);
-            return res.status(200).send({ message: "registered successfully ", data: userCreate, });
+            return res.status(200).send({ message: "Registered successfully", data: userCreate });
         } else {
             return res.status(409).send({ message: "Already Exist", data: [] });
         }
@@ -81,6 +83,7 @@ exports.registration = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
+
 
 exports.signin = async (req, res) => {
     try {
@@ -244,6 +247,32 @@ exports.getAllUser = async (req, res) => {
         return res.status(200).json({
             status: 200,
             data: formattedUsers,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+exports.getUserProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const memberSince = user.createdAt.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric',
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                user,
+                memberSince,
+            },
         });
     } catch (error) {
         console.error(error);
@@ -550,18 +579,28 @@ exports.registrationPartnerByAdmin = async (req, res) => {
 
         const { mobileNumber, email, userType } = req.body;
         req.body.email = email.split(" ").join("").toLowerCase();
-        let user = await User.findOne({ $and: [{ $or: [{ email: req.body.email }, { mobileNumber: mobileNumber }] }], userType: userType });
+
+        let user = await User.findOne({
+            $or: [
+                { email: req.body.email },
+                { mobileNumber: mobileNumber }
+            ],
+            userType: userType
+        });
+
         console.log(user);
+
         if (!user) {
             req.body.password = bcrypt.hashSync(req.body.password, 8);
             req.body.userType = userType;
             req.body.accountVerification = true;
             req.body.status = true;
-            req.body.userID = newUserId.toString();
+            req.body.userId = newUserId.toString();
+
             const userCreate = await User.create(req.body);
-            return res.status(200).send({ message: "registered successfully ", data: userCreate, });
+            return res.status(200).send({ message: "Registered successfully", data: userCreate });
         } else {
-            return res.status(409).send({ message: "Already Exist", data: [] });
+            return res.status(409).send({ message: "Already exists", data: [] });
         }
     } catch (error) {
         console.error(error);
@@ -2642,7 +2681,7 @@ exports.createPlan = async (req, res) => {
 
 exports.getAllPlans = async (req, res) => {
     try {
-        const plans = await Plan.find();
+        const plans = await Plan.find().populate('mainCategory');
         return res.status(200).json({ status: 200, data: plans });
     } catch (error) {
         console.error('Error fetching plans:', error);
@@ -2653,7 +2692,7 @@ exports.getAllPlans = async (req, res) => {
 exports.getPlanById = async (req, res) => {
     try {
         const planId = req.params.id;
-        const plan = await Plan.findById(planId);
+        const plan = await Plan.findById(planId).populate('mainCategory');
 
         if (!plan) {
             return res.status(404).json({ status: 404, message: 'Plan not found' });
@@ -2837,7 +2876,7 @@ exports.createPrice = async (req, res) => {
 
 exports.getAllPrices = async (req, res) => {
     try {
-        const prices = await DoorstepDeliveryPrice.find();
+        const prices = await DoorstepDeliveryPrice.find().populate('category');
 
         return res.status(200).json({ status: 200, data: prices });
     } catch (error) {
@@ -2850,7 +2889,7 @@ exports.getPriceById = async (req, res) => {
     try {
         const priceId = req.params.id;
 
-        const price = await DoorstepDeliveryPrice.findById(priceId);
+        const price = await DoorstepDeliveryPrice.findById(priceId).populate('category');
 
         if (!price) {
             return res.status(404).json({ status: 404, message: 'Price not found' });
@@ -2935,7 +2974,7 @@ exports.createDriverPrice = async (req, res) => {
 
 exports.getAllDriverPrice = async (req, res) => {
     try {
-        const prices = await DriverPrice.find();
+        const prices = await DriverPrice.find().populate('category');
 
         return res.status(200).json({ status: 200, data: prices });
     } catch (error) {
@@ -2948,7 +2987,7 @@ exports.getDriverPriceById = async (req, res) => {
     try {
         const priceId = req.params.id;
 
-        const price = await DriverPrice.findById(priceId);
+        const price = await DriverPrice.findById(priceId).populate('category');
 
         if (!price) {
             return res.status(404).json({ status: 404, message: 'Price not found' });
@@ -3831,20 +3870,31 @@ exports.getAllBookings = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find().populate('car user pickupLocation dropOffLocation');
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
+        const bookings = await Booking.find().populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -3868,20 +3918,25 @@ exports.getBookingsByUser = async (req, res) => {
                 populate: {
                     path: 'owner', model: 'User'
                 }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
             });
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
 
         return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -3900,7 +3955,31 @@ exports.getBookingsById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ _id: bookingId }).populate('car user pickupLocation dropOffLocation');
+        const bookings = await Booking.find({ _id: bookingId }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         if (!bookings) {
             return res.status(404).json({ status: 404, message: 'Bookings not found', data: null });
@@ -3935,20 +4014,31 @@ exports.getCompletedBookingsByUser = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ user: userId, status: "COMPLETED" }).populate('car user pickupLocation dropOffLocation');
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
+        const bookings = await Booking.find({ user: userId, status: "COMPLETED" }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         return res.status(200).json({ status: 200, message: 'Completed Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -3966,20 +4056,31 @@ exports.getUpcomingBookingsByUser = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ user: userId, pickupDate: { $gte: new Date() } }).populate('car user pickupLocation dropOffLocation');
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
+        const bookings = await Booking.find({ user: userId, pickupDate: { $gte: new Date() } }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -4003,10 +4104,31 @@ exports.getBookingByPartnerId = async (req, res) => {
         }
 
         const bookingPromises = cars.map(async (car) => {
-            const bookings = await Booking.find({ partner: partnerId, car: car._id }).populate({
-                path: 'car',
-                populate: { path: 'owner pickup drop' }
-            }).populate('user');
+            const bookings = await Booking.find({ partner: partnerId, car: car._id }).populate('car user pickupLocation dropOffLocation')
+                .populate({
+                    path: 'car',
+                    populate: {
+                        path: 'owner', model: 'User'
+                    }
+                })
+                .populate({
+                    path: 'car',
+                    populate: {
+                        path: 'brand', model: 'Brand'
+                    }
+                })
+                .populate({
+                    path: 'car',
+                    populate: {
+                        path: 'bodyType', model: 'SubscriptionCategory'
+                    }
+                })
+                .populate({
+                    path: 'car',
+                    populate: {
+                        path: 'city', model: 'City'
+                    }
+                });
             return bookings;
         });
 
@@ -4039,6 +4161,43 @@ exports.getTopBookedCarsForPartner = async (req, res) => {
         }
 
         const partnerCars = await Car.find({ owner: userId });
+
+        if (partnerCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the partner' });
+        }
+
+        const partnerCarIds = partnerCars.map(car => car._id);
+
+        const bookings = await Booking.aggregate([
+            { $match: { car: { $in: partnerCarIds } } },
+            { $group: { _id: '$car', count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        if (bookings.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No bookings found for the partner' });
+        }
+
+        const topBookedCarIds = bookings.map(booking => booking._id);
+
+        const topBookedCars = await Car.find({ _id: { $in: topBookedCarIds } }).populate('owner');
+
+        return res.status(200).json({ status: 200, data: topBookedCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllTopBookedCars = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const partnerCars = await Car.find();
 
         if (partnerCars.length === 0) {
             return res.status(404).json({ status: 404, message: 'No cars found for the partner' });
@@ -4588,12 +4747,13 @@ exports.updateUserRoles = async (req, res) => {
         const {
             isDashboard,
             isPrivacyPolicy,
-            isOnboardingManage,
+            isOnBoardingManage,
             isTermAndConditions,
             isManageCustomer,
             isPushNotification,
             isManagePromoCode,
-            isRoleAccessManage
+            isRoleAccessManage,
+            isCarManagement
         } = req.body;
 
         const user = await User.findById(userId);
@@ -4603,7 +4763,7 @@ exports.updateUserRoles = async (req, res) => {
 
         user.isDashboard = isDashboard || user.isDashboard;
         user.isPrivacyPolicy = isPrivacyPolicy || user.isPrivacyPolicy;
-        user.isOnboardingManage = isOnboardingManage || user.isOnboardingManage;
+        user.isOnBoardingManage = isOnBoardingManage || user.isOnBoardingManage;
         user.isCarManagement = isCarManagement || user.isCarManagement;
         user.isTermAndConditions = isTermAndConditions || user.isTermAndConditions;
         user.isManageCustomer = isManageCustomer || user.isManageCustomer;
@@ -5601,7 +5761,10 @@ exports.deleteOrder = async (req, res) => {
 
 exports.getAllCounts = async (req, res) => {
     try {
-        const userCount = await User.countDocuments();
+        const userCount = await User.countDocuments({ userType: "USER" });
+        const hostCount = await User.countDocuments({ userType: "PARTNER" });
+        const subAdminCount = await User.countDocuments({ userType: "SUB-ADMIN" });
+        const adminCount = await User.countDocuments({ userType: "ADMIN" });
         const orderCount = await Order.countDocuments();
         const accessoryCount = await Accessory.countDocuments();
         const carCount = await Car.countDocuments();
@@ -5612,6 +5775,9 @@ exports.getAllCounts = async (req, res) => {
             message: 'Counts retrieved successfully',
             data: {
                 users: userCount,
+                host: hostCount,
+                subAdmin: subAdminCount,
+                admin: adminCount,
                 orders: orderCount,
                 accessories: accessoryCount,
                 cars: carCount,
