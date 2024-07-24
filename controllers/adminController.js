@@ -3955,7 +3955,7 @@ exports.getBookingsById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ _id: bookingId }).populate('car user pickupLocation dropOffLocation')
+        const bookings = await Booking.findOne({ _id: bookingId }).populate('car user pickupLocation dropOffLocation')
             .populate({
                 path: 'car',
                 populate: {
