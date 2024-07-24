@@ -170,13 +170,33 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    isCarReferral: {
+        type: Boolean,
+        default: false
+    },
     userReferral: {
         type: Number,
         default: 0,
     },
+    isUserReferral: {
+        type: Boolean,
+        default: false
+    },
     royaltyReward: {
         type: Number,
         default: 0,
+    },
+    isRoyaltyReward: {
+        type: Boolean,
+        default: false
+    },
+    userSignupReward: {
+        type: Number,
+        default: 0,
+    },
+    isuserSignupReward: {
+        type: Boolean,
+        default: false
     },
     coin: {
         type: Number,

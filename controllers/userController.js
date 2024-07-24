@@ -176,10 +176,11 @@ const calculateReferralLevels = async (referrer, newUser, currentLevel = 0) => {
         if (referrer.referredBy) {
             const referrerOfReferrer = await User.findById(referrer.referredBy);
             await calculateReferralLevels(referrerOfReferrer, newUser, currentLevel);
-        } else if (referrer.referredTo.length > 0) {
-            const directReferrer = await User.findById(referrer.referredTo[0]);
-            await calculateReferralLevels(directReferrer, newUser, currentLevel);
-        }
+        } 
+        // else if (referrer.referredTo.length > 0) {
+        //     const directReferrer = await User.findById(referrer.referredTo[0]);
+        //     await calculateReferralLevels(directReferrer, newUser, currentLevel);
+        // }
     }
 };
 
@@ -193,10 +194,13 @@ async function calculateReferralBonus(referredBy) {
                 throw new Error('Admin user not found');
             }
 
-            referralBonusAmount = Math.round(adminUser.userReferral * (referralBonus.percentage / 100));
+            if(adminUser.isuserSignupReward === false){
+            // referralBonusAmount = Math.round(adminUser.userReferral * (referralBonus.percentage / 100));
+            referralBonusAmount = Math.round(1000 * (referralBonus.percentage / 100));
 
-            adminUser.userReferral -= referralBonusAmount;
+            adminUser.userSignupReward -= referralBonusAmount;
             await adminUser.save();
+
 
             const referralBonusTransaction = new Transaction({
                 user: adminUser._id,
@@ -217,6 +221,7 @@ async function calculateReferralBonus(referredBy) {
             await userTransaction.save();
         }
         return referralBonusAmount;
+    }
     } catch (error) {
         throw new Error(error.message);
     }
