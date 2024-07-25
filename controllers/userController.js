@@ -3459,7 +3459,7 @@ exports.getAllRentalCars = async (req, res) => {
     try {
         const { mainCategoryId } = req.params;
 
-        const rentalCars = await Car.find({ isRental: true });
+        const rentalCars = await Car.find({ isRental: true }).populate('owner city bodyType brand');
         const carsWithPrices = [];
 
         for (const car of rentalCars) {
@@ -3493,7 +3493,7 @@ exports.getAllSubscriptionCars = async (req, res) => {
     try {
         const { mainCategoryId } = req.params;
 
-        const SharingCars = await Car.find({ isSubscription: true });
+        const SharingCars = await Car.find({ isSubscription: true }).populate('owner city bodyType brand');
         const carsWithPrices = [];
 
         for (const car of SharingCars) {
