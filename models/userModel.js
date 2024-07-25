@@ -157,12 +157,22 @@ const userSchema = new mongoose.Schema({
             type: Number,
         },
         users: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                default: null
+            },
+            dateJoined: {
+                type: Date,
+                default: Date.now
+            }
         }]
     }],
     wallet: {
+        type: Number,
+        default: 0,
+    },
+    coin: {
         type: Number,
         default: 0,
     },
@@ -197,10 +207,6 @@ const userSchema = new mongoose.Schema({
     isuserSignupReward: {
         type: Boolean,
         default: false
-    },
-    coin: {
-        type: Number,
-        default: 0,
     },
     isVerified: {
         type: Boolean,

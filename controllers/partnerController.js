@@ -201,7 +201,7 @@ exports.verifyOtp = async (req, res) => {
             mobileNumber: updated.mobileNumber,
             token: accessToken,
             completeProfile: updated.completeProfile,
-            role: "PARTNER"
+            role: updated.role = "PARTNER" || "PARTNER"
         }
         return res.status(200).send({ status: 200, message: "logged in successfully", data: obj });
     } catch (err) {

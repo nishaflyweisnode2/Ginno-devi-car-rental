@@ -25,6 +25,8 @@ module.exports = (app) => {
     app.get('/api/v1/user/direct-referrals', [authJwt.verifyToken], auth.getDirectReferralUsers);
     app.get('/api/v1/user/all-referrals', [authJwt.verifyToken], auth.getReferralDetails);
     app.get('/api/v1/user/level-wise-income', [authJwt.verifyToken], auth.getReferralIncome);
+    app.get('/api/v1/user/royalty/level-wise-income', [authJwt.verifyToken], auth.getRoyaltyReferralIncome);
+    app.get('/api/v1/user/team-business-report', [authJwt.verifyToken], auth.getMyTeamBussinessIncome);
     app.put("/api/v1/user/updateLocation", [authJwt.verifyToken], auth.updateLocation);
     app.put("/api/v1/user/upload-id-picture", [authJwt.verifyToken], userProfileUpload.single('image'), auth.uploadIdPicture);
     app.put("/api/v1/user/update-documents", [authJwt.verifyToken], auth.updateDocuments);
