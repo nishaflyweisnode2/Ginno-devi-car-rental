@@ -1532,12 +1532,16 @@ exports.checkCarAvailability1 = async (req, res) => {
 
 exports.checkCarAvailability = async (req, res) => {
     try {
-        const { pickup, destinationLocation, mainCategory, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
+        const { pickup, drop, destinationLocation, mainCategory, pickupDate, dropOffDate, pickupTime, dropOffTime } = req.query;
 
         const [latitude, longitude] = decodeURIComponent(pickup).split(',').map(Number);
+        const [latitude1, longitude1] = decodeURIComponent(drop).split(',').map(Number);
         console.log('pickup:', pickup);
         console.log('latitude:', latitude);
         console.log('longitude:', longitude);
+        console.log('drop:', drop);
+        console.log('latitude1:', latitude1);
+        console.log('longitude1:', longitude1);
 
         const locationDetails = await Location.findOne({
             coordinates: {
@@ -1797,7 +1801,7 @@ exports.checkSharingCarAvailability = async (req, res) => {
 exports.createBooking = async (req, res) => {
     try {
         const userId = req.user._id;
-        let { carId, mainCategory, category, carChoice, plan, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime, subscriptionMonths, accessoriesId, tripPackage } = req.body;
+        let { carId, pickupCoordinates, dropCoordinates, mainCategory, category, carChoice, plan, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime, subscriptionMonths, accessoriesId, tripPackage } = req.body;
 
         const currentDate = new Date();
         const requestedPickupDate = new Date(`${pickupDate}T${pickupTime}:00.000Z`);
@@ -2008,6 +2012,8 @@ exports.createBooking = async (req, res) => {
                 mainCategory,
                 category,
                 plan,
+                pickupCoordinates,
+                dropCoordinates,
                 destinationLocation,
                 pickupLocation: carExist.pickup,
                 dropOffLocation: carExist.drop,
