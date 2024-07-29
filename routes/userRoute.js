@@ -153,6 +153,7 @@ module.exports = (app) => {
     app.post('/api/v1/user/wallet/removeWallet', [authJwt.verifyToken], auth.removeMoney);
     app.get('/api/v1/user/wallet/getwallet', [authJwt.verifyToken], auth.getWallet);
     app.get("/api/v1/user/allTransactionUser", [authJwt.verifyToken], auth.allTransactionUser);
+    app.get("/api/v1/user/allTransactionUser/byType/:type", [authJwt.verifyToken], auth.allTransactionByType);
     app.get("/api/v1/user/allcreditTransactionUser", [authJwt.verifyToken], auth.allcreditTransactionUser);
     app.get("/api/v1/user/allDebitTransactionUser", [authJwt.verifyToken], auth.allDebitTransactionUser);
 }

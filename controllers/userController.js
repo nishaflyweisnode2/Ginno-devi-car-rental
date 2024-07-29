@@ -4782,6 +4782,15 @@ exports.allTransactionUser = async (req, res) => {
     }
 };
 
+exports.allTransactionByType = async (req, res) => {
+    try {
+        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user");
+        return res.status(200).json({ data: data });
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
+    }
+};
+
 exports.allcreditTransactionUser = async (req, res) => {
     try {
         const data = await Transaction.find({ user: req.user._id, type: "Wallet", cr: true });
