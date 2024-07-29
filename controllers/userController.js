@@ -4776,7 +4776,7 @@ exports.getWallet = async (req, res) => {
 exports.allTransactionUser = async (req, res) => {
     try {
         const data = await Transaction.find({ user: req.user._id }).populate("user");
-        return res.status(200).json({ data: data });
+        return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ message: err.message });
     }
@@ -4785,16 +4785,16 @@ exports.allTransactionUser = async (req, res) => {
 exports.allTransactionByType = async (req, res) => {
     try {
         const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user");
-        return res.status(200).json({ data: data });
+        return res.status(200).json({ status: 200, data: data });
     } catch (err) {
-        return res.status(400).json({ message: err.message });
+        return res.status(400).json({ status: 500, message: err.message });
     }
 };
 
 exports.allcreditTransactionUser = async (req, res) => {
     try {
         const data = await Transaction.find({ user: req.user._id, type: "Wallet", cr: true });
-        return res.status(200).json({ data: data });
+        return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status.status(400).json({ message: err.message });
     }
@@ -4803,7 +4803,7 @@ exports.allcreditTransactionUser = async (req, res) => {
 exports.allDebitTransactionUser = async (req, res) => {
     try {
         const data = await Transaction.find({ user: req.user._id, type: "Wallet", dr: true });
-        return res.status(200).json({ data: data });
+        return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ message: err.message });
     }
