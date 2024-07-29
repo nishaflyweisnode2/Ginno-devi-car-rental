@@ -265,6 +265,9 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.deleteOrder);
     app.get('/api/v1/admin/allcount', [authJwt.isAdmin], auth.getAllCounts);
     app.get('/api/v1/admin/carallcount', [authJwt.isAdmin], auth.getAllCarCounts);
+    app.get('/api/v1/admin/inspections', [authJwt.isAdmin], auth.getAllInspections);
+    app.get('/api/v1/admin/inspections/byCarId/:carId', [authJwt.isAdmin], auth.getAllInspectionsByCarId);
+    app.get('/api/v1/admin/inspections/:inspectionId', [authJwt.isAdmin], auth.getInspectionById);
 
 
 

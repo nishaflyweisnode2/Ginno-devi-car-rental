@@ -49,6 +49,7 @@ const AccessoryCategory = require('../models/accessory/accessoryCategoryModel')
 const Accessory = require('../models/accessory/accessoryModel')
 const Order = require('../models/orderModel');
 const Address = require("../models/userAddressModel");
+const InspectionModel = require('../models/carInsceptionModel');
 
 
 
@@ -117,11 +118,16 @@ exports.signin = async (req, res) => {
 
 exports.update = async (req, res) => {
     try {
-        const { fullName, email, mobileNumber, password } = req.body;
+        const { fullName, email, mobileNumber, password, confirmPassword } = req.body;
         const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).send({ message: "not found" });
         }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ status: 400, message: 'Passwords do not match' });
+        }
+
         user.fullName = fullName || user.fullName;
         user.email = email || user.email;
         user.mobileNumber = mobileNumber || user.mobileNumber;
@@ -5820,5 +5826,41 @@ exports.getAllCarCounts = async (req, res) => {
             message: 'Server error',
             data: null,
         });
+    }
+};
+
+exports.getAllInspections = async (req, res) => {
+    try {
+        const inspections = await InspectionModel.find().populate('car');
+        return res.status(200).json({ status: 200, message: 'Inspections retrieved successfully', data: inspections });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getAllInspectionsByCarId = async (req, res) => {
+    try {
+        const { carId } = req.params;
+
+        const inspections = await InspectionModel.find({ car: carId }).populate('car');
+        return res.status(200).json({ status: 200, message: 'Inspections retrieved successfully', data: inspections });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getInspectionById = async (req, res) => {
+    try {
+        const inspectionId = req.params.inspectionId;
+        const inspection = await InspectionModel.findById(inspectionId).populate('car');
+        if (!inspection) {
+            return res.status(404).json({ status: 404, message: 'Inspection not found', data: null });
+        }
+        return res.status(200).json({ status: 200, message: 'Inspection retrieved successfully', data: inspection });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
     }
 };

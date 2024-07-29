@@ -200,6 +200,9 @@ const carSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'AdminCarPrice',
     },
+    carPrice: {
+        type: Number
+    },
 
 
 

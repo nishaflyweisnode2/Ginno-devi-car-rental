@@ -953,7 +953,7 @@ exports.getAllCars = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        const partnerCars = await Car.find();
+        const partnerCars = await Car.find().populate('owner city bodyType brand');
 
         return res.status(200).json({ status: 200, data: partnerCars });
     } catch (error) {
@@ -1593,7 +1593,7 @@ exports.checkCarAvailability = async (req, res) => {
                 isOnTrip: false,
                 isAvailable: true,
                 nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
-            }).populate('pickup');
+            }).populate('pickup').populate('owner city bodyType brand');
         } else {
             const nearbyCars = await Car.find({
                 _id: { $nin: bookedCarIds },
@@ -1609,7 +1609,7 @@ exports.checkCarAvailability = async (req, res) => {
                 isOnTrip: false,
                 isAvailable: true,
                 nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
-            }).populate('pickup');
+            }).populate('pickup').populate('owner city bodyType brand');
 
             if (nearbyCars.length === 0) {
                 return res.status(404).json({
@@ -2252,20 +2252,32 @@ exports.getBookingsByUser = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ user: userId }).populate('car user pickupLocation dropOffLocation');
+        const bookings = await Booking.find({ user: userId }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
 
         return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -2284,7 +2296,31 @@ exports.getBookingsById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ _id: bookingId, user: userId }).populate('car user pickupLocation dropOffLocation');
+        const bookings = await Booking.find({ _id: bookingId, user: userId }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         if (!bookings) {
             return res.status(404).json({ status: 404, message: 'Bookings not found', data: null });
@@ -2332,20 +2368,31 @@ exports.getCompletedBookingsByUser = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ user: userId, status: "COMPLETED" }).populate('car user pickupLocation dropOffLocation');
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
+        const bookings = await Booking.find({ user: userId, status: "COMPLETED" }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         return res.status(200).json({ status: 200, message: 'Completed Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -2363,20 +2410,31 @@ exports.getUpcomingBookingsByUser = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const bookings = await Booking.find({ user: userId, pickupDate: { $gte: new Date() } }).populate('car user pickupLocation dropOffLocation');
-
-        // .populate({
-        //     path: 'bike',
-        //     select: 'modelName rentalPrice',
-        // })
-        // .populate({
-        //     path: 'user',
-        //     select: 'username email',
-        // })
-        // .populate({
-        //     path: 'pickupLocation dropOffLocation',
-        //     select: 'locationName address',
-        // });
+        const bookings = await Booking.find({ user: userId, pickupDate: { $gte: new Date() } }).populate('car user pickupLocation dropOffLocation')
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'owner', model: 'User'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'brand', model: 'Brand'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'bodyType', model: 'SubscriptionCategory'
+                }
+            })
+            .populate({
+                path: 'car',
+                populate: {
+                    path: 'city', model: 'City'
+                }
+            });
 
         return res.status(200).json({ status: 200, message: 'Bookings retrieved successfully', data: bookings });
     } catch (error) {
@@ -3200,7 +3258,7 @@ exports.getCarsByMainCategory = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'MainCategory not found' });
         }
 
-        const cars = await Car.find({ mainCategory });
+        const cars = await Car.find({ mainCategory }).populate('owner city bodyType brand pickup');
 
         return res.status(200).json({ status: 200, data: cars });
     } catch (error) {
@@ -3218,7 +3276,7 @@ exports.getCarsByCategory = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Category not found' });
         }
 
-        const cars = await Car.find({ category });
+        const cars = await Car.find({ category }).populate('owner city bodyType brand pickup');
 
         return res.status(200).json({ status: 200, data: cars });
     } catch (error) {
@@ -3236,7 +3294,7 @@ exports.getCarsByPlan = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Plan not found' });
         }
 
-        const cars = await Car.find();
+        const cars = await Car.find().populate('owner city bodyType brand pickup');
 
         const availableCars = [];
         for (const car of cars) {
@@ -3482,6 +3540,42 @@ exports.getFAQById = async (req, res) => {
     }
 };
 
+exports.getAllRentalCars1 = async (req, res) => {
+    try {
+        const { mainCategoryId } = req.params;
+
+        const rentalCars = await Car.find({ isRental: true }).populate('owner city bodyType brand');
+        const carsWithPrices = [];
+
+        for (const car of rentalCars) {
+            const adminCarPrice = await AdminCarPrice.findOne({ car: car._id, mainCategory: mainCategoryId });
+
+            if (!adminCarPrice) {
+                continue;
+            }
+
+            let rentalPrice;
+            if (adminCarPrice.autoPricing) {
+                rentalPrice = adminCarPrice.adminHourlyRate;
+            } else {
+                rentalPrice = adminCarPrice.hostHourlyRate;
+            }
+            rentalCars.carPrice = rentalPrice
+            carsWithPrices.push({
+                car: car,
+                // rentalPrice: rentalPrice
+            });
+        }
+
+        await rentalCars.save();
+
+        return res.status(200).json({ status: 200, data: rentalCars });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getAllRentalCars = async (req, res) => {
     try {
         const { mainCategoryId } = req.params;
@@ -3503,10 +3597,10 @@ exports.getAllRentalCars = async (req, res) => {
                 rentalPrice = adminCarPrice.hostHourlyRate;
             }
 
-            carsWithPrices.push({
-                car: car,
-                rentalPrice: rentalPrice
-            });
+            car.carPrice = rentalPrice;
+            await car.save();
+
+            carsWithPrices.push(car);
         }
 
         return res.status(200).json({ status: 200, data: carsWithPrices });
@@ -3537,10 +3631,14 @@ exports.getAllSubscriptionCars = async (req, res) => {
                 rentalPrice = adminCarPrice.hostHourlyRate;
             }
 
-            carsWithPrices.push({
-                car: car,
-                rentalPrice: rentalPrice
-            });
+            // carsWithPrices.push({
+            //     car: car,
+            //     rentalPrice: rentalPrice
+            // });
+            car.carPrice = rentalPrice;
+            await car.save();
+
+            carsWithPrices.push(car);
         }
 
         return res.status(200).json({ status: 200, data: carsWithPrices });
