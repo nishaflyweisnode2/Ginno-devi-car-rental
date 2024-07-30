@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage
+const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, kpUpload0, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage
 } = require('../middlewares/imageUpload');
 
 
@@ -57,7 +57,7 @@ module.exports = (app) => {
     app.get('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.getCarById);
     app.put('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.updateCarById);
     app.delete('/api/v1/admin/cars/:carId', [authJwt.isAdmin], auth.deleteCarById);
-    app.put('/api/v1/admin/cars/:carId/documents', [authJwt.isAdmin], carDocumentImage.single('image'), auth.updateCarDocuments);
+    app.put('/api/v1/admin/cars/:carId/documents', [authJwt.isAdmin], kpUpload0, auth.updateCarDocuments);
     app.put('/api/v1/admin/:carId/updateDLDetails', [authJwt.isAdmin], kpUpload, auth.updateDLDetails);
     app.put('/api/v1/admin/:carId/updateAddressProof', [authJwt.isAdmin], addressPrrof.single('image'), auth.updateAddressProof);
     app.put('/api/v1/admin/:carId/uploadCarImages', [authJwt.isAdmin], carImage.array('image', 15), auth.uploadCarImages);
@@ -91,6 +91,7 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/terms-and-conditions/:id', [authJwt.isAdmin], auth.deleteTermAndConditionById);
     app.post('/api/v1/admin/faqs/create', [authJwt.isAdmin], auth.createFAQ);
     app.get('/api/v1/admin/faqs', [authJwt.isAdmin], auth.getAllFAQs);
+    app.get('/api/v1/admin/faqs/byType/:type', [authJwt.isAdmin], auth.getAllFAQsByType);
     app.get('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.getFAQById);
     app.put('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.updateFAQById);
     app.delete('/api/v1/admin/faqs/:id', [authJwt.isAdmin], auth.deleteFAQById);
@@ -213,6 +214,8 @@ module.exports = (app) => {
     app.get('/api/v1/admin/partner/paymentFalied-bookings/:id', [authJwt.isAdmin], auth.getPaymentFaliedBookingsForPartner);
     app.get('/api/v1/admin/partner/approved-bookings/:id', [authJwt.isAdmin], auth.getApprovedBookingsForPartner);
     app.get('/api/v1/admin/partner/rejected-bookings/:id', [authJwt.isAdmin], auth.getRejectedBookingsForPartner);
+    app.put('/api/v1/admin/bookings/:bookingId/prices', [authJwt.isAdmin], auth.updateBookingPrices);
+    app.delete('/api/v1/admin/bookings/:bookingId/prices', [authJwt.isAdmin], auth.removeBookingPrices);
     app.post('/api/v1/admin/govt-tendor/add', [authJwt.isAdmin], auth.createTenderApplication);
     app.get('/api/v1/admin/govt-tendor', [authJwt.isAdmin], auth.getAllTenderApplications);
     app.get('/api/v1/admin/govt-tendor/:id', [authJwt.isAdmin], auth.getTenderApplicationById);
@@ -268,6 +271,8 @@ module.exports = (app) => {
     app.get('/api/v1/admin/inspections', [authJwt.isAdmin], auth.getAllInspections);
     app.get('/api/v1/admin/inspections/byCarId/:carId', [authJwt.isAdmin], auth.getAllInspectionsByCarId);
     app.get('/api/v1/admin/inspections/:inspectionId', [authJwt.isAdmin], auth.getInspectionById);
+    app.get('/api/v1/admin/exportUsers', [authJwt.isAdmin], auth.exportsData)
+
 
 
 

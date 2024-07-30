@@ -254,6 +254,12 @@ const bookingSchema = new mongoose.Schema(
         driverPrice: {
             type: Number,
         },
+        extraPrice: {
+            type: Number,
+        },
+        damagePrice: {
+            type: Number,
+        },
         uniqueBookinId: {
             type: String,
         },

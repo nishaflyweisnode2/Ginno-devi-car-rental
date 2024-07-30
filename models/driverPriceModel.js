@@ -11,6 +11,9 @@ const DriverPriceSchema = new mongoose.Schema({
     price: {
         type: Number,
     },
+    nightCharge: {
+        type: Number,
+    },
 });
 
 const DriverPrice = mongoose.model('DriverPrice', DriverPriceSchema);

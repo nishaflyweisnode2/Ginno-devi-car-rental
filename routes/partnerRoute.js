@@ -100,6 +100,8 @@ module.exports = (app) => {
     app.put('/api/v1/partner/bookings/:bookingId/trip-end-details', [authJwt.isPartner], auth.updateTripEndDetails);
     app.post("/api/v1/partner/bookings/trip-end-details/verify/:bookingId", [authJwt.isPartner], auth.approveTripEndDetailsVerifyOtp);
     app.post("/api/v1/partner/bookings/trip-end-details/resendOtp/:id", [authJwt.isPartner], auth.approveTripEndDetailsResendOTP);
+    app.put('/api/v1/partner/bookings/:bookingId/prices', [authJwt.isPartner], auth.updateBookingPrices);
+    app.delete('/api/v1/partner/bookings/:bookingId/prices', [authJwt.isPartner], auth.removeBookingPrices);
     app.get('/api/v1/partner/mainCategories', [authJwt.isPartner], auth.getAllMainCategories);
     app.get('/api/v1/partner/mainCategories/:mainCategoryId', [authJwt.isPartner], auth.getMainCategoryById);
     app.get('/api/v1/partner/categories', [authJwt.isPartner], auth.getAllCategories);

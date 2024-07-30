@@ -15,7 +15,7 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['Booking', 'Wallet', 'Qc', 'Referral']
+        enum: ['Booking', 'Wallet', 'Qc', 'Referral', 'Transfer']
     },
     amount: {
         type: Number,

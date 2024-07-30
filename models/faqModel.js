@@ -11,7 +11,10 @@ const faqSchema = new mongoose.Schema(
         userType: {
             type: String,
             enum: ["ADMIN", "USER", "PARTNER", "SUB-ADMIN"],
-            // default: "USER"
+        },
+        type: {
+            type: String,
+            enum: ["RENTAL", "SHARING", "SUBSCRIPTION", "GOVERNMENT"],
         },
     },
     { timestamps: true }

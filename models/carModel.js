@@ -19,6 +19,9 @@ const carSchema = new mongoose.Schema({
     variant: {
         type: String,
     },
+    color: {
+        type: String,
+    },
     bodyType: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubscriptionCategory',
@@ -71,6 +74,20 @@ const carSchema = new mongoose.Schema({
         type: String,
     },
     isDlUpload: {
+        type: Boolean,
+        default: false
+    },
+    pollutionDocuments: {
+        type: String,
+    },
+    isPollutionDocumentsUpload: {
+        type: Boolean,
+        default: false
+    },
+    insuranceDocuments: {
+        type: String,
+    },
+    isIinsuranceDocumentsUpload: {
         type: Boolean,
         default: false
     },

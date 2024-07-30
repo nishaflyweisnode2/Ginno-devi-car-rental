@@ -515,7 +515,7 @@ exports.getSubscriptionCategoryById = async (req, res) => {
 
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, bodyType, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
+        const { licenseNumber, brand, model, variant, color, bodyType, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -559,6 +559,7 @@ exports.createCar = async (req, res) => {
             brand,
             model,
             variant,
+            color,
             bodyType,
             city,
             yearOfRegistration,
@@ -2870,6 +2871,69 @@ exports.approveTripEndDetailsResendOTP = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).send({ status: 500, message: "Server error" + error.message });
+    }
+};
+
+exports.updateBookingPrices = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { bookingId } = req.params;
+        const { extraPrice, damagePrice } = req.body;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (extraPrice !== undefined) {
+            booking.extraPrice = extraPrice;
+        }
+        if (damagePrice !== undefined) {
+            booking.damagePrice = damagePrice;
+        }
+
+        booking.totalPrice = booking.totalPrice + (booking.extraPrice || 0) + (booking.damagePrice || 0);
+
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Booking prices updated successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.removeBookingPrices = async (req, res) => {
+    try {
+        const partnerId = req.user._id;
+        const { bookingId } = req.params;
+
+        const user = await User.findById(partnerId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+
+        booking.totalPrice = booking.totalPrice - (booking.extraPrice || 0) - (booking.damagePrice || 0);
+        booking.extraPrice = 0;
+        booking.damagePrice = 0;
+
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Booking prices removed successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
     }
 };
 

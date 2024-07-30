@@ -290,6 +290,19 @@ const userSchema = new mongoose.Schema({
             type: String,
         },
     }],
+    isWalletRecharge: {
+        type: Boolean,
+        default: true
+    },
+    isWalletWithdraw: {
+        type: Boolean,
+        default: true
+    },
+    isWalletTransfer: {
+        type: Boolean,
+        default: true
+    },
+
 
 }, { timestamps: true });
 

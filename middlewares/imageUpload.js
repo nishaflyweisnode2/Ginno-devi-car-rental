@@ -15,6 +15,11 @@ const storage2 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folde
 const cityImage = multer({ storage: storage2 });
 const storage3 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "GinnoDeviCar/carDocumentImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
 const carDocumentImage = multer({ storage: storage3 });
+var kpUpload0 = carDocumentImage.fields([
+    { name: 'carDocuments', maxCount: 1 },
+    { name: 'pollutionDocuments', maxCount: 1 },
+    { name: 'insuranceDocuments', maxCount: 1 },
+]);
 const storage4 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "GinnoDeviCar/carDlImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
 const carDlImage = multer({ storage: storage4 });
 var kpUpload = carDlImage.fields([
@@ -42,4 +47,4 @@ const accessoryImage = multer({ storage: storage13 });
 const storage14 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "Sajid-Bike-Backend/accessoryCategoryImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
 const accessoryCategoryImage = multer({ storage: storage14 });
 
-module.exports = { profileImage, cityImage, brandImage, carDocumentImage, carDlImage, kpUpload, addressPrrof, carImage, referenceImage, attachement, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage }
+module.exports = { profileImage, cityImage, brandImage, carDocumentImage, kpUpload0, carDlImage, kpUpload, addressPrrof, carImage, referenceImage, attachement, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage }

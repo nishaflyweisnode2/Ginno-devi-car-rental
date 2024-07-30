@@ -50,7 +50,10 @@ const Accessory = require('../models/accessory/accessoryModel')
 const Order = require('../models/orderModel');
 const Address = require("../models/userAddressModel");
 const InspectionModel = require('../models/carInsceptionModel');
-
+const xlsx = require('xlsx');
+const path = require('path');
+const fs = require('fs');
+const ExcelJS = require('exceljs');
 
 
 
@@ -84,7 +87,6 @@ exports.registration = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
-
 
 exports.signin = async (req, res) => {
     try {
@@ -170,6 +172,7 @@ exports.getAllUser1 = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
 exports.getAllUser = async (req, res) => {
     try {
         const { date, kyc, vehicleNo, location, userName, sort, userType, currentRole } = req.query;
@@ -259,6 +262,7 @@ exports.getAllUser = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
 exports.getUserProfile = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -367,16 +371,29 @@ exports.deleteUser = async (req, res) => {
 
 exports.updateUserById = async (req, res) => {
     try {
-        const { fullName, email, mobileNumber, password, documentVerification, documentRemarks } = req.body;
+        const { fullName, email, mobileNumber, password, documentVerification, documentRemarks, confirmPassword, isWalletRecharge, isWalletWithdraw, isWalletTransfer } = req.body;
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).send({ message: "not found" });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ status: 400, message: 'Passwords do not match' });
         }
         user.documentVerification = documentVerification || user.documentVerification;
         user.documentRemarks = documentRemarks || user.documentRemarks;
         user.fullName = fullName || user.fullName;
         user.email = email || user.email;
         user.mobileNumber = mobileNumber || user.mobileNumber;
+        if (isWalletRecharge !== undefined) {
+            user.isWalletRecharge = isWalletRecharge;
+        }
+        if (isWalletWithdraw !== undefined) {
+            user.isWalletWithdraw = isWalletWithdraw;
+        }
+        if (isWalletTransfer !== undefined) {
+            user.isWalletTransfer = isWalletTransfer;
+        }
         if (req.body.password) {
             user.password = bcrypt.hashSync(password, 8) || user.password;
         }
@@ -1053,7 +1070,7 @@ exports.deleteCarImageById = async (req, res) => {
 
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
+        const { licenseNumber, brand, model, variant, color, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -1092,6 +1109,7 @@ exports.createCar = async (req, res) => {
             brand,
             model,
             variant,
+            color,
             city,
             yearOfRegistration,
             fuelType,
@@ -1265,10 +1283,26 @@ exports.updateCarDocuments = async (req, res) => {
             return res.status(404).json({ message: 'Car not found' });
         }
 
-        if (req.file) {
-            existingCar.carDocuments = req.file.path;
+        if (req.files['carDocuments']) {
+            let carDocuments = req.files['carDocuments'];
+            existingCar.carDocuments = carDocuments[0].path;
             existingCar.isCarDocumentsUpload = true;
         }
+        if (req.files['pollutionDocuments']) {
+            let pollutionDocuments = req.files['pollutionDocuments'];
+            existingCar.pollutionDocuments = pollutionDocuments[0].path;
+            existingCar.isPollutionDocumentsUpload = true;
+        }
+        if (req.files['insuranceDocuments']) {
+            let insuranceDocuments = req.files['insuranceDocuments'];
+            existingCar.insuranceDocuments = insuranceDocuments[0].path;
+            existingCar.isIinsuranceDocumentsUpload = true;
+        }
+
+        // if (req.file) {
+        //     existingCar.carDocuments = req.file.path;
+        //     existingCar.isCarDocumentsUpload = true;
+        // }
 
         existingCar.carDocumentsText = carDocumentsText;
 
@@ -1900,8 +1934,8 @@ exports.deleteTermAndConditionById = async (req, res) => {
 
 exports.createFAQ = async (req, res) => {
     try {
-        const { question, answer, userType } = req.body;
-        const newFAQ = await FAQ.create({ question, answer, userType });
+        const { question, answer, userType, type } = req.body;
+        const newFAQ = await FAQ.create({ question, answer, userType, type });
         return res.status(201).json({ status: 201, data: newFAQ });
     } catch (error) {
         console.error(error);
@@ -1912,6 +1946,17 @@ exports.createFAQ = async (req, res) => {
 exports.getAllFAQs = async (req, res) => {
     try {
         const faqs = await FAQ.find();
+        return res.status(200).json({ status: 200, data: faqs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFAQsByType = async (req, res) => {
+    try {
+        const type = req.params.type;
+        const faqs = await FAQ.find({ type: type });
         return res.status(200).json({ status: 200, data: faqs });
     } catch (error) {
         console.error(error);
@@ -2775,12 +2820,13 @@ exports.deletePlanById = async (req, res) => {
 
 exports.createAdminPackage = async (req, res) => {
     try {
-        const { title, description, price } = req.body;
+        const { title, description, price, status } = req.body;
 
         const newAdminPackage = new AdminPackage({
             title,
             description,
             price,
+            status
         });
 
         await newAdminPackage.save();
@@ -2819,11 +2865,11 @@ exports.getAdminPackageById = async (req, res) => {
 
 exports.updateAdminPackage = async (req, res) => {
     try {
-        const { title, description, price } = req.body;
+        const { title, description, price, status } = req.body;
 
         const updatedAdminPackage = await AdminPackage.findByIdAndUpdate(
             req.params.id,
-            { title, description, price },
+            { title, description, price, status },
             { new: true }
         );
 
@@ -2955,7 +3001,7 @@ exports.deletePriceById = async (req, res) => {
 
 exports.createDriverPrice = async (req, res) => {
     try {
-        const { categoryId, description, price } = req.body;
+        const { categoryId, description, price, nightCharge } = req.body;
 
         const category = await Category.findById(categoryId);
 
@@ -2967,6 +3013,7 @@ exports.createDriverPrice = async (req, res) => {
             category: categoryId,
             description,
             price,
+            nightCharge
         });
 
         const savedPrice = await newPrice.save();
@@ -3009,7 +3056,7 @@ exports.getDriverPriceById = async (req, res) => {
 exports.updateDriverPriceById = async (req, res) => {
     try {
         const priceId = req.params.id;
-        const { categoryId, description, price } = req.body;
+        const { categoryId, description, price, nightCharge } = req.body;
 
         const category = await Category.findById(categoryId);
 
@@ -3019,7 +3066,7 @@ exports.updateDriverPriceById = async (req, res) => {
 
         const updatedPrice = await DriverPrice.findByIdAndUpdate(
             priceId,
-            { category: categoryId, description, price },
+            { category: categoryId, description, price, nightCharge },
             { new: true }
         );
 
@@ -4426,6 +4473,57 @@ exports.getRejectedBookingsForPartner = async (req, res) => {
             message: 'Reject bookings for partner retrieved successfully',
             data: rejectBookings,
         });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateBookingPrices = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { extraPrice, damagePrice } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (extraPrice !== undefined) {
+            booking.extraPrice = extraPrice;
+        }
+        if (damagePrice !== undefined) {
+            booking.damagePrice = damagePrice;
+        }
+
+        booking.totalPrice = booking.totalPrice + (booking.extraPrice || 0) + (booking.damagePrice || 0);
+
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Booking prices updated successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.removeBookingPrices = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+
+        booking.totalPrice = booking.totalPrice - (booking.extraPrice || 0) - (booking.damagePrice || 0);
+        booking.extraPrice = 0;
+        booking.damagePrice = 0;
+
+        await booking.save();
+
+        return res.status(200).json({ status: 200, message: 'Booking prices removed successfully', data: booking });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
@@ -5862,5 +5960,98 @@ exports.getInspectionById = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.exportsData1 = async (req, res) => {
+    try {
+        const { userType, currentRole } = req.query;
+
+        let users;
+        if (userType) {
+            users = await User.find({ userType: userType }).populate('city').populate('cars.car');
+        } else {
+            users = await User.find({ currentRole: currentRole }).populate('city').populate('cars.car');
+        }
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Users not found' });
+        }
+        const formattedUsers = users.map(user => ({
+            _id: user._id.toString(),
+            name: user.fullName,
+            mobileNumber: user.mobileNumber,
+            email: user.email,
+            // city: user.city.name,
+            occupation: user.occupation,
+            cars: user.cars.map(car => car.car.name).join(', '),
+            memberSince: user.createdAt.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'numeric',
+                year: 'numeric',
+            }),
+        }));
+
+        const workbook = xlsx.utils.book_new();
+        const worksheet = xlsx.utils.json_to_sheet(formattedUsers);
+
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'Users');
+
+        const filePath = path.join(__dirname, 'users.xlsx');
+
+        xlsx.writeFile(workbook, filePath);
+
+        res.setHeader('Content-Disposition', 'attachment; filename=users.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        fs.createReadStream(filePath).pipe(res).on('finish', () => {
+            fs.unlinkSync(filePath);
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+exports.exportsData = async (req, res) => {
+    try {
+        const { userType, currentRole } = req.query;
+        let orders;
+        if (userType) {
+            orders = await User.find({ userType: userType }).populate('city').populate('cars.car');
+        } else {
+            orders = await User.find({ currentRole: currentRole }).populate('city').populate('cars.car');
+        }
+        const data = orders.map((order, index) => [
+            index + 1,
+            order._id.toString(),
+            order.fullName ? order.fullName : '',
+            order.mobileNumber ? order.mobileNumber : '',
+            order.email ? order.email : '',
+            order.occupation,
+            order.cars.map(car => car.car.name).join(', '),
+            order.createdAt.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'numeric',
+                year: 'numeric',
+            }),
+        ]);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Orders");
+        worksheet.columns = [
+            { header: "Sr No", key: "srNo" },
+            { header: "Full Name", key: "Full Name" },
+            { header: "Mobile Number", key: "Mobile Number" },
+            { header: "Email", key: "Email" },
+            { header: "Occupation", key: "Occupation" },
+            { header: "Cars", key: "Cars" },
+            { header: "Membership", key: "Membership" },
+        ];
+        worksheet.addRows(data);
+        const filePath = "./userData.";
+        await workbook.xlsx.writeFile(filePath);
+        return res.status(200).send({ message: "Data found", data: filePath });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).send("Server Error");
     }
 };
