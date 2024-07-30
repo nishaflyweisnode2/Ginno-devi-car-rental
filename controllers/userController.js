@@ -561,7 +561,7 @@ exports.getReferralIncome = async (req, res) => {
     }
 };
 
-exports.getRoyaltyReferralIncome = async (req, res) => {
+exports.getRoyaltyReferralIncome1 = async (req, res) => {
     try {
         const userId = req.user._id;
         const user = await User.findById(userId).populate('referralLevels.users.user');;
@@ -603,6 +603,78 @@ exports.getRoyaltyReferralIncome = async (req, res) => {
             status: 200,
             message: 'Level-wise income calculated',
             data: levelWiseIncome,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getRoyaltyReferralIncome = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId).populate('referralLevels.users.user');
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (!user.referralLevels || user.referralLevels.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No referral users found',
+                data: [],
+            });
+        }
+
+        const requiredActiveMembers = [3, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+        const royaltyRewardReport = [];
+
+        for (const level of user.referralLevels) {
+            const levelUsers = await User.find({
+                _id: { $in: level.users.map(u => u.user) }
+            });
+
+            const activeMembers = levelUsers.filter(u => u.documentVerification === 'APPROVED').length;
+
+            const levelTransactions = await Transaction.find({
+                user: userId,
+                cr: true,
+                type: { $in: ['Referral', 'Qc'] }
+            });
+
+            let qcPointIncome = 0;
+            let levelIncome = 0;
+
+            levelTransactions.forEach(transaction => {
+                // if (transaction.type === 'Qc') {
+                //     qcPointIncome += transaction.amount;
+                // }
+                if (transaction.type === 'Referral' && transaction.details.includes(`level ${level.level} for booking`)) {
+                    levelIncome += transaction.amount;
+                } else if (transaction.type === 'Qc' && transaction.details.includes(`Direct Referral bonus credited to user wallet at level ${level.level}`)) {
+                    qcPointIncome += transaction.amount;
+                }
+            });
+
+            const totalBusiness = qcPointIncome + levelIncome;
+            const eligibilityStatus = activeMembers >= requiredActiveMembers[level.level - 1] ? 'Eligible' : 'Not Eligible';
+
+            royaltyRewardReport.push({
+                level: level.level,
+                activeMembers,
+                requiredActiveMembers: requiredActiveMembers[level.level - 1],
+                eligibilityStatus,
+                totalBusiness: totalBusiness.toFixed(2),
+                qcPointIncome: qcPointIncome.toFixed(2),
+                levelIncome: levelIncome.toFixed(2)
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Royalty reward eligibility report generated',
+            data: royaltyRewardReport,
         });
     } catch (error) {
         console.error(error);
@@ -4770,6 +4842,16 @@ exports.deleteOrder = async (req, res) => {
 
 exports.addMoney = async (req, res) => {
     try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isWalletRecharge === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to recharge', data: null });
+        }
+
         const updatedUser = await User.findByIdAndUpdate(
             { _id: req.user._id },
             { $inc: { wallet: parseInt(req.body.balance) } },
@@ -4817,6 +4899,16 @@ exports.addMoney = async (req, res) => {
 
 exports.removeMoney = async (req, res) => {
     try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isWalletWithdraw === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to withdraw', data: null });
+        }
+
         const updatedUser = await User.findByIdAndUpdate({ _id: req.user._id }, { $inc: { wallet: -parseInt(req.body.balance) } }, { new: true });
         if (updatedUser) {
             const transactionData = {
@@ -4853,6 +4945,167 @@ exports.removeMoney = async (req, res) => {
             status: 500,
             message: "Server error.",
             data: {},
+        });
+    }
+};
+
+exports.transferMoneySendOtp = async (req, res) => {
+    try {
+        const { recipientId, fullName, amount } = req.body;
+        const senderId = req.user._id;
+
+        const sender = await User.findById(senderId);
+        const recipient = await User.findById(recipientId);
+
+        if (!sender || !recipient) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (sender.isWalletTransfer === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to Transfer money', data: null });
+        }
+
+        const transferAmount = parseInt(amount);
+
+        if (sender.wallet < transferAmount) {
+            return res.status(400).json({ status: 400, message: 'Insufficient balance', data: null });
+        }
+
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
+
+        sender.otp = otp
+
+        await sender.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred otp',
+            data: sender.otp
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
+        });
+    }
+};
+
+exports.transferMoneyReSendOtp = async (req, res) => {
+    try {
+        const senderId = req.user._id;
+
+        const sender = await User.findById(senderId);
+
+        if (!sender) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
+
+        sender.otp = otp
+
+        await sender.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred resend otp',
+            data: sender.otp
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
+        });
+    }
+};
+
+exports.transferMoney = async (req, res) => {
+    try {
+        const { recipientId, fullName, amount, otp } = req.body;
+        const senderId = req.user._id;
+
+
+        const sender = await User.findById(senderId);
+        const recipient = await User.findById(recipientId);
+
+        if (!sender || !recipient) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (sender.isWalletTransfer === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to Transfer money', data: null });
+        }
+
+        if (sender.otp !== otp) {
+            console.log("Invalid or expired OTP");
+            return res.status(400).json({ status: 400, message: "Invalid or expired OTP" });
+        }
+
+        const transferAmount = parseInt(amount);
+
+        if (sender.wallet < transferAmount) {
+            return res.status(400).json({ status: 400, message: 'Insufficient balance', data: null });
+        }
+
+        sender.wallet -= transferAmount;
+        recipient.wallet += transferAmount;
+
+        await sender.save();
+        await recipient.save();
+
+        const senderTransactionData = {
+            user: senderId,
+            date: Date.now(),
+            amount: transferAmount,
+            type: "Transfer",
+            cr: false,
+            dr: true,
+            details: `Transferred to ${recipient.fullName}`
+        };
+        const recipientTransactionData = {
+            user: recipientId,
+            date: Date.now(),
+            amount: transferAmount,
+            type: "Transfer",
+            dr: false,
+            cr: true,
+            details: `Received from ${sender.fullName}`
+        };
+
+        await Transaction.create(senderTransactionData);
+        await Transaction.create(recipientTransactionData);
+
+        const senderNotification = new Notification({
+            userId: senderId,
+            title: "Transfer Successful",
+            body: `You have successfully transferred ${amount} to ${recipient.fullName}.`
+        });
+        const recipientNotification = new Notification({
+            userId: recipientId,
+            title: "Money Received",
+            body: `You have received ${amount} from ${sender.fullName}.`
+        });
+
+        await senderNotification.save();
+        await recipientNotification.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred successfully',
+            data: { sender, recipient }
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
         });
     }
 };
