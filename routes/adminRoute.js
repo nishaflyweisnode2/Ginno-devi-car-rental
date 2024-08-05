@@ -236,12 +236,12 @@ module.exports = (app) => {
     app.get('/api/v1/admin/cars/getall/gps', [authJwt.isAdmin], auth.getAllCarGPSLocations);
     app.get('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.getGPSDataForCar);
     app.delete('/api/v1/admin/cars/:carId/gps', [authJwt.isAdmin], auth.deleteGPSDataForCar);
-    app.get('/api/v1/user/direct-referrals/all', [authJwt.isAdmin], auth.getAllDirectReferralUsers);
-    app.get('/api/v1/user/direct-referrals/:id', [authJwt.isAdmin], auth.getDirectReferralUsersByUserId);
-    app.get('/api/v1/user/all-referrals/all', [authJwt.isAdmin], auth.getAllUserReferralDetails);
-    app.get('/api/v1/user/all-referrals/:id', [authJwt.isAdmin], auth.getReferralDetailsByUserId);
-    app.get('/api/v1/user/level-wise-income/all', [authJwt.isAdmin], auth.getAllUserReferralIncome);
-    app.get('/api/v1/user/level-wise-income/:id', [authJwt.isAdmin], auth.getReferralIncomeByUserId);
+    app.get('/api/v1/admin/direct-referrals/all', [authJwt.isAdmin], auth.getAllDirectReferralUsers);
+    app.get('/api/v1/admin/direct-referrals/:id', [authJwt.isAdmin], auth.getDirectReferralUsersByUserId);
+    app.get('/api/v1/admin/all-referrals/all', [authJwt.isAdmin], auth.getAllUserReferralDetails);
+    app.get('/api/v1/admin/all-referrals/byUser/:id', [authJwt.isAdmin], auth.getReferralDetailsByUserId);
+    app.get('/api/v1/admin/level-wise-income/all', [authJwt.isAdmin], auth.getAllUserReferralIncome);
+    app.get('/api/v1/admin/level-wise-income/:id', [authJwt.isAdmin], auth.getReferralIncomeByUserId);
     app.get('/api/v1/admin/transactions/user/:id', [authJwt.isAdmin], auth.getTransactionDetailsByUserId);
     app.get('/api/v1/admin/income/user/:id', [authJwt.verifyToken], auth.getIncomeDetailsByUserId);
     app.get('/api/v1/admin/all-ratings', [authJwt.isAdmin], auth.getAllRatingsForCars);
@@ -268,6 +268,7 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.deleteOrder);
     app.get('/api/v1/admin/allcount', [authJwt.isAdmin], auth.getAllCounts);
     app.get('/api/v1/admin/carallcount', [authJwt.isAdmin], auth.getAllCarCounts);
+    app.get('/api/v1/admin/carallcount/by-month-wise', [authJwt.isAdmin], auth.getAllCarCountsByMonthWise);
     app.get('/api/v1/admin/inspections', [authJwt.isAdmin], auth.getAllInspections);
     app.get('/api/v1/admin/inspections/byCarId/:carId', [authJwt.isAdmin], auth.getAllInspectionsByCarId);
     app.get('/api/v1/admin/inspections/:inspectionId', [authJwt.isAdmin], auth.getInspectionById);

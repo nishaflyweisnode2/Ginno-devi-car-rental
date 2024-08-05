@@ -528,32 +528,37 @@ exports.getReferralIncome = async (req, res) => {
             });
         }
 
+        let overAllIncome = 0;
         const levelWiseIncome = [];
 
         for (const level of user.referralLevels) {
             const levelUsers = await User.find({ _id: { $in: level.users.map(u => u.user) } });
-
             const levelUserIds = levelUsers.map(u => u._id);
-
             const levelTransactions = await Transaction.find({
                 user: userId,
                 cr: true,
                 type: { $in: ['Referral', 'Qc'] }
             }).populate('user');
-            console.log("levelTransactions", levelTransactions);
-            console.log("level", level);
-            const totalIncome1 = levelTransactions.reduce((acc, curr) => acc + curr.amount, 0);
-            let totalIncome = parseFloat(totalIncome1.toFixed(2))
+            let levelIncome = 0;
+            let qcPointIncome = 0;
+            levelTransactions.forEach(transaction => {
+                if (transaction.type === 'Referral' && transaction.details.includes(`level ${level.level} for booking`)) {
+                    levelIncome += transaction.amount;
+                } else if (transaction.type === 'Qc' && transaction.details.includes(`Direct Referral bonus credited to user wallet at level ${level.level}`)) {
+                    qcPointIncome += transaction.amount;
+                }
+            });
+            console.log(levelIncome, qcPointIncome)
             levelWiseIncome.push({
                 level: { ...level._doc, users: levelUsers },
-                totalIncome
+                levelIncome: levelIncome + qcPointIncome
             });
+            overAllIncome += parseFloat((levelIncome + qcPointIncome).toFixed(2))
         }
-
         return res.status(200).json({
             status: 200,
             message: 'Level-wise income calculated',
-            data: levelWiseIncome,
+            data: levelWiseIncome, overAllIncome
         });
     } catch (error) {
         console.error(error);

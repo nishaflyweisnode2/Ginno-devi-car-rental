@@ -1889,7 +1889,10 @@ async function sendNotificationToPartner(booking, partnerId) {
 exports.getUpcomingBookingsForPartner = async (req, res) => {
     try {
         const partnerId = req.user._id;
+        console.log(partnerId);
         const currentDate = new Date();
+        console.log("currentDate", currentDate);
+        console.log("currentDate", currentDate.toISOString().split('T')[0]);
 
         const user = await User.findById(partnerId);
         if (!user) {

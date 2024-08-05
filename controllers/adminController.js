@@ -5021,12 +5021,18 @@ exports.getDirectReferralUsersByUserId = async (req, res) => {
     try {
         const userId = req.params.id;
 
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).populate({
+            path: 'referralLevels.users.user',
+            match: { 'referralLevels.level': 1 }
+        });
+
         if (!user) {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        if (!user.referralLevels || user.referralLevels.length === 0) {
+        const level1Referrals = user.referralLevels.find(level => level.level === 1);
+
+        if (!level1Referrals || level1Referrals.users.length === 0) {
             return res.status(200).json({
                 status: 200,
                 message: 'No direct referral users found',
@@ -5034,16 +5040,8 @@ exports.getDirectReferralUsersByUserId = async (req, res) => {
             });
         }
 
-        const directReferralUsers = [];
-        const level1Referrals = user.referralLevels.find(level => level.level === 1);
-        if (level1Referrals && level1Referrals.users.length > 0) {
-            for (const referralId of level1Referrals.users) {
-                const referralUser = await User.findById(referralId);
-                if (referralUser) {
-                    directReferralUsers.push(referralUser);
-                }
-            }
-        }
+        const referralIds = level1Referrals.users.map(userObj => userObj.user);
+        const directReferralUsers = await User.find({ _id: { $in: referralIds } }).populate('referredBy').populate('referralLevels.users.user');
 
         return res.status(200).json({
             status: 200,
@@ -5115,6 +5113,66 @@ exports.getReferralDetailsByUserId = async (req, res) => {
     }
 };
 
+exports.getAllUserReferralIncome1 = async (req, res) => {
+    try {
+        const users = await User.find();
+
+        if (!users || users.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No users found',
+                data: [],
+            });
+        }
+
+        let overAllIncome = 0;
+        const levelWiseIncome = [];
+
+        for (const user of users) {
+            if (user.referralLevels && user.referralLevels.length > 0) {
+                for (const level of user.referralLevels) {
+                    const levelUsers = await User.find({ _id: { $in: level.users.map(u => u.user) } });
+
+                    const levelUserIds = levelUsers.map(u => u._id);
+
+                    const levelTransactions = await Transaction.find({
+                        user: user._id,
+                        cr: true,
+                        type: { $in: ['Referral', 'Qc'] }
+                    }).populate('user');
+                    console.log("levelTransactions", levelTransactions);
+                    console.log("level", level);
+
+                    let levelIncome = 0;
+                    let qcPointIncome = 0;
+                    levelTransactions.forEach(transaction => {
+                        if (transaction.type === 'Referral' && transaction.details.includes(`level ${level.level} for booking`)) {
+                            levelIncome += transaction.amount;
+                        } else if (transaction.type === 'Qc' && transaction.details.includes(`Direct Referral bonus credited to user wallet at level ${level.level}`)) {
+                            qcPointIncome += transaction.amount;
+                        }
+                    });
+                    console.log(levelIncome, qcPointIncome)
+                    levelWiseIncome.push({
+                        level: { ...level._doc, users: levelUsers },
+                        levelIncome: levelIncome + qcPointIncome
+                    });
+                    overAllIncome += parseFloat((levelIncome + qcPointIncome).toFixed(2))
+                }
+            }
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Level-wise income calculated',
+            data: levelWiseIncome, overAllIncome
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
 exports.getAllUserReferralIncome = async (req, res) => {
     try {
         const users = await User.find();
@@ -5127,24 +5185,54 @@ exports.getAllUserReferralIncome = async (req, res) => {
             });
         }
 
-        const levelWiseIncome = [];
+        let overAllIncome = 0;
+        const userLevelWiseIncome = [];
 
         for (const user of users) {
+            const userLevelIncome = {
+                userId: user._id,
+                userName: user.fullName,
+                levels: [],
+            };
+
             if (user.referralLevels && user.referralLevels.length > 0) {
                 for (const level of user.referralLevels) {
-                    const levelTransactions = await Transaction.find({ user: { $in: level.users } });
+                    const levelUsers = await User.find({ _id: { $in: level.users.map(u => u.user) } });
 
-                    const totalIncome = levelTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+                    const levelTransactions = await Transaction.find({
+                        user: user._id,
+                        cr: true,
+                        type: { $in: ['Referral', 'Qc'] }
+                    }).populate('user');
 
-                    levelWiseIncome.push({ userId: user._id, level: level.level, totalIncome });
+                    let levelIncome = 0;
+                    let qcPointIncome = 0;
+                    levelTransactions.forEach(transaction => {
+                        if (transaction.type === 'Referral' && transaction.details.includes(`level ${level.level} for booking`)) {
+                            levelIncome += transaction.amount;
+                        } else if (transaction.type === 'Qc' && transaction.details.includes(`Direct Referral bonus credited to user wallet at level ${level.level}`)) {
+                            qcPointIncome += transaction.amount;
+                        }
+                    });
+
+                    const totalLevelIncome = parseFloat((levelIncome + qcPointIncome).toFixed(2));
+                    userLevelIncome.levels.push({
+                        level: level.level,
+                        users: levelUsers,
+                        levelIncome: totalLevelIncome
+                    });
+                    overAllIncome += totalLevelIncome;
                 }
             }
+
+            userLevelWiseIncome.push(userLevelIncome);
         }
 
         return res.status(200).json({
             status: 200,
             message: 'Level-wise income calculated',
-            data: levelWiseIncome,
+            data: userLevelWiseIncome,
+            overAllIncome: parseFloat(overAllIncome.toFixed(2))
         });
     } catch (error) {
         console.error(error);
@@ -5169,18 +5257,43 @@ exports.getReferralIncomeByUserId = async (req, res) => {
             });
         }
 
+        let overAllIncome = 0;
         const levelWiseIncome = [];
 
         for (const level of user.referralLevels) {
-            const levelTransactions = await Transaction.find({ user: { $in: level.users } });
-            const totalIncome = levelTransactions.reduce((acc, curr) => acc + curr.amount, 0);
-            levelWiseIncome.push({ level: level.level, totalIncome });
+            const levelUsers = await User.find({ _id: { $in: level.users.map(u => u.user) } });
+
+            const levelUserIds = levelUsers.map(u => u._id);
+
+            const levelTransactions = await Transaction.find({
+                user: user._id,
+                cr: true,
+                type: { $in: ['Referral', 'Qc'] }
+            }).populate('user');
+            console.log("levelTransactions", levelTransactions);
+            console.log("level", level);
+
+            let levelIncome = 0;
+            let qcPointIncome = 0;
+            levelTransactions.forEach(transaction => {
+                if (transaction.type === 'Referral' && transaction.details.includes(`level ${level.level} for booking`)) {
+                    levelIncome += transaction.amount;
+                } else if (transaction.type === 'Qc' && transaction.details.includes(`Direct Referral bonus credited to user wallet at level ${level.level}`)) {
+                    qcPointIncome += transaction.amount;
+                }
+            });
+            console.log(levelIncome, qcPointIncome)
+            levelWiseIncome.push({
+                level: { ...level._doc, users: levelUsers },
+                levelIncome: levelIncome + qcPointIncome
+            });
+            overAllIncome += parseFloat((levelIncome + qcPointIncome).toFixed(2))
         }
 
         return res.status(200).json({
             status: 200,
             message: 'Level-wise income calculated',
-            data: levelWiseIncome,
+            data: levelWiseIncome, overAllIncome
         });
     } catch (error) {
         console.error(error);
@@ -5267,6 +5380,63 @@ exports.getIncomeDetailsByUserId = async (req, res) => {
                 totalWalletDebit: totalWalletDebit,
                 totalQcCredit: totalQcCredit,
                 totalQcDebit: totalQcDebit,
+                totalQcCoinBalance: user.coin,
+                totalWalletBalance: user.wallet,
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getIncomeDetailsByCarId = async (req, res) => {
+    try {
+        const carId = req.params.id;
+
+        const car = await Car.findById(carId);
+        if (!car) {
+            return res.status(404).json({ status: 404, message: 'Car not found', data: null });
+        }
+        const userId = car.owner;
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Booking'] } });
+
+        const carWiseIncome = {};
+
+        transactions.forEach(transaction => {
+            const carId = transaction.car ? transaction.car._id.toString() : 'No Car';
+            if (!carWiseIncome[carId]) {
+                carWiseIncome[carId] = {
+                    car: transaction.car ? transaction.car : 'No Car',
+                    totalWalletCredit: 0,
+                    totalWalletDebit: 0,
+                    totalQcCredit: 0,
+                    totalQcDebit: 0,
+                };
+            }
+
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) {
+                    carWiseIncome[carId].totalWalletCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    carWiseIncome[carId].totalWalletDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) {
+                    carWiseIncome[carId].totalQcCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    carWiseIncome[carId].totalQcDebit += transaction.amount;
+                }
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions: transactions,
+                carWiseIncome: Object.values(carWiseIncome),
                 totalQcCoinBalance: user.coin,
                 totalWalletBalance: user.wallet,
             }
@@ -5927,6 +6097,100 @@ exports.getAllCarCounts = async (req, res) => {
     }
 };
 
+exports.getAllCarCountsByMonthWise = async (req, res) => {
+    try {
+        const carCount = await Car.countDocuments();
+
+        // Aggregation to group cars by month based on createdAt field
+        const monthlyCarCounts = await Car.aggregate([
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+
+        const monthlyRentalCounts = await Car.aggregate([
+            { $match: { isRental: true } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const monthlySubscriptionCounts = await Car.aggregate([
+            { $match: { isSubscription: true } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const monthlyGovernmentTenderCounts = await Car.aggregate([
+            { $match: { isGovernmentTendor: true } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const monthlySharingCounts = await Car.aggregate([
+            { $match: { isSharing: true } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Formatting the response to include month names
+        const monthNames = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
+        const formatCounts = (counts) => counts.map(entry => ({
+            month: monthNames[entry._id - 1],
+            count: entry.count
+        }));
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Counts retrieved successfully',
+            data: {
+                totalRegistredCar: carCount,
+                monthlyCounts: formatCounts(monthlyCarCounts),
+                rentalCars: formatCounts(monthlyRentalCounts),
+                subscriptionCars: formatCounts(monthlySubscriptionCounts),
+                governmentTenderCars: formatCounts(monthlyGovernmentTenderCounts),
+                sharingCars: formatCounts(monthlySharingCounts)
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            data: null,
+        });
+    }
+};
+
 exports.getAllInspections = async (req, res) => {
     try {
         const inspections = await InspectionModel.find().populate('car');
@@ -6012,6 +6276,7 @@ exports.exportsData1 = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
     }
 };
+
 exports.exportsData = async (req, res) => {
     try {
         const { userType, currentRole } = req.query;
@@ -6047,7 +6312,7 @@ exports.exportsData = async (req, res) => {
             { header: "Membership", key: "Membership" },
         ];
         worksheet.addRows(data);
-        const filePath = "./userData.";
+        const filePath = "./userData.xlsx";
         await workbook.xlsx.writeFile(filePath);
         return res.status(200).send({ message: "Data found", data: filePath });
     } catch (err) {
