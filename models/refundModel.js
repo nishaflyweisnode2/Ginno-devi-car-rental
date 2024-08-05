@@ -6,20 +6,43 @@ const refundSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Booking',
         },
-        refundDetails: {
+        accountNo: {
             type: String,
+            default: null
+        },
+        upiId: {
+            type: String,
+            default: null
+        },
+        branchName: {
+            type: String,
+            default: null
+        },
+        ifscCode: {
+            type: String,
+            default: null
         },
         refundAmount: {
             type: Number,
         },
-        refundCharges: {
-            type: Number,
-        },
-        extendedPrice: {
+        cancelationCharges: {
             type: Number,
         },
         totalRefundAmount: {
             type: Number,
+        },
+        totalBookingAmount: {
+            type: Number,
+        },
+        type: {
+            type: String,
+            enum: ['UPI', 'WALLET', 'OTHER'],
+            default: 'WALLET',
+        },
+        refundType: {
+            type: String,
+            enum: ['SECURITY-DEPOSITE', 'CANCELLATION', 'PENDING'],
+            default: 'PENDING',
         },
         refundStatus: {
             type: String,
@@ -30,6 +53,9 @@ const refundSchema = new mongoose.Schema(
             type: String,
         },
         refundTransactionId: {
+            type: String,
+        },
+        refundRemarks: {
             type: String,
         },
         refundTransactionDate: {

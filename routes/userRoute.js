@@ -159,4 +159,11 @@ module.exports = (app) => {
     app.get("/api/v1/user/allTransactionUser/byType/:type", [authJwt.verifyToken], auth.allTransactionByType);
     app.get("/api/v1/user/allcreditTransactionUser", [authJwt.verifyToken], auth.allcreditTransactionUser);
     app.get("/api/v1/user/allDebitTransactionUser", [authJwt.verifyToken], auth.allDebitTransactionUser);
+    app.post('/api/v1/user/refund/add', [authJwt.verifyToken], auth.createUserDetails);
+    app.get('/api/v1/user/refund', [authJwt.verifyToken], auth.getUserDetails);
+    app.get('/api/v1/user/refund/:id', [authJwt.verifyToken], auth.getUserDetailsById);
+    app.put('/api/v1/user/refund/:id', [authJwt.verifyToken], auth.updateUserDetails);
+    app.delete('/api/v1/user/refund', [authJwt.verifyToken], auth.deleteUserDetails);
+    app.post('/api/v1/user/bookings/:bookingId/security-deposit-add-preference', [authJwt.verifyToken], auth.addSecurityDepositPreferenceInBooking);
+    app.put('/api/v1/user/bookings/:bookingId/refunds/:refundId/security-deposit-preference', [authJwt.verifyToken], auth.updateSecurityDepositPreferenceByRefundId);
 }

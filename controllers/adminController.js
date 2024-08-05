@@ -54,6 +54,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
+const UserDetails = require('../models/userRefundModel');
 
 
 
@@ -5310,17 +5311,55 @@ exports.getTransactionDetailsByUserId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        const transactions = await Transaction.find({ user: userId });
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Booking', 'Wallet', 'Qc', 'Referral', 'Transfer'] } });
 
-        let totalCredit = 0;
-        let totalDebit = 0;
+        let totalWalletCredit = 0;
+        let totalWalletDebit = 0;
+        let totalQcCredit = 0;
+        let totalQcDebit = 0;
+        let totalBookingCredit = 0;
+        let totalBookingDebit = 0;
+        let totalReferralCredit = 0;
+        let totalReferralDebit = 0;
+        let totalTransferCredit = 0;
+        let totalTransferDebit = 0;
 
         transactions.forEach(transaction => {
-            if (transaction.cr) {
-                totalCredit += transaction.amount;
-            }
-            if (transaction.dr) {
-                totalDebit += transaction.amount;
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) {
+                    totalWalletCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalWalletDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) {
+                    totalQcCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalQcDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Booking') {
+                if (transaction.cr) {
+                    totalBookingCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalBookingDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Referral') {
+                if (transaction.cr) {
+                    totalReferralCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalReferralDebit += transaction.amount;
+                }
+            } else if (transaction.type === 'Transfer') {
+                if (transaction.cr) {
+                    totalTransferCredit += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalTransferDebit += transaction.amount;
+                }
             }
         });
 
@@ -5328,8 +5367,16 @@ exports.getTransactionDetailsByUserId = async (req, res) => {
             status: 200,
             data: {
                 transactions: transactions,
-                totalCredit: totalCredit,
-                totalDebit: totalDebit
+                totalCredit: totalQcCredit,
+                totalDebit: totalQcDebit,
+                totalWalletCredit: totalWalletCredit,
+                totalWalletDebit: totalWalletDebit,
+                totalBookingCredit: totalBookingCredit,
+                totalBookingDebit: totalBookingDebit,
+                totalReferralCredit: totalReferralCredit,
+                totalReferralDebit: totalReferralDebit,
+                totalTransferCredit: totalTransferCredit,
+                totalTransferDebit: totalTransferDebit,
             }
         });
     } catch (error) {
@@ -5959,11 +6006,11 @@ exports.getOrderById = async (req, res) => {
 exports.updateOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { status } = req.body;
+        const { status, orderDeliveredDate } = req.body;
 
         const updatedOrder = await Order.findByIdAndUpdate(
             orderId,
-            { status },
+            { status, orderDeliveredDate },
             { new: true }
         ).populate('user').populate('items.accessory').populate('shippingAddress');
 
@@ -6318,5 +6365,130 @@ exports.exportsData = async (req, res) => {
     } catch (err) {
         console.error(err.message);
         return res.status(500).send("Server Error");
+    }
+};
+
+exports.updateRefundPaymentStatus = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+        const { refundStatus, refundTransactionId, refundRemarks } = req.body;
+
+        const updatedBooking = await Booking.findOne({ _id: bookingId });
+
+        if (!updatedBooking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const refundId = await Refund.findOne({ booking: bookingId });
+
+        if (!refundId) {
+            return res.status(404).json({ status: 404, message: 'RefundId not found', data: null });
+        }
+
+        const validStatusValues = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'];
+        if (!validStatusValues.includes(refundStatus)) {
+            return res.status(400).json({ error: "Invalid RefundStatus status value" });
+        }
+
+        refundId.refundStatus = refundStatus;
+        refundId.refundTransactionId = refundTransactionId;
+        refundId.refundTransactionDate = new Date;
+        refundId.refundRemarks = refundRemarks;
+
+        await refundId.save();
+
+        if (refundId.refundStatus === 'PENDING' || refundId.refundStatus === 'PROCESSING' || refundId.refundStatus === 'COMPLETED') {
+            if (refundId.type === 'WALLET' && refundId.refundStatus === 'COMPLETED') {
+                const user = await User.findById(updatedBooking.user);
+                if (!user) {
+                    return res.status(404).json({ status: 404, message: 'User not found', data: null });
+                }
+
+                user.wallet += refundId.totalRefundAmount;
+                await user.save();
+            }
+        }
+
+        if (refundId.refundStatus === "COMPLETED") {
+            const welcomeMessage = `Refund success.`;
+            const welcomeNotification = new Notification({
+                recipient: updatedBooking.user,
+                content: welcomeMessage,
+                type: 'welcome',
+            });
+            await welcomeNotification.save();
+
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Payment status updated successfully',
+            data: refundId,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while updating payment status',
+            data: null,
+        });
+    }
+};
+
+exports.getAllRefundData = async (req, res) => {
+    try {
+
+        const refund = await Refund.find().populate({ path: "booking", populate: { path: "user" } });
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        const response = {
+            status: 200,
+            message: 'Refund status and amount retrieved successfully',
+            data: refund,
+        };
+
+        return res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving refund status and amount',
+            data: null,
+        });
+    }
+};
+
+exports.getRefundStatusAndAmount = async (req, res) => {
+    try {
+        const bookingId = req.params.bookingId;
+
+        const booking = await Booking.findOne({ _id: bookingId });
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        const refund = await Refund.findOne({ booking: bookingId });
+
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        const response = {
+            status: 200,
+            message: 'Refund status and amount retrieved successfully',
+            data: refund,
+        };
+
+        return res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving refund status and amount',
+            data: null,
+        });
     }
 };

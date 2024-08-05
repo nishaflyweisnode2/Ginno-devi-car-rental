@@ -273,7 +273,9 @@ module.exports = (app) => {
     app.get('/api/v1/admin/inspections/byCarId/:carId', [authJwt.isAdmin], auth.getAllInspectionsByCarId);
     app.get('/api/v1/admin/inspections/:inspectionId', [authJwt.isAdmin], auth.getInspectionById);
     app.get('/api/v1/admin/exportUsers', [authJwt.isAdmin], auth.exportsData)
-
+    app.put('/api/v1/admin/bookings/updatePaymentStatus/:bookingId', [authJwt.isAdmin], auth.updateRefundPaymentStatus);
+    app.get('/api/v1/admin/booking/getAllRefundData', [authJwt.isAdmin], auth.getAllRefundData);
+    app.get('/api/v1/admin/booking/:bookingId/refund', [authJwt.isAdmin], auth.getRefundStatusAndAmount);
 
 
 
