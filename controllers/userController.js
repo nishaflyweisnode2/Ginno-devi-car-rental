@@ -905,34 +905,44 @@ exports.updateDocuments = async (req, res) => {
         const userId = req.user._id;
         const { uploadId, drivingLicense, bankDetails } = req.body;
 
-        const isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
-        const isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
-        const isDrivingLicenseUpload = !!(drivingLicense.frontImage && drivingLicense.backImage && drivingLicense.drivingLicenseNo);
-        const isUploadbankDetails = !!(bankDetails.bankName && bankDetails.accountNo && bankDetails.reAccountNumber && bankDetails.ifscCode && bankDetails.accountHolderName && bankDetails.cheque);
+        let isPanCardUpload = false, isAadharCardUpload = false, isDrivingLicenseUpload = false, isUploadbankDetails = false;
 
-        const updateFields = {
-            'uploadId.frontImage': uploadId.frontImage || null,
-            'uploadId.backImage': uploadId.backImage || null,
-            'uploadId.aadharCardNo': uploadId.aadharCardNo || null,
-            'uploadId.panNumber': uploadId.panNumber || null,
-            'uploadId.panImage': uploadId.panImage || null,
-            'uploadId.panName': uploadId.panName || null,
-            'uploadId.isPanCardUpload': isPanCardUpload,
-            'uploadId.isAadharCardUpload': isAadharCardUpload,
-            'drivingLicense.frontImage': drivingLicense.frontImage || null,
-            'drivingLicense.backImage': drivingLicense.backImage || null,
-            'drivingLicense.drivingLicenseNo': drivingLicense.drivingLicenseNo || null,
-            'drivingLicense.isDrivingLicenseUpload': isDrivingLicenseUpload,
-            'bankDetails.bankName': bankDetails.bankName || null,
-            'bankDetails.accountNo': bankDetails.accountNo || null,
-            'bankDetails.reAccountNumber': bankDetails.reAccountNumber || null,
-            'bankDetails.ifscCode': bankDetails.ifscCode || null,
-            'bankDetails.accountHolderName': bankDetails.accountHolderName || null,
-            'bankDetails.cheque': bankDetails.cheque || null,
-            'bankDetails.isUploadbankDetails': isUploadbankDetails,
+        const updateFields = {};
 
+        if (uploadId) {
+            isPanCardUpload = !!(uploadId.panNumber && uploadId.panImage && uploadId.panName);
+            isAadharCardUpload = !!(uploadId.aadharCardNo && uploadId.frontImage && uploadId.backImage);
 
-        };
+            updateFields['uploadId.frontImage'] = uploadId.frontImage || null;
+            updateFields['uploadId.backImage'] = uploadId.backImage || null;
+            updateFields['uploadId.aadharCardNo'] = uploadId.aadharCardNo || null;
+            updateFields['uploadId.panNumber'] = uploadId.panNumber || null;
+            updateFields['uploadId.panImage'] = uploadId.panImage || null;
+            updateFields['uploadId.panName'] = uploadId.panName || null;
+            updateFields['uploadId.isPanCardUpload'] = isPanCardUpload;
+            updateFields['uploadId.isAadharCardUpload'] = isAadharCardUpload;
+        }
+
+        if (drivingLicense) {
+            isDrivingLicenseUpload = !!(drivingLicense.frontImage && drivingLicense.backImage && drivingLicense.drivingLicenseNo);
+
+            updateFields['drivingLicense.frontImage'] = drivingLicense.frontImage || null;
+            updateFields['drivingLicense.backImage'] = drivingLicense.backImage || null;
+            updateFields['drivingLicense.drivingLicenseNo'] = drivingLicense.drivingLicenseNo || null;
+            updateFields['drivingLicense.isDrivingLicenseUpload'] = isDrivingLicenseUpload;
+        }
+
+        if (bankDetails) {
+            isUploadbankDetails = !!(bankDetails.bankName && bankDetails.accountNo && bankDetails.reAccountNumber && bankDetails.ifscCode && bankDetails.accountHolderName && bankDetails.cheque);
+
+            updateFields['bankDetails.bankName'] = bankDetails.bankName || null;
+            updateFields['bankDetails.accountNo'] = bankDetails.accountNo || null;
+            updateFields['bankDetails.reAccountNumber'] = bankDetails.reAccountNumber || null;
+            updateFields['bankDetails.ifscCode'] = bankDetails.ifscCode || null;
+            updateFields['bankDetails.accountHolderName'] = bankDetails.accountHolderName || null;
+            updateFields['bankDetails.cheque'] = bankDetails.cheque || null;
+            updateFields['bankDetails.isUploadbankDetails'] = isUploadbankDetails;
+        }
 
         const updatedUser = await User.findOneAndUpdate(
             { _id: userId },
