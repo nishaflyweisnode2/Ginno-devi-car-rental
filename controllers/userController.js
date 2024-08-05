@@ -2989,7 +2989,7 @@ exports.cancelBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
         }
-
+ 
         const findCancelReason = await CancelReason.findById(cancelReason);
         if (!findCancelReason) {
             return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });
