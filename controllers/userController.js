@@ -3458,8 +3458,8 @@ exports.getAllCarFeaturesByCarId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'No cars found for the user' });
         }
 
-        const carIds = userCars.map(car => car._id);
-        const carFeatures = await CarFeatures.find({ car: { $in: carIds } }).populate('car');
+        // const carIds = userCars.map(car => car._id);
+        const carFeatures = await CarFeatures.findOne({ car: carId }).populate('car');
 
         return res.status(200).json({ status: 200, data: carFeatures });
     } catch (error) {
