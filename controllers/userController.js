@@ -4106,9 +4106,9 @@ exports.getDirectReferrals = async (req, res) => {
 
 exports.getAllPrices = async (req, res) => {
     try {
-        const prices = await DoorstepDeliveryPrice.find();
+        const prices = await DoorstepDeliveryPrice.find().populate('category');
 
-        return res.status(200).json({ status: 200, data: prices }).populate('category');
+        return res.status(200).json({ status: 200, data: prices });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
@@ -4146,9 +4146,9 @@ exports.getPriceById = async (req, res) => {
 
 exports.getAllDriverPrice = async (req, res) => {
     try {
-        const prices = await DriverPrice.find();
+        const prices = await DriverPrice.find().populate('category');
 
-        return res.status(200).json({ status: 200, data: prices }).populate('category');
+        return res.status(200).json({ status: 200, data: prices });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
