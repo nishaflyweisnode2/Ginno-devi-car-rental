@@ -3878,8 +3878,14 @@ exports.updateReferralLevelById = async (req, res) => {
         const referralLevelId = req.params.referralLevelId;
         const updateData = req.body;
 
-        if (updateData.referralBonus) {
-            const checkReferralBonus = await ReferralBonus.findById(referralBonus);
+        const referralLevel = await ReferralLevel.findById(referralLevelId);
+
+        if (!referralLevel) {
+            return res.status(404).json({ status: 404, message: 'Referral level not found' });
+        }
+
+        if (referralLevel.referralBonus) {
+            const checkReferralBonus = await ReferralBonus.findById(referralLevel.referralBonus);
             if (!checkReferralBonus) {
                 return res.status(404).json({ status: 404, message: 'Referral bonus configuration not found' });
             }
