@@ -1864,12 +1864,12 @@ exports.checkSharingCarAvailability = async (req, res) => {
             availableFrom: date,
             noOfPassenger: { $gte: seat }
         })
-        .populate('mainCategory')
-        .populate('owner')
-        .populate('car')
-        .populate('pickupLocation')
-        .populate('dropOffLocation')
-        .lean();
+            .populate('mainCategory')
+            .populate('owner')
+            .populate('car')
+            .populate('pickupLocation')
+            .populate('dropOffLocation')
+            .lean();
 
         if (sharedCars.length === 0) {
             return res.status(404).json({
@@ -2352,6 +2352,7 @@ exports.createBookingForSharingCar = async (req, res) => {
             user: user._id,
             car: carId,
             mainCategory,
+            shareCarId: adminCarPrice._id,
             'pickupCoordinates.type': 'Point',
             'pickupCoordinates.coordinates': leavingFrom,
             'dropCoordinates.type': 'Point',
@@ -2364,6 +2365,12 @@ exports.createBookingForSharingCar = async (req, res) => {
         });
 
         await newBooking.save();
+
+        await SharedCar.findByIdAndUpdate(
+            adminCarPrice._id,
+            { $push: { booking: newBooking._id } },
+            { new: true, useFindAndModify: false }
+        );
 
         const welcomeMessage = `Welcome, ${user.fullName}! Thank you for Booking, your Booking details ${newBooking}.`;
         const welcomeNotification = new Notification({
@@ -2387,6 +2394,21 @@ exports.createBookingForSharingCar = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'An error occurred while creating the booking', error: error.message });
+    }
+};
+
+exports.getSharedCarById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sharedCar = await SharedCar.findById(id).populate('mainCategory car owner location pickupLocation dropOffLocation booking')
+        .populate({ path: 'booking', populate: { path: 'user' } });
+        if (!sharedCar) {
+            return res.status(404).json({ status: 404, message: 'Shared car not found' });
+        }
+        return res.status(200).json({ status: 200, data: sharedCar });
+    } catch (error) {
+        console.error('Error fetching shared car:', error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
     }
 };
 
@@ -3048,7 +3070,7 @@ exports.cancelBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
         }
- 
+
         const findCancelReason = await CancelReason.findById(cancelReason);
         if (!findCancelReason) {
             return res.status(404).json({ status: 404, message: 'Cancel reason not found', data: null });

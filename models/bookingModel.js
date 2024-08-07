@@ -58,6 +58,10 @@ const bookingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',
         },
+        shareCarId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'SharedCar',
+        },
         pickupDate: {
             type: Date,
         },

@@ -79,6 +79,10 @@ const sharedCarSchema = new mongoose.Schema({
         type: String,
         enum: ['Rental', 'Sharing', 'Subscription', 'GovernmentTendor', 'BikeRental', 'TractorRental']
     },
+    booking: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+    }],
 
 }, { timestamps: true });
 
