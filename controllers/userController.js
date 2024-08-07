@@ -1755,51 +1755,6 @@ exports.checkSharingCarAvailability1 = async (req, res) => {
             type: "Point",
             coordinates: goingTo.split(',').map(parseFloat)
         };
-
-        const sharedCars = await SharedCar.find({
-            type: "Sharing",
-            pickupCoordinates: leavingFromCoordinates,
-            dropCoordinates: goingToCoordinates,
-            availableFrom: date,
-            noOfPassenger: { $gte: seat }
-        });
-
-        if (sharedCars.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                message: 'No shared cars found for the specified route and date.',
-            });
-        }
-
-        const carIds = sharedCars.map(car => car.car);
-
-        const cars = await Car.find({ _id: { $in: carIds } });
-
-        const combinedData = sharedCars.map(sharedCar => {
-            const carDetails = cars.find(car => car._id.toString() === sharedCar.car.toString());
-            return { ...sharedCar.toObject(), carDetails };
-        });
-
-        return res.status(200).json({ status: 200, data: combinedData });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
-    }
-};
-
-exports.checkSharingCarAvailability = async (req, res) => {
-    try {
-        const { leavingFrom, goingTo, date, seat } = req.query;
-
-        const leavingFromCoordinates = {
-            type: "Point",
-            coordinates: leavingFrom.split(',').map(parseFloat)
-        };
-
-        const goingToCoordinates = {
-            type: "Point",
-            coordinates: goingTo.split(',').map(parseFloat)
-        };
         console.log("date", date);
         const sharedCars = await SharedCar.find({
             type: "Sharing",
@@ -1838,7 +1793,7 @@ exports.checkSharingCarAvailability = async (req, res) => {
                     ],
                 },
             ],
-        });
+        }).populate('mainCategory owner car pickupLocation dropOffLocation');
         const bookedCarIds = bookedCars.map(booking => booking.car);
 
         const availableCarIds = carIds.filter(carId => !bookedCarIds.includes(carId));
@@ -1863,7 +1818,7 @@ exports.checkSharingCarAvailability = async (req, res) => {
 
         for (const sharedCar of sharedCars) {
             const carDetails = availableCars.find(car => car._id.toString() === sharedCar.car.toString());
-            const adminCarPrice = await AdminCarPrice.findOne({ car: sharedCar.car, mainCategory: sharedCar.mainCategory });
+            const adminCarPrice = await AdminCarPrice.findOne({ car: sharedCar.car, mainCategory: sharedCar.mainCategory }).populate('mainCategory  car');
             console.log("****", adminCarPrice);
 
             let rentalPrice;
@@ -1877,6 +1832,110 @@ exports.checkSharingCarAvailability = async (req, res) => {
             console.log("****", rentalPrice);
             const carData = { ...sharedCar.toObject(), carDetails, rentalPrice };
             combinedData.push(carData);
+        }
+
+        return res.status(200).json({ status: 200, data: combinedData });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'An error occurred while checking car availability.' });
+    }
+};
+
+exports.checkSharingCarAvailability = async (req, res) => {
+    try {
+        const { leavingFrom, goingTo, date, seat } = req.query;
+
+        const leavingFromCoordinates = {
+            type: "Point",
+            coordinates: leavingFrom.split(',').map(parseFloat)
+        };
+
+        const goingToCoordinates = {
+            type: "Point",
+            coordinates: goingTo.split(',').map(parseFloat)
+        };
+
+        console.log("date", date);
+
+        const sharedCars = await SharedCar.find({
+            type: "Sharing",
+            pickupCoordinates: leavingFromCoordinates,
+            dropCoordinates: goingToCoordinates,
+            availableFrom: date,
+            noOfPassenger: { $gte: seat }
+        })
+        .populate('mainCategory')
+        .populate('owner')
+        .populate('car')
+        .populate('pickupLocation')
+        .populate('dropOffLocation')
+        .lean();
+
+        if (sharedCars.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No shared cars found for the specified route and date.',
+            });
+        }
+
+        const carIds = sharedCars.map(car => car.car._id);
+
+        const bookedCars = await Booking.find({
+            $and: [
+                {
+                    $or: [
+                        { pickupDate: date },
+                    ],
+                },
+                {
+                    $or: [
+                        { dropOffDate: date },
+                    ],
+                },
+                {
+                    $or: [
+                        { status: 'PENDING', isTripCompleted: false },
+                        { isSubscription: false },
+                        { isTimeExtended: true, timeExtendedDropOffTime: { $gte: date, $lte: date } },
+                    ],
+                },
+            ],
+        }).populate('mainCategory owner car pickupLocation dropOffLocation').lean();
+
+        const bookedCarIds = bookedCars.map(booking => booking.car._id.toString());
+
+        const availableCarIds = carIds.filter(carId => !bookedCarIds.includes(carId.toString()));
+
+        const availableCars = await Car.find(
+            {
+                _id: { $in: availableCarIds },
+                isSharing: true
+            }
+        ).populate('owner brand model bodyType city pickup drop adminCarPrice').lean();
+
+        if (availableCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No shared cars found.', });
+        }
+
+        const combinedData = [];
+
+        for (const sharedCar of sharedCars) {
+            const carDetails = availableCars.find(car => car._id.toString() === sharedCar.car._id.toString());
+            if (carDetails) {
+                const adminCarPrice = await AdminCarPrice.findOne({ car: sharedCar.car._id, mainCategory: sharedCar.mainCategory._id }).populate('mainCategory car').lean();
+
+                let rentalPrice;
+                if (adminCarPrice) {
+                    if (adminCarPrice.autoPricing) {
+                        rentalPrice = adminCarPrice.adminHourlyRate;
+                    } else {
+                        rentalPrice = adminCarPrice.hostHourlyRate;
+                    }
+                }
+
+                const carData = { ...sharedCar, carDetails, rentalPrice };
+                combinedData.push(carData);
+            }
         }
 
         return res.status(200).json({ status: 200, data: combinedData });
