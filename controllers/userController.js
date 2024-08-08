@@ -1869,6 +1869,8 @@ exports.checkSharingCarAvailability = async (req, res) => {
             .populate('car')
             .populate('pickupLocation')
             .populate('dropOffLocation')
+            .populate('booking')
+            .populate({ path: 'booking', populate: { path: 'user' } })
             .lean();
 
         if (sharedCars.length === 0) {
@@ -1900,7 +1902,7 @@ exports.checkSharingCarAvailability = async (req, res) => {
                     ],
                 },
             ],
-        }).populate('mainCategory owner car pickupLocation dropOffLocation').lean();
+        }).populate('mainCategory owner car pickupLocation dropOffLocation booking').lean();
 
         const bookedCarIds = bookedCars.map(booking => booking.car._id.toString());
 
