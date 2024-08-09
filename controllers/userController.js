@@ -1867,6 +1867,7 @@ exports.checkSharingCarAvailability = async (req, res) => {
             .populate('mainCategory')
             .populate('owner')
             .populate('car')
+            .populate({ path: 'car', populate: [{ path: 'brand' }, { path: 'bodyType' }, { path: 'city' }, { path: 'pickup' }, { path: 'drop' }, { path: 'adminCarPrice' }] })
             .populate('pickupLocation')
             .populate('dropOffLocation')
             .populate('booking')
@@ -2403,7 +2404,7 @@ exports.getSharedCarById = async (req, res) => {
     try {
         const { id } = req.params;
         const sharedCar = await SharedCar.findById(id).populate('mainCategory car owner location pickupLocation dropOffLocation booking')
-        .populate({ path: 'booking', populate: { path: 'user' } });
+            .populate({ path: 'booking', populate: { path: 'user' } });
         if (!sharedCar) {
             return res.status(404).json({ status: 404, message: 'Shared car not found' });
         }
