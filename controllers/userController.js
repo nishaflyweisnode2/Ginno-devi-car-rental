@@ -4243,7 +4243,7 @@ exports.getDriverPriceByCategoryId = async (req, res) => {
     try {
         const category = req.params.id;
 
-        const price = await DriverPrice.find({ category }).populate('category');
+        const price = await DriverPrice.findOne({ category }).populate('category');
 
         if (!price) {
             return res.status(404).json({ status: 404, message: 'Price not found' });
