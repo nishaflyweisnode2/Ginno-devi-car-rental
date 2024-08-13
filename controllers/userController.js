@@ -4202,7 +4202,7 @@ exports.getAllPrices = async (req, res) => {
 exports.getAllPricesByCategoryId = async (req, res) => {
     try {
         const category = req.params.id;
-        const prices = await DoorstepDeliveryPrice.find({ category }).populate('category');
+        const prices = await DoorstepDeliveryPrice.findOne({ category }).populate('category');
 
         return res.status(200).json({ status: 200, data: prices });
     } catch (error) {
