@@ -41,7 +41,7 @@ const refundSchema = new mongoose.Schema(
         },
         refundType: {
             type: String,
-            enum: ['SECURITY-DEPOSITE', 'CANCELLATION', 'PENDING'],
+            enum: ['SECURITY-DEPOSITE', 'CANCELLATION', 'PENDING', 'WITHDRAW'],
             default: 'PENDING',
         },
         refundStatus: {

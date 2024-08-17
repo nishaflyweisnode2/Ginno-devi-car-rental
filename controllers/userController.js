@@ -5049,6 +5049,139 @@ exports.removeMoney = async (req, res) => {
     }
 };
 
+exports.addWithdrawMoney = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+        const { refundPreference, upiId, accountNo, branchName, ifscCode, amount } = req.body;
+
+
+        const newRefund = new Refund({
+            user: userId,
+            refundAmount: amount,
+            totalRefundAmount: amount || 0,
+            type: refundPreference,
+            refundStatus: 'PENDING',
+            refundDetails: refundPreference,
+            upiId: upiId || null,
+            accountNo: accountNo || null,
+            branchName: branchName || null,
+            ifscCode: ifscCode || null,
+            refundTransactionId: '',
+            refundType: "WITHDRAW",
+
+        });
+
+        const savedRefund = await newRefund.save();
+
+        const welcomeMessage = `Withdraw initiated.`;
+        const welcomeNotification = new Notification({
+            recipient: userId,
+            content: welcomeMessage,
+            title: 'Withdraw Amount',
+        });
+        await welcomeNotification.save();
+
+        return res.status(200).json({ status: 200, message: 'Withdraw Amount added successfully', data: savedRefund });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateWithdrawMoneyId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const { refundId } = req.params;
+        console.log(refundId);
+        const { refundPreference, upiId, accountNo, branchName, ifscCode } = req.body;
+
+        let refund;
+        if (refundId) {
+            refund = await Refund.findOne({ _id: refundId });
+            console.log("refund", refund);
+            console.log("refundId", refundId);
+            if (!refund) {
+                return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+            }
+        } else {
+            return res.status(400).json({ status: 400, message: 'Invalid parameters', data: null });
+        }
+
+        console.log(refund);
+        if (refund) {
+            refund.type = refundPreference;
+            refund.refundStatus = 'PROCESSING';
+            refund.refundDetails = refundPreference;
+            refund.upiId = upiId || null;
+            refund.accountNo = accountNo || null;
+            refund.branchName = branchName || null;
+            refund.ifscCode = ifscCode || null;
+            refund.refundTransactionId = '';
+            refund.refundType = "WITHDRAW",
+                await refund.save();
+        }
+        return res.status(200).json({ status: 200, message: 'Withdraw Amount updated successfully', data: refund });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getRefundStatusAndAmount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const refund = await Refund.find({ user: userId, refundType: "WITHDRAW", }).sort({ createdAt: -1 });
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        const response = { status: 200, message: 'Refund status and amount retrieved successfully', data: refund, };
+
+        return res.status(200).json({ status: 200, data: response });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
+    }
+};
+
+exports.getRefundStatusAndAmountById = async (req, res) => {
+    try {
+        const { refundId } = req.params;
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const refund = await Refund.findById({ _id: refundId })
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        const response = { status: 200, message: 'Refund status and amount retrieved successfully', data: refund, };
+
+        return res.status(200).json({ status: 200, data: response });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
+    }
+};
+
 exports.transferMoneySendOtp = async (req, res) => {
     try {
         const { recipientId, fullName, amount } = req.body;

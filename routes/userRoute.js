@@ -152,6 +152,10 @@ module.exports = (app) => {
     app.delete('/api/v1/user/order/:orderId', [authJwt.verifyToken], auth.deleteOrder);
     app.post('/api/v1/user/wallet/addWallet', [authJwt.verifyToken], auth.addMoney);
     app.post('/api/v1/user/wallet/removeWallet', [authJwt.verifyToken], auth.removeMoney);
+    app.post('/api/v1/user/withdraw/add', [authJwt.verifyToken], auth.addWithdrawMoney);
+    app.put('/api/v1/user/withdraw/refunds/:refundId', [authJwt.verifyToken], auth.updateWithdrawMoneyId);
+    app.get('/api/v1/user/withdraw/refund', [authJwt.verifyToken], auth.getRefundStatusAndAmount);
+    app.get('/api/v1/user/withdraw/refund/:refundId', [authJwt.verifyToken], auth.getRefundStatusAndAmountById);
     app.post('/api/v1/user/wallet/transfer/send-otp', [authJwt.verifyToken], auth.transferMoneySendOtp);
     app.post('/api/v1/user/wallet/transfer/resend-otp', [authJwt.verifyToken], auth.transferMoneyReSendOtp);
     app.post('/api/v1/user/wallet/transfer', [authJwt.verifyToken], auth.transferMoney);
