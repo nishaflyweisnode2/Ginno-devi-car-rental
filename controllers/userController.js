@@ -5150,9 +5150,7 @@ exports.getRefundStatusAndAmount = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
         }
 
-        const response = { status: 200, message: 'Refund status and amount retrieved successfully', data: refund, };
-
-        return res.status(200).json({ status: 200, data: response });
+        return res.status(200).json({ status: 200, message: 'Refund status and amount retrieved successfully', data: refund });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
@@ -5173,9 +5171,7 @@ exports.getRefundStatusAndAmountById = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
         }
 
-        const response = { status: 200, message: 'Refund status and amount retrieved successfully', data: refund, };
-
-        return res.status(200).json({ status: 200, data: response });
+        return res.status(200).json({ status: 200, message: 'Refund status and amount retrieved successfully', data: refund });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
