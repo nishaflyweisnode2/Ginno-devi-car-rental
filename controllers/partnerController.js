@@ -4777,3 +4777,452 @@ exports.deleteOrder = async (req, res) => {
         });
     }
 };
+
+exports.addMoney = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isWalletRecharge === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to recharge', data: null });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            { _id: req.user._id },
+            { $inc: { wallet: parseInt(req.body.balance) } },
+            { new: true }
+        );
+        if (updatedUser) {
+            const transactionData = {
+                user: req.user._id,
+                date: Date.now(),
+                amount: req.body.balance,
+                type: "Wallet",
+                cr: true,
+                details: "Money has been added from your wallet."
+
+            };
+            const createdTransaction = await Transaction.create(transactionData);
+            const welcomeMessage = `Welcome, ${updatedUser.fullName}! Thank you for adding money to your wallet.`;
+            const welcomeNotification = new Notification({
+                userId: updatedUser._id,
+                title: "Notification",
+                body: welcomeMessage,
+            });
+            await welcomeNotification.save();
+            return res.status(200).json({
+                status: 200,
+                message: "Money has been added.",
+                data: updatedUser,
+            });
+        } else {
+            return res.status(404).json({
+                status: 404,
+                message: "No data found",
+                data: {},
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: "Server error.",
+            data: {},
+        });
+    }
+};
+
+exports.removeMoney = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isWalletWithdraw === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to withdraw', data: null });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate({ _id: req.user._id }, { $inc: { wallet: -parseInt(req.body.balance) } }, { new: true });
+        if (updatedUser) {
+            const transactionData = {
+                user: req.user._id,
+                date: Date.now(),
+                amount: req.body.balance,
+                type: "Wallet",
+                dr: true,
+                details: "Money has been deducted from your wallet."
+            };
+            const createdTransaction = await Transaction.create(transactionData);
+            const welcomeMessage = `Welcome, ${updatedUser.fullName}! Money has been deducted from your wallet.`;
+            const welcomeNotification = new Notification({
+                userId: updatedUser._id,
+                title: "Notification",
+                body: welcomeMessage,
+            });
+            await welcomeNotification.save();
+            return res.status(200).json({
+                status: 200,
+                message: "Money has been deducted.",
+                data: updatedUser,
+            });
+        } else {
+            return res.status(404).json({
+                status: 404,
+                message: "No data found",
+                data: {},
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: "Server error.",
+            data: {},
+        });
+    }
+};
+
+exports.addWithdrawMoney = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+        const { refundPreference, upiId, accountNo, branchName, ifscCode, amount } = req.body;
+
+
+        const newRefund = new Refund({
+            user: userId,
+            refundAmount: amount,
+            totalRefundAmount: amount || 0,
+            type: refundPreference,
+            refundStatus: 'PENDING',
+            refundDetails: refundPreference,
+            upiId: upiId || null,
+            accountNo: accountNo || null,
+            branchName: branchName || null,
+            ifscCode: ifscCode || null,
+            refundTransactionId: '',
+            refundType: "WITHDRAW",
+
+        });
+
+        const savedRefund = await newRefund.save();
+
+        const welcomeMessage = `Withdraw initiated.`;
+        const welcomeNotification = new Notification({
+            recipient: userId,
+            content: welcomeMessage,
+            title: 'Withdraw Amount',
+        });
+        await welcomeNotification.save();
+
+        return res.status(200).json({ status: 200, message: 'Withdraw Amount added successfully', data: savedRefund });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateWithdrawMoneyId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const { refundId } = req.params;
+        console.log(refundId);
+        const { refundPreference, upiId, accountNo, branchName, ifscCode } = req.body;
+
+        let refund;
+        if (refundId) {
+            refund = await Refund.findOne({ _id: refundId });
+            console.log("refund", refund);
+            console.log("refundId", refundId);
+            if (!refund) {
+                return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+            }
+        } else {
+            return res.status(400).json({ status: 400, message: 'Invalid parameters', data: null });
+        }
+
+        console.log(refund);
+        if (refund) {
+            refund.type = refundPreference;
+            refund.refundStatus = 'PROCESSING';
+            refund.refundDetails = refundPreference;
+            refund.upiId = upiId || null;
+            refund.accountNo = accountNo || null;
+            refund.branchName = branchName || null;
+            refund.ifscCode = ifscCode || null;
+            refund.refundTransactionId = '';
+            refund.refundType = "WITHDRAW",
+                await refund.save();
+        }
+        return res.status(200).json({ status: 200, message: 'Withdraw Amount updated successfully', data: refund });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.getRefundStatusAndAmount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const refund = await Refund.find({ user: userId, refundType: "WITHDRAW", }).sort({ createdAt: -1 });
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Refund status and amount retrieved successfully', data: refund });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
+    }
+};
+
+exports.getRefundStatusAndAmountById = async (req, res) => {
+    try {
+        const { refundId } = req.params;
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const refund = await Refund.findById({ _id: refundId })
+        if (!refund) {
+            return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Refund status and amount retrieved successfully', data: refund });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving refund status and amount', data: null, });
+    }
+};
+
+exports.transferMoneySendOtp = async (req, res) => {
+    try {
+        const { recipientId, fullName, amount } = req.body;
+        const senderId = req.user._id;
+
+        const sender = await User.findById(senderId);
+        const recipient = await User.findById(recipientId);
+
+        if (!sender || !recipient) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (sender.isWalletTransfer === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to Transfer money', data: null });
+        }
+
+        const transferAmount = parseInt(amount);
+
+        if (sender.wallet < transferAmount) {
+            return res.status(400).json({ status: 400, message: 'Insufficient balance', data: null });
+        }
+
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
+
+        sender.otp = otp
+
+        await sender.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred otp',
+            data: sender.otp
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
+        });
+    }
+};
+
+exports.transferMoneyReSendOtp = async (req, res) => {
+    try {
+        const senderId = req.user._id;
+
+        const sender = await User.findById(senderId);
+
+        if (!sender) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+        const otpExpiration = new Date(Date.now() + 60 * 1000);
+
+        sender.otp = otp
+
+        await sender.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred resend otp',
+            data: sender.otp
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
+        });
+    }
+};
+
+exports.transferMoney = async (req, res) => {
+    try {
+        const { recipientId, fullName, amount, otp } = req.body;
+        const senderId = req.user._id;
+
+
+        const sender = await User.findById(senderId);
+        const recipient = await User.findById(recipientId);
+
+        if (!sender || !recipient) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (sender.isWalletTransfer === false) {
+            return res.status(404).json({ status: 404, message: 'You have no access to Transfer money', data: null });
+        }
+
+        if (sender.otp !== otp) {
+            console.log("Invalid or expired OTP");
+            return res.status(400).json({ status: 400, message: "Invalid or expired OTP" });
+        }
+
+        const transferAmount = parseInt(amount);
+
+        if (sender.wallet < transferAmount) {
+            return res.status(400).json({ status: 400, message: 'Insufficient balance', data: null });
+        }
+
+        sender.wallet -= transferAmount;
+        recipient.wallet += transferAmount;
+
+        await sender.save();
+        await recipient.save();
+
+        const senderTransactionData = {
+            user: senderId,
+            date: Date.now(),
+            amount: transferAmount,
+            type: "Transfer",
+            cr: false,
+            dr: true,
+            details: `Transferred to ${recipient.fullName}`
+        };
+        const recipientTransactionData = {
+            user: recipientId,
+            date: Date.now(),
+            amount: transferAmount,
+            type: "Transfer",
+            dr: false,
+            cr: true,
+            details: `Received from ${sender.fullName}`
+        };
+
+        await Transaction.create(senderTransactionData);
+        await Transaction.create(recipientTransactionData);
+
+        const senderNotification = new Notification({
+            userId: senderId,
+            title: "Transfer Successful",
+            body: `You have successfully transferred ${amount} to ${recipient.fullName}.`
+        });
+        const recipientNotification = new Notification({
+            userId: recipientId,
+            title: "Money Received",
+            body: `You have received ${amount} from ${sender.fullName}.`
+        });
+
+        await senderNotification.save();
+        await recipientNotification.save();
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Money transferred successfully',
+            data: { sender, recipient }
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Server error.',
+            data: {}
+        });
+    }
+};
+
+exports.getWallet = async (req, res) => {
+    try {
+        const data = await User.findOne({ _id: req.user._id, });
+        if (data) {
+            return res.status(200).json({ status: 200, message: "get wallet", data: data.wallet });
+        } else {
+            return res.status(404).json({ status: 404, message: "No data found", data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+    }
+};
+
+exports.allTransactionUser = async (req, res) => {
+    try {
+        const data = await Transaction.find({ user: req.user._id }).populate("user");
+        return res.status(200).json({ status: 200, data: data });
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
+    }
+};
+
+exports.allTransactionByType = async (req, res) => {
+    try {
+        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user");
+        return res.status(200).json({ status: 200, data: data });
+    } catch (err) {
+        return res.status(400).json({ status: 500, message: err.message });
+    }
+};
+
+exports.allcreditTransactionUser = async (req, res) => {
+    try {
+        const data = await Transaction.find({ user: req.user._id, type: "Wallet", cr: true });
+        return res.status(200).json({ status: 200, data: data });
+    } catch (err) {
+        return res.status.status(400).json({ message: err.message });
+    }
+};
+
+exports.allDebitTransactionUser = async (req, res) => {
+    try {
+        const data = await Transaction.find({ user: req.user._id, type: "Wallet", dr: true });
+        return res.status(200).json({ status: 200, data: data });
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
+    }
+};

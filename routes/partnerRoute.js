@@ -148,17 +148,31 @@ module.exports = (app) => {
     app.get('/api/v1/partner/cars/getall/gps', [authJwt.isPartner], auth.getAllCarGPSLocations);
     app.get('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.getGPSDataForCar);
     app.delete('/api/v1/partner/cars/:carId/gps', [authJwt.isPartner], auth.deleteGPSDataForCar);
-    app.put('/api/v1/partner/switchRole/:roleId', [authJwt.verifyToken], auth.switchRole)
-    app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
-    app.get('/api/v1/partner/accessories/categories', [authJwt.verifyToken], auth.getAllAccessoryCategories);
-    app.get('/api/v1/partner/accessories/categories/:categoryId', [authJwt.verifyToken], auth.getAccessoryCategoryById);
-    app.get('/api/v1/partner/accessories', [authJwt.verifyToken], auth.getAllAccessories);
-    app.get('/api/v1/partner/accessories/:accessoryId', [authJwt.verifyToken], auth.getAccessoryById);
-    app.get('/api/v1/partner/accessories/category/:categoryId', [authJwt.verifyToken], auth.getAllAccessoriesByCategoryId);
-    app.post('/api/v1/partner/accessories/order', [authJwt.verifyToken], auth.createOrder);
-    app.get('/api/v1/partner/order', [authJwt.verifyToken], auth.getAllOrders);
-    app.get('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.getOrderById);
-    app.put('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
-    app.delete('/api/v1/partner/order/:orderId', [authJwt.verifyToken], auth.deleteOrder);
+    app.put('/api/v1/partner/switchRole/:roleId', [authJwt.isPartner], auth.switchRole)
+    app.get('/api/v1/partner/currentRole', [authJwt.isPartner], auth.getCurrentRole)
+    app.get('/api/v1/partner/accessories/categories', [authJwt.isPartner], auth.getAllAccessoryCategories);
+    app.get('/api/v1/partner/accessories/categories/:categoryId', [authJwt.isPartner], auth.getAccessoryCategoryById);
+    app.get('/api/v1/partner/accessories', [authJwt.isPartner], auth.getAllAccessories);
+    app.get('/api/v1/partner/accessories/:accessoryId', [authJwt.isPartner], auth.getAccessoryById);
+    app.get('/api/v1/partner/accessories/category/:categoryId', [authJwt.isPartner], auth.getAllAccessoriesByCategoryId);
+    app.post('/api/v1/partner/accessories/order', [authJwt.isPartner], auth.createOrder);
+    app.get('/api/v1/partner/order', [authJwt.isPartner], auth.getAllOrders);
+    app.get('/api/v1/partner/order/:orderId', [authJwt.isPartner], auth.getOrderById);
+    app.put('/api/v1/partner/order/:orderId', [authJwt.isPartner], auth.updateOrder);
+    app.delete('/api/v1/partner/order/:orderId', [authJwt.isPartner], auth.deleteOrder);
+    app.post('/api/v1/partner/wallet/addWallet', [authJwt.isPartner], auth.addMoney);
+    app.post('/api/v1/partner/wallet/removeWallet', [authJwt.isPartner], auth.removeMoney);
+    app.post('/api/v1/partner/withdraw/add', [authJwt.isPartner], auth.addWithdrawMoney);
+    app.put('/api/v1/partner/withdraw/refunds/:refundId', [authJwt.isPartner], auth.updateWithdrawMoneyId);
+    app.get('/api/v1/partner/withdraw/refund', [authJwt.isPartner], auth.getRefundStatusAndAmount);
+    app.get('/api/v1/partner/withdraw/refund/:refundId', [authJwt.isPartner], auth.getRefundStatusAndAmountById);
+    app.post('/api/v1/partner/wallet/transfer/send-otp', [authJwt.isPartner], auth.transferMoneySendOtp);
+    app.post('/api/v1/partner/wallet/transfer/resend-otp', [authJwt.isPartner], auth.transferMoneyReSendOtp);
+    app.post('/api/v1/partner/wallet/transfer', [authJwt.isPartner], auth.transferMoney);
+    app.get('/api/v1/partner/wallet/getwallet', [authJwt.isPartner], auth.getWallet);
+    app.get("/api/v1/partner/allTransactionUser", [authJwt.isPartner], auth.allTransactionUser);
+    app.get("/api/v1/partner/allTransactionUser/byType/:type", [authJwt.isPartner], auth.allTransactionByType);
+    app.get("/api/v1/partner/allcreditTransactionUser", [authJwt.isPartner], auth.allcreditTransactionUser);
+    app.get("/api/v1/partner/allDebitTransactionUser", [authJwt.isPartner], auth.allDebitTransactionUser);
     
 }
