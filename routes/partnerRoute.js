@@ -128,6 +128,11 @@ module.exports = (app) => {
     app.get('/api/v1/partner/transactions/user', [authJwt.isPartner], auth.getTransactionDetailsByUserId);
     app.get('/api/v1/partner/income/user', [authJwt.isPartner], auth.getIncomeDetailsByUserId);
     app.get('/api/v1/partner/referral-bonus', [authJwt.isPartner], auth.getAllReferralBonuses);
+    app.get('/api/v1/partner/direct-referrals', [authJwt.isPartner], auth.getDirectReferralUsers);
+    app.get('/api/v1/partner/all-referrals', [authJwt.isPartner], auth.getReferralDetails);
+    app.get('/api/v1/partner/level-wise-income', [authJwt.isPartner], auth.getReferralIncome);
+    app.get('/api/v1/partner/royalty/level-wise-income', [authJwt.isPartner], auth.getRoyaltyReferralIncome);
+    app.get('/api/v1/partner/team-business-report', [authJwt.isPartner], auth.getMyTeamBussinessIncome);
     app.post('/api/v1/partner/user/review', [authJwt.isPartner], auth.createUserReview);
     app.get('/api/v1/partner/user/review/:hostId', [authJwt.isPartner], auth.getUserReviewById);
     app.post('/api/v1/partner/govt-tendor/add', [authJwt.isPartner], auth.createTenderApplication);
