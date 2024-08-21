@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, carDocumentImage, kpUpload, addressPrrof, carImage, attachement } = require('../middlewares/imageUpload');
+const { profileImage, carDocumentImage, kpUpload, addressPrrof, carImage, attachement, cheque } = require('../middlewares/imageUpload');
 
 
 
@@ -179,5 +179,7 @@ module.exports = (app) => {
     app.get('/api/v1/partner/refund/:id', [authJwt.isPartner], auth.getUserDetailsById);
     app.put('/api/v1/partner/refund/:id', [authJwt.isPartner], auth.updateUserDetails);
     app.delete('/api/v1/partner/refund', [authJwt.isPartner], auth.deleteUserDetails);
+    app.put('/api/v1/partner/updateBankDetails', [authJwt.isPartner], cheque.single('image'), auth.updateBankDetails);
+
 
 }

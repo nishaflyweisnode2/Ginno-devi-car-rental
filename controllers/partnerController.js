@@ -5498,3 +5498,39 @@ exports.updateSecurityDepositPreferenceByRefundId = async (req, res) => {
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
     }
 };
+
+exports.updateBankDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { bankName, accountNumber, reAccountNumber, accountHolderName, ifscCode } = req.body;
+
+        const userData = await User.findOne({ _id: userId });
+        if (!userData) {
+            return res.status(404).send({ status: 404, message: "User not found" });
+        }
+
+        let existingDetails = await User.findOne({ _id: userId });
+
+        if (existingDetails) {
+            if (req.file) {
+                existingDetails.bankDetails.cheque = req.file.path;
+                existingDetails.bankDetails.isUploadbankDetails = true;
+            }
+
+            if (bankName) existingDetails.bankDetails.bankName = bankName;
+            if (accountNumber) existingDetails.bankDetails.accountNumber = accountNumber;
+            if (reAccountNumber) existingDetails.bankDetails.reAccountNumber = reAccountNumber;
+            if (accountHolderName) existingDetails.bankDetails.accountHolderName = accountHolderName;
+            if (ifscCode) existingDetails.bankDetails.ifscCode = ifscCode;
+
+            existingDetails.bankDetails.isUploadbankDetails = true;
+
+        }
+        const updatedCar = await existingDetails.save();
+
+        return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
