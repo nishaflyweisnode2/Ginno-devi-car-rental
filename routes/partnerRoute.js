@@ -174,5 +174,10 @@ module.exports = (app) => {
     app.get("/api/v1/partner/allTransactionUser/byType/:type", [authJwt.isPartner], auth.allTransactionByType);
     app.get("/api/v1/partner/allcreditTransactionUser", [authJwt.isPartner], auth.allcreditTransactionUser);
     app.get("/api/v1/partner/allDebitTransactionUser", [authJwt.isPartner], auth.allDebitTransactionUser);
-    
+    app.post('/api/v1/partner/refund/add', [authJwt.isPartner], auth.createUserDetails);
+    app.get('/api/v1/partner/refund', [authJwt.isPartner], auth.getUserDetails);
+    app.get('/api/v1/partner/refund/:id', [authJwt.isPartner], auth.getUserDetailsById);
+    app.put('/api/v1/partner/refund/:id', [authJwt.isPartner], auth.updateUserDetails);
+    app.delete('/api/v1/partner/refund', [authJwt.isPartner], auth.deleteUserDetails);
+
 }

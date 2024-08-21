@@ -38,6 +38,8 @@ const AccessoryCategory = require('../models/accessory/accessoryCategoryModel')
 const Accessory = require('../models/accessory/accessoryModel')
 const Order = require('../models/orderModel');
 const Address = require("../models/userAddressModel");
+const UserDetails = require('../models/userRefundModel');
+const Refund = require('../models/refundModel');
 
 
 
@@ -5224,5 +5226,275 @@ exports.allDebitTransactionUser = async (req, res) => {
         return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ message: err.message });
+    }
+};
+
+exports.createUserDetails = async (req, res) => {
+    try {
+        const { upiId, accountNumber, confirmAccountNumber, ifscCode, branchName } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (accountNumber !== confirmAccountNumber) {
+            return res.status(400).json({ status: 400, message: 'Both Account Number and Confirm Account Number should be same', data: null });
+        }
+        const userDetails = new UserDetails({
+            userId,
+            upiId,
+            accountNumber,
+            ifscCode,
+            branchName
+        });
+
+        await userDetails.save();
+
+        return res.status(201).json({ status: 201, message: 'User details created successfully', data: userDetails });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while creating user details', data: null });
+    }
+};
+
+exports.getUserDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const userDetails = await UserDetails.find({ userId });
+
+        if (!userDetails) {
+            return res.status(404).json({ status: 404, message: 'User details not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'User details retrieved successfully', data: userDetails });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving user details', data: null });
+    }
+};
+
+exports.getUserDetailsById = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const userDetails = await UserDetails.findOne({ _id: req.params.id });
+
+        if (!userDetails) {
+            return res.status(404).json({ status: 404, message: 'User details not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'User details retrieved successfully', data: userDetails });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while retrieving user details', data: null });
+    }
+};
+
+exports.updateUserDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+        const updateFields = req.body;
+
+        if (updateFields.accountNumber !== updateFields.confirmAccountNumber) {
+            return res.status(400).json({ status: 400, message: 'Account number and confirm account number do not match', data: null });
+        }
+
+        const userDetails = await UserDetails.findOneAndUpdate({ _id: req.params.id }, updateFields, { new: true });
+
+        if (!userDetails) {
+            return res.status(404).json({ status: 404, message: 'User details not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'User details updated successfully', data: userDetails });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while updating user details', data: null });
+    }
+};
+
+exports.deleteUserDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const userDetails = await UserDetails.findOneAndDelete({ userId });
+
+        if (!userDetails) {
+            return res.status(404).json({ status: 404, message: 'User details not found', data: null });
+        }
+
+        return res.status(200).json({ status: 200, message: 'User details deleted successfully', data: null });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error while deleting user details', data: null });
+    }
+};
+
+exports.addSecurityDepositPreferenceInBooking = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const bookingId = req.params.bookingId;
+        const { refundPreference, upiId, accountNo, branchName, ifscCode } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.status !== 'COMPLETED') {
+            return res.status(403).json({ status: 403, message: 'Booking is not eligible for a refund', data: null });
+        }
+
+        if (booking.paymentStatus !== 'PAID') {
+            return res.status(403).json({ status: 403, message: 'Booking payment is not completed', data: null });
+        }
+
+        let refundAmount = booking.isWalletUsed ? booking.walletAmount : booking.totalPrice;
+
+        const checkRefundBooking = await Refund.findOne({ booking: booking._id });
+        if (checkRefundBooking) {
+            checkRefundBooking.refundStatus = 'PROCESSING'
+            checkRefundBooking.save();
+            return res.status(422).json({ status: 422, message: 'Refund has already been initiated for this booking', data: checkRefundBooking });
+        }
+
+        const newRefund = new Refund({
+            booking: booking._id,
+            refundAmount: refundAmount,
+            totalRefundAmount: refundAmount || 0,
+            totalBookingAmount: booking.totalPrice,
+            type: refundPreference,
+            refundStatus: 'PENDING',
+            refundDetails: refundPreference,
+            upiId: upiId || null,
+            accountNo: accountNo || null,
+            branchName: branchName || null,
+            ifscCode: ifscCode || null,
+            refundTransactionId: '',
+            refundType: "SECURITY-DEPOSITE",
+
+        });
+
+        const savedRefund = await newRefund.save();
+
+        booking.status = 'COMPLETED';
+        booking.refundPreference = refundPreference;
+        booking.upiId = upiId;
+        booking.accountNo = accountNo;
+        booking.branchName = branchName;
+        booking.ifscCode = ifscCode;
+        booking.refund = savedRefund._id;
+        await booking.save();
+
+        const welcomeMessage = `Refund initiated.`;
+        const welcomeNotification = new Notification({
+            recipient: booking.user._id,
+            content: welcomeMessage,
+            title: 'Security deposit refund payment',
+        });
+        await welcomeNotification.save();
+
+        return res.status(200).json({ status: 200, message: 'Booking preference added successfully', data: booking });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.updateSecurityDepositPreferenceByRefundId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const { bookingId, refundId } = req.params;
+        console.log(bookingId, refundId);
+        const { refundPreference, upiId, accountNo, branchName, ifscCode } = req.body;
+
+        let booking;
+        let refund;
+
+        if (bookingId) {
+            booking = await Booking.findById(bookingId);
+        }
+        if (refundId) {
+            refund = await Refund.findOne({ _id: refundId });
+            console.log("refund", refund);
+            console.log("refundId", refundId);
+
+            if (!refund) {
+                return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
+            }
+            booking = await Booking.findById(refund.booking);
+        } else {
+            return res.status(400).json({ status: 400, message: 'Invalid parameters', data: null });
+        }
+
+        if (!booking) {
+            return res.status(404).json({ status: 404, message: 'Booking not found', data: null });
+        }
+
+        if (booking.status !== 'COMPLETED') {
+            return res.status(403).json({ status: 403, message: 'Booking is not eligible for a refund', data: null });
+        }
+
+        if (booking.paymentStatus !== 'PAID') {
+            return res.status(403).json({ status: 403, message: 'Booking payment is not completed', data: null });
+        }
+
+        booking.refundPreference = refundPreference;
+        booking.upiId = upiId;
+        booking.accountNo = accountNo;
+        booking.branchName = branchName;
+        booking.ifscCode = ifscCode;
+        await booking.save();
+
+        console.log(refund);
+        if (refund) {
+            refund.type = refundPreference;
+            refund.refundStatus = 'PROCESSING';
+            refund.refundDetails = refundPreference;
+            refund.upiId = upiId || null;
+            refund.accountNo = accountNo || null;
+            refund.branchName = branchName || null;
+            refund.ifscCode = ifscCode || null;
+            refund.refundTransactionId = '';
+            refund.refundType = "SECURITY-DEPOSITE",
+                await refund.save();
+        }
+
+        return res.status(200).json({ status: 200, message: 'Booking preference updated successfully', data: booking });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', data: null });
     }
 };
