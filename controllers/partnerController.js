@@ -540,10 +540,12 @@ exports.createCar = async (req, res) => {
             return res.status(400).json({ message: 'ChassisNumber number already in use' });
         }
 
+        if(bodyType){
         const checkBody = await subscriptionCategoryModel.findById(bodyType);
         if (!checkBody) {
             return res.status(404).json({ message: 'Car Body Type not found' });
         }
+    }
 
         const checkCity = await City.findById(city);
         if (!checkCity) {

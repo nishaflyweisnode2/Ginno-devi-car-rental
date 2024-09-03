@@ -5452,6 +5452,10 @@ exports.getIncomeDetailsByCarId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Car not found', data: null });
         }
         const userId = car.owner;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
         const transactions = await Transaction.find({ user: userId, type: { $in: ['Booking'] } });
 
         const carWiseIncome = {};
