@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, publishAddImage, animalMelaImage, animalFeedsImage, overAllImage, userProfileUpload, cheque } = require('../middlewares/imageUpload');
+const { profileImage, attachement, publishAddImage, animalMelaImage, animalFeedsImage, overAllImage, userProfileUpload, cheque } = require('../middlewares/imageUpload');
 
 
 
@@ -171,4 +171,9 @@ module.exports = (app) => {
     app.delete('/api/v1/user/refund', [authJwt.verifyToken], auth.deleteUserDetails);
     app.post('/api/v1/user/bookings/:bookingId/security-deposit-add-preference', [authJwt.verifyToken], auth.addSecurityDepositPreferenceInBooking);
     app.put('/api/v1/user/bookings/:bookingId/refunds/:refundId/security-deposit-preference', [authJwt.verifyToken], auth.updateSecurityDepositPreferenceByRefundId);
+    app.post('/api/v1/user/contact/us', [authJwt.verifyToken], attachement.single('image'), auth.createContactUs);
+    app.get('/api/v1/user/contact-us', [authJwt.verifyToken], auth.getAllContactUsEntries);
+    app.get('/api/v1/user/contact-us/:id', [authJwt.verifyToken], auth.getContactUsEntryById);
+    app.put('/api/v1/user/contact-us/:id', [authJwt.verifyToken], attachement.single('image'), auth.updateContactUsEntry);
+    app.delete('/api/v1/user/contact-us/:id', [authJwt.verifyToken], auth.deleteContactUsEntry);
 }

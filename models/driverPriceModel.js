@@ -14,7 +14,7 @@ const DriverPriceSchema = new mongoose.Schema({
     nightCharge: {
         type: Number,
     },
-});
+}, { timestamps: true });
 
 const DriverPrice = mongoose.model('DriverPrice', DriverPriceSchema);
 

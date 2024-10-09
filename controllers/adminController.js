@@ -55,6 +55,7 @@ const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
 const UserDetails = require('../models/userRefundModel');
+const ContactUs = require('../models/contactusModel');
 
 
 
@@ -381,7 +382,10 @@ exports.updateUserById = async (req, res) => {
         if (password !== confirmPassword) {
             return res.status(400).json({ status: 400, message: 'Passwords do not match' });
         }
-        user.documentVerification = documentVerification || user.documentVerification;
+        if (documentVerification) {
+            user.documentVerification = documentVerification || user.documentVerification;
+            user.isVerified = true;
+        }
         user.documentRemarks = documentRemarks || user.documentRemarks;
         user.fullName = fullName || user.fullName;
         user.email = email || user.email;
@@ -889,25 +893,46 @@ exports.deleteCarBrand = async (req, res) => {
 
 exports.createCoupon = async (req, res) => {
     try {
-        const { title, desc, code, discount, isPercent, expirationDate, isActive } = req.body;
+        const { title, desc, code, discount, isPercent, expirationDate, isActive, recipient } = req.body;
 
-        const existingCoupon = await Coupon.findOne({ code });
+        let usersToReceiveCoupon = [];
 
-        if (existingCoupon) {
-            return res.status(400).json({ status: 400, error: 'Coupon code already exists' });
+        if (recipient === "ALL") {
+            usersToReceiveCoupon = await User.find({ userType: "USER" });
+        } else if (Array.isArray(recipient)) {
+            usersToReceiveCoupon = await User.find({ _id: { $in: recipient } });
+        } else if (typeof recipient === "string") {
+            const user = await User.findById(recipient);
+            if (user) {
+                usersToReceiveCoupon.push(user);
+            }
         }
 
-        const newCoupon = await Coupon.create({
-            title,
-            desc,
-            code,
-            discount,
-            isPercent,
-            expirationDate,
-            isActive,
-        });
+        if (usersToReceiveCoupon.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Recipient users not found' });
+        }
 
-        res.status(201).json({ status: 201, message: 'Coupon created successfully', data: newCoupon });
+        const createdCoupons = await Promise.all(usersToReceiveCoupon.map(async (user) => {
+            return await Coupon.create({
+                title,
+                desc,
+                code,
+                discount,
+                isPercent,
+                expirationDate,
+                isActive,
+                recipient: user._id
+            });
+        }));
+
+        const notifications = usersToReceiveCoupon.map(user => ({
+            recipient: user._id,
+            content: `You have received a new coupon: ${title}`,
+            type: 'coupon',
+        }));
+        await Notification.insertMany(notifications);
+
+        res.status(201).json({ status: 201, message: 'Coupons created successfully', data: createdCoupons });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 500, error: 'Server error' });
@@ -916,7 +941,42 @@ exports.createCoupon = async (req, res) => {
 
 exports.getAllCoupons = async (req, res) => {
     try {
-        const coupons = await Coupon.find();
+        const coupons = await Coupon.find().populate('recipient');
+
+        const couponsWithExpirationStatus = coupons.map(coupon => {
+            const expirationDate = new Date(coupon.expirationDate);
+            const currentDate = new Date();
+            const isExpired = coupon.expirationDate ? expirationDate <= currentDate : false;
+            return {
+                ...coupon.toObject(),
+                isExpired,
+            };
+        });
+
+        const uniqueCoupons = [];
+        const seen = new Set();
+
+        couponsWithExpirationStatus.forEach(coupon => {
+            const uniqueKey = `${coupon.title}-${coupon.code}`;
+            if (!seen.has(uniqueKey)) {
+                seen.add(uniqueKey);
+                uniqueCoupons.push(coupon);
+            }
+        });
+
+        return res.status(200).json({ status: 200, data: uniqueCoupons });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
+exports.getAllCouponsByUserId = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const coupons = await Coupon.find({ recipient: id }).populate('recipient');
+
         res.status(200).json({ status: 200, data: coupons });
     } catch (error) {
         console.error(error);
@@ -927,7 +987,7 @@ exports.getAllCoupons = async (req, res) => {
 exports.getCouponById = async (req, res) => {
     try {
         const couponId = req.params.id;
-        const coupon = await Coupon.findById(couponId);
+        const coupon = await Coupon.findById(couponId).populate('recipient');
 
         if (!coupon) {
             return res.status(404).json({ status: 404, message: 'Coupon not found' });
@@ -958,6 +1018,28 @@ exports.updateCouponById = async (req, res) => {
     }
 };
 
+exports.updateCoupon = async (req, res) => {
+    try {
+        const { recipient } = req.body;
+
+        if (recipient === "ALL") {
+            const { title, desc, code, discount, isPercent, expirationDate, isActive } = req.body;
+            await Coupon.updateMany({}, { title, desc, code, discount, isPercent, expirationDate, isActive });
+            return res.status(200).json({ status: 200, message: "All coupons updated successfully" });
+        } else {
+            const { title, desc, code, discount, isPercent, expirationDate, isActive } = req.body;
+            const updatedCoupon = await Coupon.findOneAndUpdate({ recipient }, { title, desc, code, discount, isPercent, expirationDate, isActive }, { new: true });
+            if (!updatedCoupon) {
+                return res.status(404).json({ status: 404, message: "Coupon not found" });
+            }
+            return res.status(200).json({ status: 200, message: "Coupon updated successfully", data: updatedCoupon });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: "Server error" });
+    }
+};
+
 exports.deleteCouponById = async (req, res) => {
     try {
         const couponId = req.params.id;
@@ -973,6 +1055,22 @@ exports.deleteCouponById = async (req, res) => {
         res.status(500).json({ status: 500, error: 'Server error' });
     }
 };
+
+exports.deleteAllCoupons = async (req, res) => {
+    try {
+        const result = await Coupon.deleteMany({});
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ status: 404, message: 'No coupons found to delete' });
+        }
+
+        res.status(200).json({ status: 200, message: 'All coupons deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
 
 exports.createCarImage = async (req, res) => {
     try {
@@ -2496,19 +2594,44 @@ exports.deleteSubscriptionCategory = async (req, res) => {
 
 exports.createOffer = async (req, res) => {
     try {
-        const { title, description, discountPercentage, targetUsers, validUntil } = req.body;
+        const { recipient, title, code, description, discountPercentage, validUntil } = req.body;
 
-        const newOffer = new Offer({
-            title,
-            description,
-            discountPercentage,
-            targetUsers,
-            validUntil,
-        });
+        let usersToReceiveOffer = [];
 
-        const savedOffer = await newOffer.save();
+        if (recipient === "ALL") {
+            usersToReceiveOffer = await User.find({ userType: "USER" });
+        } else if (Array.isArray(recipient)) {
+            usersToReceiveOffer = await User.find({ _id: { $in: recipient } });
+        } else if (typeof recipient === "string") {
+            const user = await User.findById(recipient);
+            if (user) {
+                usersToReceiveOffer.push(user);
+            }
+        }
 
-        return res.status(201).json({ status: 201, data: savedOffer });
+        if (usersToReceiveOffer.length === 0) {
+            return res.status(404).json({ status: 404, message: 'Recipient users not found' });
+        }
+
+        const createdOffers = await Promise.all(usersToReceiveOffer.map(async (user) => {
+            return await Offer.create({
+                title,
+                code,
+                description,
+                discountPercentage,
+                validUntil,
+                recipient: user._id
+            });
+        }));
+
+        const notifications = usersToReceiveOffer.map(user => ({
+            recipient: user._id,
+            content: `You have received a new offer: ${title}`,
+            type: 'coupon',
+        }));
+        await Notification.insertMany(notifications);
+
+        return res.status(201).json({ status: 201, message: 'Offer created successfully', data: createdOffers });
     } catch (error) {
         console.error('Error creating offer:', error);
         return res.status(500).json({ status: 500, error: error.message });
@@ -2517,18 +2640,52 @@ exports.createOffer = async (req, res) => {
 
 exports.getAllOffers = async (req, res) => {
     try {
-        const allOffers = await Offer.find();
+        const allOffers = await Offer.find().populate('recipient');
 
-        return res.status(200).json({ status: 200, data: allOffers });
+        const offersWithExpirationStatus = allOffers.map(offer => {
+            const expirationDate = new Date(offer.expirationDate);
+            const currentDate = new Date();
+            const isExpired = offer.expirationDate ? expirationDate <= currentDate : false;
+            return {
+                ...offer.toObject(),
+                isExpired,
+            };
+        });
+
+        const uniqueCoupons = [];
+        const seen = new Set();
+
+        offersWithExpirationStatus.forEach(coupon => {
+            const uniqueKey = `${coupon.title}-${coupon.code}`;
+            if (!seen.has(uniqueKey)) {
+                seen.add(uniqueKey);
+                uniqueCoupons.push(coupon);
+            }
+        });
+
+        return res.status(200).json({ status: 200, data: uniqueCoupons });
     } catch (error) {
         console.error('Error fetching offers:', error);
         return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
+exports.getAllOffersByUserId = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const allOffers = await Offer.find({ recipient: id }).populate('recipient');
+
+        res.status(200).json({ status: 200, data: allOffers });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, error: 'Server error' });
+    }
+};
+
 exports.getOfferById = async (req, res) => {
     try {
-        const offer = await Offer.findById(req.params.id);
+        const offer = await Offer.findById(req.params.id).populate('recipient');
 
         if (!offer) {
             return res.status(404).json({ status: 404, message: 'Offer not found' });
@@ -2543,11 +2700,11 @@ exports.getOfferById = async (req, res) => {
 
 exports.updateOfferById = async (req, res) => {
     try {
-        const { title, description, discountPercentage, targetUsers, validUntil } = req.body;
+        const updateFields = req.body;
 
         const updatedOffer = await Offer.findByIdAndUpdate(
             req.params.id,
-            { title, description, discountPercentage, targetUsers, validUntil },
+            updateFields,
             { new: true }
         );
 
@@ -3282,10 +3439,13 @@ exports.updateRefundPaymentStatus = async (req, res) => {
 
         const newTransaction = new Transaction({
             user: booking.user,
+            booking: bookingId,
             amount: refund.totalRefundAmount,
             type: 'Wallet',
             details: 'Wallet add money for Booking',
-            cr: true
+            cr: true,
+            paymentStatus: 'Success'
+
         });
 
         await newTransaction.save();
@@ -6500,5 +6660,98 @@ exports.getRefundStatusAndAmount = async (req, res) => {
             message: 'Server error while retrieving refund status and amount',
             data: null,
         });
+    }
+};
+
+exports.getAllContactUsEntries = async (req, res) => {
+    try {
+        const contactUsEntries = await ContactUs.find();
+        return res.status(200).json({ status: 200, data: contactUsEntries });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getContactUsEntryById = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const contactUsEntry = await ContactUs.findById(contactUsId);
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: contactUsEntry });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateContactUsEntry = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+
+        if (req.file) {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                {
+                    $set: {
+                        attachment: req.file.path,
+                        ...req.body,
+                    },
+                },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        } else {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                { $set: req.body },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.replyToContactUsEntry = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reply } = req.body;
+
+        if (!reply || typeof reply !== 'string') {
+            return res.status(400).json({ status: 400, message: 'Reply is required and must be a string' });
+        }
+
+        const contactUsEntry = await ContactUs.findByIdAndUpdate(
+            id,
+            { reply },
+            { new: true }
+        );
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Reply added successfully', data: contactUsEntry });
+
+    } catch (error) {
+        console.error('Error replying to contact us entry:', error);
+        return res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
     }
 };

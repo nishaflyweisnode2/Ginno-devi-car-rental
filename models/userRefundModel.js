@@ -17,7 +17,7 @@ const userDetailsSchema = new mongoose.Schema({
     branchName: {
         type: String,
     }
-});
+}, { timestamps: true });
 
 const UserDetails = mongoose.model('UserDetails', userDetailsSchema);
 

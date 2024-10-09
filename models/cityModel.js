@@ -11,7 +11,7 @@ const citySchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-});
+}, { timestamps: true });
 
 
 const City = mongoose.model('City', citySchema);

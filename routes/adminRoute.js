@@ -5,7 +5,7 @@ const router = express()
 
 const authJwt = require("../middlewares/auth");
 
-const { profileImage, cityImage, brandImage, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, kpUpload0, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage
+const { profileImage, cityImage, brandImage, attachement, referenceImage, publishAddImage, animalMelaImage, animalFeedsImage, carDocumentImage, kpUpload0, carDlImage, kpUpload, addressPrrof, carImage, categoryImage, overAllImage, userProfileUpload, cheque, accessoryCategoryImage, accessoryImage
 } = require('../middlewares/imageUpload');
 
 
@@ -43,7 +43,9 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/brand/:carBrandId', [authJwt.isAdmin], auth.deleteCarBrand);
     app.post('/api/v1/admin/coupons', [authJwt.isAdmin], auth.createCoupon);
     app.get('/api/v1/admin/coupons', [authJwt.isAdmin], auth.getAllCoupons);
+    app.get('/api/v1/admin/coupons/user/:id', [authJwt.isAdmin], auth.getAllCouponsByUserId);
     app.get('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.getCouponById);
+    app.put('/api/v1/admin/coupons', [authJwt.isAdmin], auth.updateCoupon);
     app.put('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.updateCouponById);
     app.delete('/api/v1/admin/coupons/:id', [authJwt.isAdmin], auth.deleteCouponById);
     app.post('/api/v1/admin/carImages', [authJwt.isAdmin], referenceImage.array('image'), auth.createCarImage);
@@ -122,6 +124,7 @@ module.exports = (app) => {
     app.delete('/api/v1/admin/subscriptionCategory/:subscriptioncategoryId', [authJwt.isAdmin], auth.deleteSubscriptionCategory);
     app.post('/api/v1/admin/offers', [authJwt.isAdmin], auth.createOffer);
     app.get('/api/v1/admin/offers', [authJwt.isAdmin], auth.getAllOffers);
+    app.get('/api/v1/admin/offers/user/:id', [authJwt.isAdmin], auth.getAllOffersByUserId);
     app.get('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.getOfferById);
     app.put('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.updateOfferById);
     app.delete('/api/v1/admin/offers/:id', [authJwt.isAdmin], auth.deleteOfferById);
@@ -276,7 +279,10 @@ module.exports = (app) => {
     app.put('/api/v1/admin/bookings/updatePaymentStatus/:bookingId', [authJwt.isAdmin], auth.updateRefundPaymentStatus);
     app.get('/api/v1/admin/booking/getAllRefundData', [authJwt.isAdmin], auth.getAllRefundData);
     app.get('/api/v1/admin/booking/:bookingId/refund', [authJwt.isAdmin], auth.getRefundStatusAndAmount);
-
+    app.get('/api/v1/admin/contact-us', [authJwt.isAdmin], auth.getAllContactUsEntries);
+    app.get('/api/v1/admin/contact-us/:id', [authJwt.isAdmin], auth.getContactUsEntryById);
+    app.put('/api/v1/user/contact-us/:id', [authJwt.verifyToken], attachement.single('image'), auth.updateContactUsEntry);
+    app.put('/api/v1/admin/contact-us/:id/reply', [authJwt.isAdmin], auth.replyToContactUsEntry);
 
 
 }

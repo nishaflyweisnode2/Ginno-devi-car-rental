@@ -23,7 +23,7 @@ const locationSchema = new mongoose.Schema({
         enum: ['pickup', 'drop'],
         required: true,
     },
-});
+}, { timestamps: true });
 
 locationSchema.index({ coordinates: '2dsphere' });
 

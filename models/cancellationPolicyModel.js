@@ -7,7 +7,7 @@ const cancellationPolicySchema = new mongoose.Schema({
   description: {
     type: String,
   },
-});
+}, { timestamps: true });
 
 const CancellationPolicy = mongoose.model('CancellationPolicy', cancellationPolicySchema);
 

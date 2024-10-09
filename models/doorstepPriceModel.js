@@ -17,7 +17,7 @@ const DoorstepDeliveryPriceSchema = new mongoose.Schema({
     price: {
         type: Number,
     },
-});
+}, { timestamps: true });
 
 const DoorstepDeliveryPrice = mongoose.model('DoorstepDeliveryPrice', DoorstepDeliveryPriceSchema);
 

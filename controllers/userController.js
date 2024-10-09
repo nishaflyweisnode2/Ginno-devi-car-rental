@@ -46,6 +46,7 @@ const AccessoryCategory = require('../models/accessory/accessoryCategoryModel')
 const Accessory = require('../models/accessory/accessoryModel')
 const Order = require('../models/orderModel');
 const UserDetails = require('../models/userRefundModel');
+const ContactUs = require('../models/contactusModel');
 
 
 
@@ -155,7 +156,8 @@ exports.signup = async (req, res) => {
             amount: 500,
             type: 'Qc',
             details: `Signup bonus credited to user Qcwallet at level`,
-            cr: true
+            cr: true,
+            paymentStatus: 'Success'
         });
         await userTransaction.save();
 
@@ -222,7 +224,9 @@ async function calculateReferralBonus(referredBy, currentLevel = 1, user, totalB
                         amount: referralBonusAmount,
                         type: 'Referral',
                         details: `Direct Referral bonus deduction for user referral at level ${currentLevel} or percentage ${currentLevelData.percentage}`,
-                        dr: true
+                        dr: true,
+                        paymentStatus: 'Success'
+
                     });
                     await referralBonusTransaction.save();
 
@@ -231,7 +235,9 @@ async function calculateReferralBonus(referredBy, currentLevel = 1, user, totalB
                         amount: referralBonusAmount,
                         type: 'Qc',
                         details: `Direct Referral bonus credited to user Qcwallet at level ${currentLevel} or percentage ${currentLevelData.percentage}`,
-                        cr: true
+                        cr: true,
+                        paymentStatus: 'Success'
+
                     });
                     await userTransaction.save();
 
@@ -1399,11 +1405,29 @@ exports.getOfferById = async (req, res) => {
 
 exports.getAllCoupons = async (req, res) => {
     try {
-        const coupons = await Coupon.find();
-        res.status(200).json({ status: 200, data: coupons });
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const coupons = await Coupon.find({ recipient: userId });
+
+        const validCoupons = coupons.filter(coupon => {
+            const expirationDate = new Date(coupon.expirationDate);
+            const currentDate = new Date();
+            const isExpired = coupon.expirationDate && expirationDate <= currentDate;
+
+            const isUsed = coupon.usedInBooking;
+
+            return !isExpired && !isUsed;
+        });
+
+        return res.status(200).json({ status: 200, data: validCoupons });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 500, error: 'Server error' });
+        return res.status(500).json({ status: 500, error: 'Server error' });
     }
 };
 
@@ -1953,6 +1977,17 @@ exports.createBooking = async (req, res) => {
         const userId = req.user._id;
         let { carId, pickupCoordinates, dropCoordinates, mainCategory, category, carChoice, plan, destinationLocation, pickupDate, dropOffDate, pickupTime, dropOffTime, subscriptionMonths, accessoriesId, tripPackage } = req.body;
 
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        if (user.isVerified === false || user.documentVerification !== "APPROVED") {
+            return res.status(403).json({
+                status: 403, message: 'User cannot book a car. The account must be approved by an admin.', data: null
+            });
+        }
+
         const currentDate = new Date();
         const requestedPickupDate = new Date(`${pickupDate}T${pickupTime}:00.000Z`);
 
@@ -2071,16 +2106,6 @@ exports.createBooking = async (req, res) => {
         if (existingBookingPickup || existingBookingDrop || existingExtendedBookingPickup || existingExtendedBookingDrop) {
             return res.status(400).json({ status: 400, message: 'Car is already booked for the specified pickup and/or drop-off date and time.', data: null, });
         } else {
-
-            const user = await User.findById(userId);
-            if (!user) {
-                return res.status(404).json({ status: 404, message: 'User not found', data: null });
-            }
-
-            if (user.isVerified === false) {
-                return res.status(404).json({ status: 404, message: 'User can not book Car first approved account by admin', data: null });
-            }
-
             const carExist = await Car.findById(carId);
             if (!carExist) {
                 return res.status(400).json({ status: 400, message: 'Car not available', data: null });
@@ -2202,10 +2227,11 @@ exports.createBooking = async (req, res) => {
 
             const newTransaction = new Transaction({
                 user: userId,
+                booking: newBooking._id,
                 amount: totalPriceWithAccessories,
                 type: 'Booking',
                 details: 'Booking creation',
-                dr: true
+                dr: true,
             });
 
             await newTransaction.save();
@@ -2303,8 +2329,10 @@ exports.createBookingForSharingCar = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'User not found', data: null });
         }
 
-        if (user.isVerified === false) {
-            return res.status(404).json({ status: 404, message: 'User can not book Car first approved account by admin', data: null });
+        if (user.isVerified === false || user.documentVerification !== "APPROVED") {
+            return res.status(403).json({
+                status: 403, message: 'User cannot book a car. The account must be approved by an admin.', data: null
+            });
         }
 
         const carExist = await Car.findById(carId);
@@ -2639,17 +2667,24 @@ exports.applyCouponToBooking = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Coupon has already been applied to this booking', data: null });
         }
 
-        const coupon = await Coupon.findOne({ code: couponCode });
+        const coupon = await Coupon.findOne({ code: couponCode, recipient: userId });
         if (!coupon || !coupon.isActive || new Date(coupon.expirationDate) < new Date()) {
             return res.status(400).json({ status: 400, message: 'Invalid or expired coupon code', data: null });
+        }
+
+        const previousBookings = await Booking.find({ userId: userId, offerCode: couponCode });
+        if (previousBookings.length > 0) {
+            return res.status(400).json({ status: 400, message: 'You have already used this coupon code in a previous booking', data: null });
         }
 
         booking.offerCode = couponCode;
         booking.discountPrice = Math.round(booking.totalPrice * (coupon.discount / 100));
         booking.totalPrice = Math.round(booking.totalPrice - booking.discountPrice);
         booking.isCouponApplied = true;
+        coupon.usedInBooking = true;
 
         await booking.save();
+        await coupon.save();
 
         return res.status(200).json({ status: 200, message: 'Coupon applied successfully', data: booking });
     } catch (error) {
@@ -2677,8 +2712,8 @@ exports.removeCouponFromBooking = async (req, res) => {
 
         booking.offerCode = null;
         booking.discountPrice = 0;
-
         booking.isCouponApplied = false;
+        // coupon.usedInBooking = false;
 
         await booking.save();
 
@@ -2781,10 +2816,13 @@ exports.applyQuackCoinToBooking = async (req, res) => {
 
         const newTransaction = new Transaction({
             user: userId,
+            booking: booking._id,
             amount: quackCoinToUse,
             type: 'Qc',
             details: 'Qc Coin apply in Booking',
-            dr: true
+            dr: true,
+            paymentStatus: 'Success'
+
         });
 
         await newTransaction.save();
@@ -2816,15 +2854,16 @@ exports.removeQuackCoinFromBooking = async (req, res) => {
         user.coin += booking.coinAmount;
         await user.save();
 
-        const newTransaction = new Transaction({
-            user: userId,
-            amount: booking.coinAmount,
-            type: 'Qc',
-            details: 'Qc Coin remove in Booking',
-            cr: true
-        });
-
-        await newTransaction.save();
+        const transaction = await Transaction.findOne({ user: userId, booking: bookingId });
+        if (transaction) {
+            transaction.paymentStatus = 'Canceled';
+            transaction.user = userId,
+                transaction.amount = booking.totalPrice,
+                transaction.type = 'Qc',
+                transaction.details = 'Qc Coin remove in Booking',
+                transaction.cr = true
+            await transaction.save();
+        }
 
         booking.coinAmount = 0;
 
@@ -2861,9 +2900,6 @@ exports.updatePaymentStatus = async (req, res) => {
             return res.status(400).json({ error: "Invalid Payment status value" });
         }
 
-        updatedBooking.paymentStatus = paymentStatus;
-        updatedBooking.referenceId = referenceId;
-
         if (paymentStatus === 'PAID') {
             const carId = updatedBooking.car;
 
@@ -2872,6 +2908,12 @@ exports.updatePaymentStatus = async (req, res) => {
             car.rentalCount += 1;
 
             await car.save();
+            const transaction = await Transaction.findOne({ user: userId, booking: bookingId });
+            if (transaction) {
+                transaction.paymentStatus = 'Success';
+                transaction.transctionId = referenceId;
+                await transaction.save();
+            }
         }
 
         if (paymentStatus === 'FAILED') {
@@ -2885,8 +2927,16 @@ exports.updatePaymentStatus = async (req, res) => {
                 // await car.save();
                 await user.save();
             }
+            const transaction = await Transaction.findOne({ user: userId, booking: bookingId });
+            if (transaction) {
+                transaction.paymentStatus = 'Failed';
+                await transaction.save();
+            }
 
         }
+
+        updatedBooking.paymentStatus = paymentStatus;
+        updatedBooking.referenceId = referenceId;
 
         await updatedBooking.save();
 
@@ -4964,7 +5014,8 @@ exports.addMoney = async (req, res) => {
                 amount: req.body.balance,
                 type: "Wallet",
                 cr: true,
-                details: "Money has been added from your wallet."
+                details: "Money has been added from your wallet.",
+                paymentStatus: 'Success'
 
             };
             const createdTransaction = await Transaction.create(transactionData);
@@ -5017,7 +5068,8 @@ exports.removeMoney = async (req, res) => {
                 amount: req.body.balance,
                 type: "Wallet",
                 dr: true,
-                details: "Money has been deducted from your wallet."
+                details: "Money has been deducted from your wallet.",
+                paymentStatus: 'Success'
             };
             const createdTransaction = await Transaction.create(transactionData);
             const welcomeMessage = `Welcome, ${updatedUser.fullName}! Money has been deducted from your wallet.`;
@@ -5295,7 +5347,8 @@ exports.transferMoney = async (req, res) => {
             type: "Transfer",
             cr: false,
             dr: true,
-            details: `Transferred to ${recipient.fullName}`
+            details: `Transferred to ${recipient.fullName}`,
+            paymentStatus: 'Success'
         };
         const recipientTransactionData = {
             user: recipientId,
@@ -5304,7 +5357,8 @@ exports.transferMoney = async (req, res) => {
             type: "Transfer",
             dr: false,
             cr: true,
-            details: `Received from ${sender.fullName}`
+            details: `Received from ${sender.fullName}`,
+            paymentStatus: 'Success'
         };
 
         await Transaction.create(senderTransactionData);
@@ -5355,7 +5409,7 @@ exports.getWallet = async (req, res) => {
 
 exports.allTransactionUser = async (req, res) => {
     try {
-        const data = await Transaction.find({ user: req.user._id }).populate("user");
+        const data = await Transaction.find({ user: req.user._id }).populate("user booking");
         return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ message: err.message });
@@ -5364,7 +5418,7 @@ exports.allTransactionUser = async (req, res) => {
 
 exports.allTransactionByType = async (req, res) => {
     try {
-        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user");
+        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user booking");
         return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ status: 500, message: err.message });
@@ -5656,5 +5710,120 @@ exports.updateSecurityDepositPreferenceByRefundId = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', data: null });
+    }
+};
+
+exports.createContactUs = async (req, res) => {
+    try {
+        const { mobileNumber, email, message, image } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        let attachmentPath = null;
+
+        if (req.file) {
+            attachmentPath = req.file.path;
+        } else if (image) {
+            attachmentPath = image;
+        }
+
+        const newContactUs = await ContactUs.create({
+            user: user._id,
+            attachment: attachmentPath,
+            mobileNumber,
+            email,
+            message,
+        });
+
+        return res.status(201).json({ status: 201, data: newContactUs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllContactUsEntries = async (req, res) => {
+    try {
+        const contactUsEntries = await ContactUs.find();
+        return res.status(200).json({ status: 200, data: contactUsEntries });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getContactUsEntryById = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const contactUsEntry = await ContactUs.findById(contactUsId);
+
+        if (!contactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, data: contactUsEntry });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateContactUsEntry = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+
+        if (req.file) {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                {
+                    $set: {
+                        attachment: req.file.path,
+                        ...req.body,
+                    },
+                },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        } else {
+            const updatedContactUsEntry = await ContactUs.findByIdAndUpdate(
+                contactUsId,
+                { $set: req.body },
+                { new: true }
+            );
+
+            if (!updatedContactUsEntry) {
+                return res.status(404).json({ status: 404, message: 'Contact Us entry not found' });
+            }
+
+            return res.status(200).json({ status: 200, data: updatedContactUsEntry });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteContactUsEntry = async (req, res) => {
+    try {
+        const contactUsId = req.params.id;
+        const deletedContactUsEntry = await ContactUs.findByIdAndDelete(contactUsId);
+
+        if (!deletedContactUsEntry) {
+            return res.status(404).json({ status: 404, message: 'Contact us entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Contact us entry deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };

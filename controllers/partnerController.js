@@ -540,12 +540,12 @@ exports.createCar = async (req, res) => {
             return res.status(400).json({ message: 'ChassisNumber number already in use' });
         }
 
-        if(bodyType){
-        const checkBody = await subscriptionCategoryModel.findById(bodyType);
-        if (!checkBody) {
-            return res.status(404).json({ message: 'Car Body Type not found' });
+        if (bodyType) {
+            const checkBody = await subscriptionCategoryModel.findById(bodyType);
+            if (!checkBody) {
+                return res.status(404).json({ message: 'Car Body Type not found' });
+            }
         }
-    }
 
         const checkCity = await City.findById(city);
         if (!checkCity) {
@@ -2114,10 +2114,13 @@ exports.approveBookingStatus = async (req, res) => {
 
         const newTransaction = new Transaction({
             user: partnerId,
+            booking: booking._id,
             amount: booking.totalPrice,
             type: 'Wallet',
-            details: 'Booking creation',
-            cr: true
+            details: 'Booking Approve',
+            cr: true,
+            paymentStatus: 'Success'
+
         });
 
         await newTransaction.save();
@@ -2322,15 +2325,16 @@ exports.rejectBookingStatus = async (req, res) => {
 
         await booking.save();
 
-        const newTransaction = new Transaction({
-            user: partnerId,
-            amount: booking.totalPrice,
-            type: 'Wallet',
-            details: 'Booking Refund',
-            dr: true
-        });
-
-        await newTransaction.save();
+        const transaction = await Transaction.findOne({ user: partnerId, booking: bookingId });
+        if (transaction) {
+            transaction.paymentStatus = 'Failed';
+            transaction.user = partnerId,
+                transaction.amount = booking.totalPrice,
+                transaction.type = 'Wallet',
+                transaction.details = 'Booking Refund',
+                transaction.dr = true
+            await transaction.save();
+        }
 
         if (booking.status = 'REJECT') {
             const userCheck = await User.findById(booking.user);
@@ -2560,10 +2564,13 @@ exports.updateTripEndDetails = async (req, res) => {
             await carOwner.save();
             const newTransaction = new Transaction({
                 user: carOwner._id,
+                booking: booking._id,
                 amount: amountToOwner,
                 type: 'Booking',
                 details: 'Booking creation',
-                cr: true
+                cr: true,
+                paymentStatus: 'Success'
+
             });
 
             await newTransaction.save();
@@ -2574,10 +2581,12 @@ exports.updateTripEndDetails = async (req, res) => {
             await admin.save();
             const newTransaction = new Transaction({
                 user: admin._id,
+                booking: booking._id,
                 amount: amountToAdmin,
                 type: 'Booking',
                 details: 'Booking creation',
-                cr: true
+                cr: true,
+                paymentStatus: 'Success'
             });
 
             await newTransaction.save();
@@ -2600,28 +2609,37 @@ exports.updateTripEndDetails = async (req, res) => {
 
             const carReferralTransaction = new Transaction({
                 user: admin._id,
+                booking: booking._id,
                 amount: carReferralAmount,
                 type: 'Booking',
                 details: 'Car referral reward',
-                cr: true
+                cr: true,
+                paymentStatus: 'Success'
+
             });
             await carReferralTransaction.save();
 
             const userReferralTransaction = new Transaction({
                 user: admin._id,
+                booking: booking._id,
                 amount: userReferralAmount,
                 type: 'Booking',
                 details: 'User referral reward',
-                cr: true
+                cr: true,
+                paymentStatus: 'Success'
+
             });
             await userReferralTransaction.save();
 
             const royaltyRewardTransaction = new Transaction({
                 user: admin._id,
+                booking: booking._id,
                 amount: royaltyRewardAmount,
                 type: 'Booking',
                 details: 'Royalty reward',
-                cr: true
+                cr: true,
+                paymentStatus: 'Success'
+
             });
             await royaltyRewardTransaction.save();
         }
@@ -2795,10 +2813,13 @@ const distributeRewards = async (userId, rewards, bookingId) => {
 
             const transaction = new Transaction({
                 user: userId,
+                booking: bookingId,
                 amount: reward.amount,
                 type: 'Referral',
                 details: `Referral bonus for level ${reward.level} for booking ${bookingId}`,
                 cr: true,
+                paymentStatus: 'Success'
+
             });
 
             await transaction.save();
@@ -5197,7 +5218,7 @@ exports.getWallet = async (req, res) => {
 
 exports.allTransactionUser = async (req, res) => {
     try {
-        const data = await Transaction.find({ user: req.user._id }).populate("user");
+        const data = await Transaction.find({ user: req.user._id }).populate("user booking");
         return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ message: err.message });
@@ -5206,7 +5227,7 @@ exports.allTransactionUser = async (req, res) => {
 
 exports.allTransactionByType = async (req, res) => {
     try {
-        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user");
+        const data = await Transaction.find({ user: req.user._id, type: req.params.type }).populate("user booking");
         return res.status(200).json({ status: 200, data: data });
     } catch (err) {
         return res.status(400).json({ status: 500, message: err.message });

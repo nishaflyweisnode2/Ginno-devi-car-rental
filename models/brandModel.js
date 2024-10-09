@@ -15,7 +15,7 @@ const carBrandSchema = new mongoose.Schema({
         default: false,
     },
 
-});
+}, { timestamps: true });
 
 const CarBrand = mongoose.model('Brand', carBrandSchema);
 

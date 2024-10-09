@@ -7,7 +7,7 @@ const fulfilmentPolicySchema = new mongoose.Schema({
   answer: {
     type: String,
   },
-});
+}, { timestamps: true });
 
 const FulfilmentPolicy = mongoose.model('FulfilmentPolicy', fulfilmentPolicySchema);
 

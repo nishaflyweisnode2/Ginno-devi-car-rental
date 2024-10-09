@@ -25,7 +25,7 @@ const addressSchema = new mongoose.Schema({
         city: String,
         pincode: String,
     },
-});
+}, { timestamps: true });
 
 const AddressModel = mongoose.model('Address', addressSchema);
 

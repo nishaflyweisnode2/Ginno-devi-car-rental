@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const CouponSchema = new mongoose.Schema({
+    recipient: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
     title: {
         type: String,
     },
@@ -9,7 +14,6 @@ const CouponSchema = new mongoose.Schema({
     },
     code: {
         type: String,
-        unique: true,
     },
     discount: {
         type: Number,
@@ -24,6 +28,10 @@ const CouponSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true,
+    },
+    usedInBooking: {
+        type: Boolean,
+        default: false,
     },
 }, { timestamps: true });
 

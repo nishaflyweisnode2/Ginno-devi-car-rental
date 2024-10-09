@@ -21,8 +21,8 @@ const planSchema = new mongoose.Schema({
     extendPrice: {
         type: Number,
     },
-    
-});
+
+}, { timestamps: true });
 
 const Plan = mongoose.model('Plan', planSchema);
 

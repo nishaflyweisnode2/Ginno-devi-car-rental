@@ -33,7 +33,7 @@ const reviewSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-});
+}, { timestamps: true });
 
 reviewSchema.plugin(mongoosePaginate);
 

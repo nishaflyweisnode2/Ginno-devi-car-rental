@@ -17,7 +17,7 @@ const adminPackageSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-});
+}, { timestamps: true });
 
 const AdminPackage = mongoose.model('AdminPackage', adminPackageSchema);
 

@@ -12,7 +12,7 @@ const TenderApplicationSchema = new mongoose.Schema({
     apply: {
         type: String,
     }
-});
+}, { timestamps: true });
 
 const TenderApplication = mongoose.model('GovtTendors', TenderApplicationSchema);
 

@@ -10,7 +10,7 @@ const contactUsSchema = new mongoose.Schema({
     reason: {
         type: String,
     },
-});
+}, { timestamps: true });
 
 const ContactUs = mongoose.model('CallUs', contactUsSchema);
 

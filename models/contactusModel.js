@@ -17,7 +17,11 @@ const contactUsSchema = new mongoose.Schema({
     message: {
         type: String,
     },
-});
+    reply: {
+        type: String,
+    },
+
+}, { timestamps: true });
 
 const ContactUs = mongoose.model('ContactUs', contactUsSchema);
 

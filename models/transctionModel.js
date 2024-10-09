@@ -5,6 +5,10 @@ const paymentTransactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
+    booking: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+    },
     cr: {
         type: Boolean,
         default: false,
@@ -22,7 +26,15 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     details: {
         type: String,
-    }
+    },
+    transctionId: {
+        type: String,
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['Pending', 'Success', 'Failed', 'Canceled'],
+        default: 'Pending'
+    },
 }, { timestamps: true });
 
 const PaymentTransaction = mongoose.model('PaymentTransaction', paymentTransactionSchema);
