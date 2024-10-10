@@ -47,6 +47,7 @@ const Accessory = require('../models/accessory/accessoryModel')
 const Order = require('../models/orderModel');
 const UserDetails = require('../models/userRefundModel');
 const ContactUs = require('../models/contactusModel');
+const FeatureImage = require('../models/carFeaturesImageModel');
 
 
 
@@ -1988,6 +1989,11 @@ exports.createBooking = async (req, res) => {
             });
         }
 
+        const carData = await Car.findById(carId);
+        if (!carData) {
+            return res.status(400).json({ status: 400, message: 'Car not available', data: null });
+        }
+
         const currentDate = new Date();
         const requestedPickupDate = new Date(`${pickupDate}T${pickupTime}:00.000Z`);
 
@@ -2018,18 +2024,22 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Invalid pickup date. Pickup date cannot be earlier than the current date.', data: null });
         }
 
-        let driverPrice;
+        let driverPrice = 0;
         if (category) {
             const checkCategory = await Category.findById(category);
             if (!checkCategory) {
                 return res.status(404).json({ status: 404, message: 'Category not found' });
             }
-
-            const price = await DriverPrice.findOne({ category: category });
-            if (!price) {
-                return res.status(404).json({ status: 404, message: 'Price not found' });
+            if (checkCategory.name === "With Driver") {
+                if (carData.isCarWithDriver === false) {
+                    return res.status(400).json({ status: 400, message: 'Car is not available with a driver' });
+                }
+                const price = await DriverPrice.findOne({ category: category });
+                if (!price) {
+                    return res.status(404).json({ status: 404, message: 'Price not found' });
+                }
+                driverPrice = price.price
             }
-            driverPrice = price.price
         }
 
         if (mainCategory) {
@@ -2053,19 +2063,23 @@ exports.createBooking = async (req, res) => {
             tripProtctionMoney = package.price
         }
 
-        let carChoicePrice;
+        let carChoicePrice = 0;
         if (carChoice) {
             const category = await Category.findById(carChoice);
             if (!category) {
                 return res.status(404).json({ status: 404, message: 'car choice Category not found' });
             }
 
-            const option = await DoorstepDeliveryPrice.findOne({ category: carChoice })
-            if (!option) {
-                return res.status(400).json({ status: 400, message: 'Car Choice Not Found', data: null });
+            if (category.name === "Doorstep") {
+                if (carData.isCarWithDoorStepDelivery === false) {
+                    return res.status(400).json({ status: 400, message: 'Car is not available for doorstep delivery' });
+                }
+                const option = await DoorstepDeliveryPrice.findOne({ category: carChoice })
+                if (!option) {
+                    return res.status(400).json({ status: 400, message: 'Car Choice Not Found', data: null });
+                }
+                carChoicePrice = option.price
             }
-
-            carChoicePrice = option.price
         }
 
         const existingBookingPickup = await Booking.findOne({
@@ -2171,6 +2185,8 @@ exports.createBooking = async (req, res) => {
                 taxAmount = roundedTotalPrice * (taxAmountPercentage / 100);
             }
 
+            taxAmount = parseFloat(taxAmount).toFixed(2);
+
             const totalPriceWithAccessories = roundedTotalPrice + accessoriesPrice + adminCarPrice.depositedMoney + tripProtctionMoney + carChoicePrice + driverPrice + taxAmount;
             let isSubscription, isRental;
             if (subscriptionMonths != (null || undefined)) {
@@ -2212,7 +2228,7 @@ exports.createBooking = async (req, res) => {
                 carChoicePrice,
                 driverPrice,
                 uniqueBookinId: await generateBookingCode(),
-                taxAmount
+                taxAmount,
             });
 
             // user.coin += carExist.quackCoin
@@ -5822,6 +5838,49 @@ exports.deleteContactUsEntry = async (req, res) => {
         }
 
         return res.status(200).json({ status: 200, message: 'Contact us entry deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFeatureImages = async (req, res) => {
+    try {
+        const featureImages = await FeatureImage.find();
+        return res.status(200).json({ status: 200, message: 'Feature images retrieved successfully', data: featureImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFeatureImagesByFeatureName = async (req, res) => {
+    try {
+        const { featureName } = req.params;
+
+        const featureImages = await FeatureImage.find({ featureName: featureName });
+
+        if (featureImages.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No feature images found for the specified feature name' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature images retrieved successfully', data: featureImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFeatureImageById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const featureImage = await FeatureImage.findById(id);
+
+        if (!featureImage) {
+            return res.status(404).json({ status: 404, message: 'Feature image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature image retrieved successfully', data: featureImage });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: error.message });

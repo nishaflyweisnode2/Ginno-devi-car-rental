@@ -176,4 +176,7 @@ module.exports = (app) => {
     app.get('/api/v1/user/contact-us/:id', [authJwt.verifyToken], auth.getContactUsEntryById);
     app.put('/api/v1/user/contact-us/:id', [authJwt.verifyToken], attachement.single('image'), auth.updateContactUsEntry);
     app.delete('/api/v1/user/contact-us/:id', [authJwt.verifyToken], auth.deleteContactUsEntry);
+    app.get('/api/v1/user/car-features-image', [authJwt.verifyToken], auth.getAllFeatureImages);
+    app.get('/api/v1/user/car-features-image/by-name/:featureName', [authJwt.verifyToken], auth.getAllFeatureImagesByFeatureName);
+    app.get('/api/v1/user/car-features-image/:id', [authJwt.verifyToken], auth.getFeatureImageById);
 }

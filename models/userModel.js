@@ -302,6 +302,13 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    dummyImage: [
+        {
+            img: {
+                type: String
+            }
+        }
+    ],
 
 
 }, { timestamps: true });

@@ -246,7 +246,7 @@ module.exports = (app) => {
     app.get('/api/v1/admin/level-wise-income/all', [authJwt.isAdmin], auth.getAllUserReferralIncome);
     app.get('/api/v1/admin/level-wise-income/:id', [authJwt.isAdmin], auth.getReferralIncomeByUserId);
     app.get('/api/v1/admin/transactions/user/:id', [authJwt.isAdmin], auth.getTransactionDetailsByUserId);
-    app.get('/api/v1/admin/income/user/:id', [authJwt.verifyToken], auth.getIncomeDetailsByUserId);
+    app.get('/api/v1/admin/income/user/:id', [authJwt.isAdmin], auth.getIncomeDetailsByUserId);
     app.get('/api/v1/admin/all-ratings', [authJwt.isAdmin], auth.getAllRatingsForCars);
     app.get('/api/v1/admin/ratings/:carId', [authJwt.isAdmin], auth.getAllRatingsByCarId);
     app.get('/api/v1/admin/ratings/:carId/rating/:rating', [authJwt.isAdmin], auth.getRatingsByCarIdAndRating);
@@ -267,7 +267,7 @@ module.exports = (app) => {
     app.get('/api/v1/admin/accessories/category/:categoryId', [authJwt.isAdmin], auth.getAllAccessoriesByCategoryId);
     app.get('/api/v1/admin/order', [authJwt.isAdmin], auth.getAllOrders);
     app.get('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.getOrderById);
-    app.put('/api/v1/admin/order/:orderId', [authJwt.verifyToken], auth.updateOrder);
+    app.put('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.updateOrder);
     app.delete('/api/v1/admin/order/:orderId', [authJwt.isAdmin], auth.deleteOrder);
     app.get('/api/v1/admin/allcount', [authJwt.isAdmin], auth.getAllCounts);
     app.get('/api/v1/admin/carallcount', [authJwt.isAdmin], auth.getAllCarCounts);
@@ -281,8 +281,12 @@ module.exports = (app) => {
     app.get('/api/v1/admin/booking/:bookingId/refund', [authJwt.isAdmin], auth.getRefundStatusAndAmount);
     app.get('/api/v1/admin/contact-us', [authJwt.isAdmin], auth.getAllContactUsEntries);
     app.get('/api/v1/admin/contact-us/:id', [authJwt.isAdmin], auth.getContactUsEntryById);
-    app.put('/api/v1/user/contact-us/:id', [authJwt.verifyToken], attachement.single('image'), auth.updateContactUsEntry);
+    app.put('/api/v1/user/contact-us/:id', [authJwt.isAdmin], attachement.single('image'), auth.updateContactUsEntry);
     app.put('/api/v1/admin/contact-us/:id/reply', [authJwt.isAdmin], auth.replyToContactUsEntry);
-
-
+    app.put("/api/v1/admin/upload-features-picture", [authJwt.isAdmin], attachement.array('image'), auth.uploadFeaturesPicture);
+    app.post('/api/v1/admin/car-features-image', [authJwt.isAdmin], auth.createFeatureImage);
+    app.get('/api/v1/admin/car-features-image', [authJwt.isAdmin], auth.getAllFeatureImages);
+    app.get('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.getFeatureImageById);
+    app.put('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.updateFeatureImage);
+    app.delete('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.deleteFeatureImage);
 }

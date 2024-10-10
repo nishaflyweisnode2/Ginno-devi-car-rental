@@ -56,6 +56,8 @@ const fs = require('fs');
 const ExcelJS = require('exceljs');
 const UserDetails = require('../models/userRefundModel');
 const ContactUs = require('../models/contactusModel');
+const CarFeatures = require('../models/carFeaturesModel');
+const FeatureImage = require('../models/carFeaturesImageModel');
 
 
 
@@ -1071,7 +1073,6 @@ exports.deleteAllCoupons = async (req, res) => {
     }
 };
 
-
 exports.createCarImage = async (req, res) => {
     try {
         const { tips, url } = req.body;
@@ -1169,7 +1170,7 @@ exports.deleteCarImageById = async (req, res) => {
 
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, color, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
+        const { licenseNumber, brand, model, variant, color, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat, isCarWithDriver, isCarWithDoorStepDelivery } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -1217,7 +1218,9 @@ exports.createCar = async (req, res) => {
             chassisNumber,
             sharingFrequency,
             status,
-            seat
+            seat,
+            isCarWithDriver,
+            isCarWithDoorStepDelivery
         });
 
         const savedCar = await newCar.save();
@@ -2736,7 +2739,21 @@ exports.deleteOfferById = async (req, res) => {
 
 exports.createAdminCarPrice = async (req, res) => {
     try {
-        const { mainCategory, car, adminHourlyRate, adminMinPricePerHour, adminMaxPricePerHour, autoPricing, depositedMoney, extendPrice } = req.body;
+        const {
+            mainCategory,
+            car,
+            adminHourlyRate,
+            adminHourlyRateDiscountPercentage,
+            adminMinPricePerHour,
+            adminMinPricePerHourDiscountPercentage,
+            adminMaxPricePerHour,
+            adminMaxPricePerHourDiscountPercentage,
+            priceDiscountPercentage,
+            depositedMoney,
+            depositedMoneyDiscountPercentage,
+            extendPrice,
+            extendPriceDiscountPercentage
+        } = req.body;
 
         const mainCategoryObjects = await MainCategory.find({ _id: { $in: mainCategory } });
 
@@ -2744,17 +2761,54 @@ exports.createAdminCarPrice = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'One or more MainCategories not found' });
         }
 
+        const adminHourlyRateDiscountPrice = adminHourlyRate
+            ? (adminHourlyRate * (1 - adminHourlyRateDiscountPercentage / 100)).toFixed(2)
+            : null;
+
+        const adminMinPricePerHourDiscountPrice = adminMinPricePerHour
+            ? (adminMinPricePerHour * (1 - adminMinPricePerHourDiscountPercentage / 100)).toFixed(2)
+            : null;
+
+        const adminMaxPricePerHourDiscountPrice = adminMaxPricePerHour
+            ? (adminMaxPricePerHour * (1 - adminMaxPricePerHourDiscountPercentage / 100)).toFixed(2)
+            : null;
+
+        const priceDiscountPrice = adminHourlyRate
+            ? (adminHourlyRate * (1 - priceDiscountPercentage / 100)).toFixed(2)
+            : null;
+
+        const depositedMoneyDiscountPrice = depositedMoney
+            ? (depositedMoney * (1 - depositedMoneyDiscountPercentage / 100)).toFixed(2)
+            : null;
+
+        const extendPriceDiscountPrice = extendPrice
+            ? (extendPrice * (1 - extendPriceDiscountPercentage / 100)).toFixed(2)
+            : null;
+
         const adminCarPrice = new AdminCarPrice({
             mainCategory,
             car,
             adminHourlyRate,
+            adminHourlyRateDiscountPrice,
+            adminHourlyRateDiscountPercentage,
             adminMinPricePerHour,
+            adminMinPricePerHourDiscountPrice,
+            adminMinPricePerHourDiscountPercentage,
             adminMaxPricePerHour,
+            adminMaxPricePerHourDiscountPrice,
+            adminMaxPricePerHourDiscountPercentage,
             price: adminHourlyRate,
-            autoPricing,
+            priceDiscountPrice,
+            priceDiscountPercentage,
+            autoPricing: req.body.autoPricing || true,
             depositedMoney,
-            extendPrice
+            depositedMoneyDiscountPrice,
+            depositedMoneyDiscountPercentage,
+            extendPrice,
+            extendPriceDiscountPrice,
+            extendPriceDiscountPercentage
         });
+
         await adminCarPrice.save();
 
         const carObject = await Car.findById(car);
@@ -6753,5 +6807,113 @@ exports.replyToContactUsEntry = async (req, res) => {
     } catch (error) {
         console.error('Error replying to contact us entry:', error);
         return res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
+    }
+};
+
+exports.uploadFeaturesPicture = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        let images = [];
+        if (req.files) {
+            for (let j = 0; j < req.files.length; j++) {
+                let obj = {
+                    img: req.files[j].path,
+                };
+                images.push(obj);
+            }
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, { dummyImage: images, }, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Uploaded successfully', data: updatedUser.dummyImage });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Failed to upload profile picture', error: error.message });
+    }
+};
+
+exports.createFeatureImage = async (req, res) => {
+    try {
+        const { featureName, imageUrl } = req.body;
+
+        const existingFeatureImage = await FeatureImage.findOne({ featureName });
+        if (existingFeatureImage) {
+            return res.status(400).json({ status: 400, message: 'Feature image already exists' });
+        }
+
+        const newFeatureImage = await FeatureImage.create({ featureName, imageUrl });
+        return res.status(201).json({ status: 201, message: 'Feature image created successfully', data: newFeatureImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFeatureImages = async (req, res) => {
+    try {
+        const featureImages = await FeatureImage.find();
+        return res.status(200).json({ status: 200, message: 'Feature images retrieved successfully', data: featureImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFeatureImageById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const featureImage = await FeatureImage.findById(id);
+
+        if (!featureImage) {
+            return res.status(404).json({ status: 404, message: 'Feature image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature image retrieved successfully', data: featureImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.updateFeatureImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { featureName, imageUrl } = req.body;
+
+        const updatedFeatureImage = await FeatureImage.findByIdAndUpdate(
+            id,
+            { featureName, imageUrl },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedFeatureImage) {
+            return res.status(404).json({ status: 404, message: 'Feature image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature image updated successfully', data: updatedFeatureImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.deleteFeatureImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedFeatureImage = await FeatureImage.findByIdAndDelete(id);
+
+        if (!deletedFeatureImage) {
+            return res.status(404).json({ status: 404, message: 'Feature image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature image deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };

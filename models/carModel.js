@@ -220,7 +220,14 @@ const carSchema = new mongoose.Schema({
     carPrice: {
         type: Number
     },
-
+    isCarWithDriver: {
+        type: Boolean,
+        default: false
+    },
+    isCarWithDoorStepDelivery: {
+        type: Boolean,
+        default: false
+    }
 
 
 }, { timestamps: true });

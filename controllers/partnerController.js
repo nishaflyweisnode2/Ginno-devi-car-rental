@@ -40,6 +40,7 @@ const Order = require('../models/orderModel');
 const Address = require("../models/userAddressModel");
 const UserDetails = require('../models/userRefundModel');
 const Refund = require('../models/refundModel');
+const FeatureImage = require('../models/carFeaturesImageModel');
 
 
 
@@ -517,7 +518,7 @@ exports.getSubscriptionCategoryById = async (req, res) => {
 
 exports.createCar = async (req, res) => {
     try {
-        const { licenseNumber, brand, model, variant, color, bodyType, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat } = req.body;
+        const { licenseNumber, brand, model, variant, color, bodyType, city, yearOfRegistration, fuelType, transmissionType, kmDriven, chassisNumber, sharingFrequency, status, seat, isCarWithDriver, isCarWithDoorStepDelivery } = req.body;
         const userId = req.user._id;
 
         const user = await User.findOne({ _id: userId });
@@ -573,7 +574,9 @@ exports.createCar = async (req, res) => {
             chassisNumber,
             sharingFrequency,
             status,
-            seat
+            seat,
+            isCarWithDriver,
+            isCarWithDoorStepDelivery
         });
 
         const savedCar = await newCar.save();
@@ -1768,10 +1771,25 @@ exports.updateHostCarPricing = async (req, res) => {
             return res.status(403).json({ status: 403, message: 'User does not own the specified car' });
         }
 
-        partnerCar.hostHourlyRate = req.body.hostHourlyRate || partnerCar.hostHourlyRate;
+        if (req.body.hostHourlyRate) {
+            partnerCar.hostHourlyRate = req.body.hostHourlyRate;
+            partnerCar.hostHourlyRateDiscountPercentage = req.body.hostHourlyRateDiscountPercentage || partnerCar.hostHourlyRateDiscountPercentage;
+            partnerCar.hostHourlyRateDiscountPrice = (partnerCar.hostHourlyRate * (1 - partnerCar.hostHourlyRateDiscountPercentage / 100)).toFixed(2);
+        }
+
+        if (req.body.hostMinPricePerHour) {
+            partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour;
+            partnerCar.hostMinPricePerHourDiscountPercentage = req.body.hostMinPricePerHourDiscountPercentage || partnerCar.hostMinPricePerHourDiscountPercentage;
+            partnerCar.hostMinPricePerHourDiscountPrice = (partnerCar.hostMinPricePerHour * (1 - partnerCar.hostMinPricePerHourDiscountPercentage / 100)).toFixed(2);
+        }
+
+        if (req.body.hostMaxPricePerHour) {
+            partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour;
+            partnerCar.hostMaxPricePerHourDiscountPercentage = req.body.hostMaxPricePerHourDiscountPercentage || partnerCar.hostMaxPricePerHourDiscountPercentage;
+            partnerCar.hostMaxPricePerHourDiscountPrice = (partnerCar.hostMaxPricePerHour * (1 - partnerCar.hostMaxPricePerHourDiscountPercentage / 100)).toFixed(2);
+        }
+
         partnerCar.isHostPricing = req.body.isHostPricing || partnerCar.isHostPricing;
-        partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour || partnerCar.hostMinPricePerHour;
-        partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour || partnerCar.hostMaxPricePerHour;
 
         if (req.body.autoPricing) {
             partnerCar.autoPricing = true;
@@ -1813,10 +1831,25 @@ exports.updateHostCarPricingByCarId = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Host car pricing not found or does not belong to the partner' });
         }
 
-        partnerCar.hostHourlyRate = req.body.hostHourlyRate || partnerCar.hostHourlyRate;
+        if (req.body.hostHourlyRate) {
+            partnerCar.hostHourlyRate = req.body.hostHourlyRate;
+            partnerCar.hostHourlyRateDiscountPercentage = req.body.hostHourlyRateDiscountPercentage || partnerCar.hostHourlyRateDiscountPercentage;
+            partnerCar.hostHourlyRateDiscountPrice = (partnerCar.hostHourlyRate * (1 - partnerCar.hostHourlyRateDiscountPercentage / 100)).toFixed(2);
+        }
+
+        if (req.body.hostMinPricePerHour) {
+            partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour;
+            partnerCar.hostMinPricePerHourDiscountPercentage = req.body.hostMinPricePerHourDiscountPercentage || partnerCar.hostMinPricePerHourDiscountPercentage;
+            partnerCar.hostMinPricePerHourDiscountPrice = (partnerCar.hostMinPricePerHour * (1 - partnerCar.hostMinPricePerHourDiscountPercentage / 100)).toFixed(2);
+        }
+
+        if (req.body.hostMaxPricePerHour) {
+            partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour;
+            partnerCar.hostMaxPricePerHourDiscountPercentage = req.body.hostMaxPricePerHourDiscountPercentage || partnerCar.hostMaxPricePerHourDiscountPercentage;
+            partnerCar.hostMaxPricePerHourDiscountPrice = (partnerCar.hostMaxPricePerHour * (1 - partnerCar.hostMaxPricePerHourDiscountPercentage / 100)).toFixed(2);
+        }
+
         partnerCar.isHostPricing = req.body.isHostPricing || partnerCar.isHostPricing;
-        partnerCar.hostMinPricePerHour = req.body.hostMinPricePerHour || partnerCar.hostMinPricePerHour;
-        partnerCar.hostMaxPricePerHour = req.body.hostMaxPricePerHour || partnerCar.hostMaxPricePerHour;
 
         if (req.body.autoPricing) {
             partnerCar.autoPricing = true;
@@ -5555,5 +5588,48 @@ exports.updateBankDetails = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllFeatureImages = async (req, res) => {
+    try {
+        const featureImages = await FeatureImage.find();
+        return res.status(200).json({ status: 200, message: 'Feature images retrieved successfully', data: featureImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getAllFeatureImagesByFeatureName = async (req, res) => {
+    try {
+        const { featureName } = req.params;
+
+        const featureImages = await FeatureImage.find({ featureName: featureName });
+
+        if (featureImages.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No feature images found for the specified feature name' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature images retrieved successfully', data: featureImages });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+exports.getFeatureImageById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const featureImage = await FeatureImage.findById(id);
+
+        if (!featureImage) {
+            return res.status(404).json({ status: 404, message: 'Feature image not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Feature image retrieved successfully', data: featureImage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
