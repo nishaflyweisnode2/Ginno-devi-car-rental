@@ -5031,7 +5031,8 @@ exports.addMoney = async (req, res) => {
                 type: "Wallet",
                 cr: true,
                 details: "Money has been added from your wallet.",
-                paymentStatus: 'Success'
+                paymentStatus: 'Success',
+                transctionId: req.body.transctionId || null,
 
             };
             const createdTransaction = await Transaction.create(transactionData);
@@ -5085,7 +5086,9 @@ exports.removeMoney = async (req, res) => {
                 type: "Wallet",
                 dr: true,
                 details: "Money has been deducted from your wallet.",
-                paymentStatus: 'Success'
+                paymentStatus: 'Success',
+                transctionId: req.body.transctionId || null,
+
             };
             const createdTransaction = await Transaction.create(transactionData);
             const welcomeMessage = `Welcome, ${updatedUser.fullName}! Money has been deducted from your wallet.`;
@@ -5324,7 +5327,7 @@ exports.transferMoneyReSendOtp = async (req, res) => {
 
 exports.transferMoney = async (req, res) => {
     try {
-        const { recipientId, fullName, amount, otp } = req.body;
+        const { recipientId, fullName, amount, otp, transctionId } = req.body;
         const senderId = req.user._id;
 
 
@@ -5364,7 +5367,9 @@ exports.transferMoney = async (req, res) => {
             cr: false,
             dr: true,
             details: `Transferred to ${recipient.fullName}`,
-            paymentStatus: 'Success'
+            paymentStatus: 'Success',
+            transctionId: transctionId || null,
+
         };
         const recipientTransactionData = {
             user: recipientId,
