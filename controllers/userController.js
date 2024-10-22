@@ -2049,10 +2049,12 @@ exports.createBooking = async (req, res) => {
             }
         }
 
+        let planMoney = 0;
         const checkPlan = await Plan.findById(plan);
         if (!checkPlan) {
             return res.status(404).json({ status: 404, message: 'Plan not found' });
         }
+        planMoney = checkPlan.price;
 
         let tripProtctionMoney = 0;
         if (tripPackage) {
@@ -2193,9 +2195,10 @@ exports.createBooking = async (req, res) => {
             console.log("carChoicePrice", carChoicePrice);
             console.log("driverPrice", driverPrice);
             console.log("taxAmount", taxAmount);
+            console.log("planMoney", planMoney);
             console.log("adminCarPrice.depositedMoney", adminCarPrice.depositedMoney);
 
-            const totalPriceWithAccessories = parseFloat(roundedTotalPrice) + parseFloat(accessoriesPrice) + parseFloat(adminCarPrice.depositedMoney) + parseFloat(tripProtctionMoney) + parseFloat(carChoicePrice) + parseFloat(driverPrice) + parseFloat(taxAmount);
+            const totalPriceWithAccessories = parseFloat(roundedTotalPrice) + parseFloat(accessoriesPrice) + parseFloat(adminCarPrice.depositedMoney) + parseFloat(tripProtctionMoney) + parseFloat(carChoicePrice) + parseFloat(driverPrice) + parseFloat(taxAmount) + parseFloat(planMoney);
 
             console.log("totalPriceWithAccessories", totalPriceWithAccessories);
 
@@ -2240,6 +2243,7 @@ exports.createBooking = async (req, res) => {
                 driverPrice,
                 uniqueBookinId: await generateBookingCode(),
                 taxAmount,
+                planPrice: planMoney
             });
 
             // user.coin += carExist.quackCoin

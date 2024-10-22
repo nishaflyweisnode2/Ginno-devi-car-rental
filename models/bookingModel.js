@@ -107,6 +107,9 @@ const bookingSchema = new mongoose.Schema(
         carChoicePrice: {
             type: Number,
         },
+        planPrice: {
+            type: Number,
+        },
         depositedMoney: {
             type: Number,
         },
