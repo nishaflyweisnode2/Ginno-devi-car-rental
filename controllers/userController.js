@@ -1706,7 +1706,7 @@ exports.checkCarAvailability = async (req, res) => {
                 isOnTrip: false,
                 isAvailable: true,
                 nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
-            }).populate('pickup').populate('owner city bodyType brand');
+            }).populate('pickup').populate('owner city bodyType brand adminCarPrice');
         } else {
             const nearbyCars = await Car.find({
                 _id: { $nin: bookedCarIds },
@@ -1722,7 +1722,7 @@ exports.checkCarAvailability = async (req, res) => {
                 isOnTrip: false,
                 isAvailable: true,
                 nextAvailableDateTime: { $gte: startDateTime, $lte: endDateTime },
-            }).populate('pickup').populate('owner city bodyType brand');
+            }).populate('pickup').populate('owner city bodyType brand adminCarPrice');
 
             if (nearbyCars.length === 0) {
                 return res.status(404).json({
