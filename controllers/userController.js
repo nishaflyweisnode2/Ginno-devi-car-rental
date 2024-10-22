@@ -2187,7 +2187,18 @@ exports.createBooking = async (req, res) => {
 
             taxAmount = parseFloat(taxAmount).toFixed(2);
 
-            const totalPriceWithAccessories = roundedTotalPrice + accessoriesPrice + adminCarPrice.depositedMoney + tripProtctionMoney + carChoicePrice + driverPrice + taxAmount;
+            console.log("roundedTotalPrice", roundedTotalPrice);
+            console.log("accessoriesPrice", accessoriesPrice);
+            console.log("tripProtctionMoney", tripProtctionMoney);
+            console.log("carChoicePrice", carChoicePrice);
+            console.log("driverPrice", driverPrice);
+            console.log("taxAmount", taxAmount);
+            console.log("adminCarPrice.depositedMoney", adminCarPrice.depositedMoney);
+
+            const totalPriceWithAccessories = parseFloat(roundedTotalPrice) + parseFloat(accessoriesPrice) + parseFloat(adminCarPrice.depositedMoney) + parseFloat(tripProtctionMoney) + parseFloat(carChoicePrice) + parseFloat(driverPrice) + parseFloat(taxAmount);
+
+            console.log("totalPriceWithAccessories", totalPriceWithAccessories);
+
             let isSubscription, isRental;
             if (subscriptionMonths != (null || undefined)) {
                 isSubscription = true;
