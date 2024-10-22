@@ -2054,7 +2054,8 @@ exports.createBooking = async (req, res) => {
         if (!checkPlan) {
             return res.status(404).json({ status: 404, message: 'Plan not found' });
         }
-        planMoney = checkPlan.price;
+        planMoney = checkPlan.klLimit * checkPlan.price;
+        console.log("checkPlan.klLimit * checkPlan.price", checkPlan.klLimit * checkPlan.price);
 
         let tripProtctionMoney = 0;
         if (tripPackage) {
