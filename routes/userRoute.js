@@ -179,4 +179,6 @@ module.exports = (app) => {
     app.get('/api/v1/user/car-features-image', [authJwt.verifyToken], auth.getAllFeatureImages);
     app.get('/api/v1/user/car-features-image/by-name/:featureName', [authJwt.verifyToken], auth.getAllFeatureImagesByFeatureName);
     app.get('/api/v1/user/car-features-image/:id', [authJwt.verifyToken], auth.getFeatureImageById);
+    app.get('/api/v1/user/tax-amount', [authJwt.verifyToken], auth.getAllTaxAmount);
+
 }

@@ -5938,3 +5938,14 @@ exports.getFeatureImageById = async (req, res) => {
         return res.status(500).json({ status: 500, error: error.message });
     }
 };
+
+exports.getAllTaxAmount = async (req, res) => {
+    try {
+        const TaxAmount = await Tax.findOne().sort({ createdAt: -1 });
+
+        return res.status(200).json({ status: 200, data: TaxAmount });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
