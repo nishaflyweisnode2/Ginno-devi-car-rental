@@ -3608,7 +3608,6 @@ exports.getAllCarFeaturesByCarId1 = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'No cars found for the user' });
         }
 
-        // const carIds = userCars.map(car => car._id);
         const carFeatures = await CarFeatures.findOne({ car: carId }).populate('car');
 
         return res.status(200).json({ status: 200, data: carFeatures });
@@ -3622,28 +3621,25 @@ exports.getAllCarFeaturesByCarId = async (req, res) => {
         const userId = req.user._id;
         const carId = req.params.carId;
 
-        // Find the user by ID
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ status: 404, message: 'User not found' });
         }
 
-        // Find car associated with the user (optional, since features are common to all cars)
-        const userCars = await Car.find({ car: carId });
+        const userCars = await Car.find({ _id: carId, user: userId });
         if (!userCars || userCars.length === 0) {
             return res.status(404).json({ status: 404, message: 'No cars found for the user' });
         }
 
-        const carFeatures = await CarFeatures.find();
-
-        if (!carFeatures || carFeatures.length === 0) {
+        const carFeatures = await CarFeatures.findOne({ car: carId });
+        if (!carFeatures) {
             return res.status(404).json({ status: 404, message: 'No car features found' });
         }
 
-        // const featureKeys = carFeatures.map(feature => feature.keyName);
-        // const featureImages = await FeatureImage.find({ keyName: { $in: featureKeys } });
-        const featureKeys = carFeatures.map(feature => feature.keyName);
+        const featureKeys = Object.keys(carFeatures._doc).filter(key => carFeatures[key] === true || typeof carFeatures[key] === 'string');
+
         const regexFeatureKeys = featureKeys.map(key => new RegExp(`^${key}$`, 'i'));
+
         const featureImages = await FeatureImage.find({ keyName: { $in: regexFeatureKeys } });
 
         const responseData = {
