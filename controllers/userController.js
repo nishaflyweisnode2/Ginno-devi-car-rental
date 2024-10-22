@@ -3593,7 +3593,7 @@ exports.getCarsByPlan = async (req, res) => {
     }
 };
 
-exports.getAllCarFeaturesByCarId = async (req, res) => {
+exports.getAllCarFeaturesByCarId1 = async (req, res) => {
     try {
         const userId = req.user._id;
         const carId = req.params.carId;
@@ -3612,6 +3612,46 @@ exports.getAllCarFeaturesByCarId = async (req, res) => {
         const carFeatures = await CarFeatures.findOne({ car: carId }).populate('car');
 
         return res.status(200).json({ status: 200, data: carFeatures });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+exports.getAllCarFeaturesByCarId = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const carId = req.params.carId;
+
+        // Find the user by ID
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        // Find car associated with the user (optional, since features are common to all cars)
+        const userCars = await Car.find({ car: carId });
+        if (!userCars || userCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No cars found for the user' });
+        }
+
+        const carFeatures = await CarFeatures.find();
+
+        if (!carFeatures || carFeatures.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No car features found' });
+        }
+
+        // const featureKeys = carFeatures.map(feature => feature.keyName);
+        // const featureImages = await FeatureImage.find({ keyName: { $in: featureKeys } });
+        const featureKeys = carFeatures.map(feature => feature.keyName);
+        const regexFeatureKeys = featureKeys.map(key => new RegExp(`^${key}$`, 'i'));
+        const featureImages = await FeatureImage.find({ keyName: { $in: regexFeatureKeys } });
+
+        const responseData = {
+            carFeatures,
+            featureImages,
+        };
+
+        return res.status(200).json({ status: 200, data: responseData });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: error.message });
