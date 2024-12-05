@@ -343,10 +343,51 @@ exports.getUserById = async (req, res) => {
             year: 'numeric',
         });
 
+        const transactions = await Transaction.find({ user: userId, type: { $in: ['Booking', 'Wallet', 'Qc', 'Referral', 'Transfer'] } });
+
+        let totalWalletTopUp = 0;
+        let totalWalletWithdraw = 0;
+        let totalWalletTransfer = 0;
+        let totalReferralTopUp = 0;
+        let totalReferralWithdraw = 0;
+        let totalReferralTransfer = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) {
+                    totalWalletTopUp += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalWalletWithdraw += transaction.amount;
+                }
+            } else if (transaction.type === 'Transfer') {
+                if (transaction.cr) {
+                    // totalWalletTransfer += transaction.amount;
+                }
+                if (transaction.dr) {
+                    totalWalletTransfer += transaction.amount;
+                }
+            } else if (transaction.type === 'Referral') {
+                if (transaction.cr) {
+                    totalReferralTopUp += transaction.amount;
+                }
+                if (transaction.dr) {
+                    // totalReferralWithdraw += transaction.amount;
+                }
+            }
+        });
+
         return res.status(200).json({
             status: 200, data: {
                 user,
                 memberSince,
+                transactions: transactions,
+                totalWalletTopUp: totalWalletTopUp,
+                totalWalletWithdraw: totalWalletWithdraw,
+                totalWalletTransfer: totalWalletTransfer,
+                totalReferralTopUp: totalReferralTopUp,
+                totalReferralWithdraw: totalReferralWithdraw,
+                totalReferralTransfer: totalReferralTransfer,
             },
         });
     } catch (error) {
@@ -5522,7 +5563,7 @@ exports.getReferralIncomeByUserId = async (req, res) => {
     }
 };
 
-exports.getTransactionDetailsByUserId = async (req, res) => {
+exports.getTransactionDetailsByUserId1 = async (req, res) => {
     try {
         const userId = req.params.id;
 
@@ -5598,6 +5639,141 @@ exports.getTransactionDetailsByUserId = async (req, res) => {
                 totalTransferCredit: totalTransferCredit,
                 totalTransferDebit: totalTransferDebit,
             }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getTransactionDetailsByUserId = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found', data: null });
+        }
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const transactions = await Transaction.find({
+            user: userId,
+            type: { $in: ['Booking', 'Wallet', 'Qc', 'Referral', 'Transfer'] },
+        }).populate({
+            path: 'booking',
+            select: 'mainCategory',
+            populate: { path: 'mainCategory', select: 'name' },
+        });
+
+        const todayTransactions = await Transaction.find({
+            user: userId,
+            type: { $in: ['Booking', 'Wallet', 'Qc', 'Referral', 'Transfer'] },
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        }).populate({
+            path: 'booking',
+            select: 'mainCategory',
+            populate: { path: 'mainCategory', select: 'name' },
+        });
+        console.log(todayTransactions);
+
+        let totalWalletCredit = 0, todayWalletCreditCount = 0;
+        let totalWalletDebit = 0, todayWalletDebitCount = 0;
+        let totalQcCredit = 0, todayQcCreditCount = 0;
+        let totalQcDebit = 0, todayQcDebitCount = 0;
+        let totalBookingCredit = 0, todayBookingCreditCount = 0;
+        let totalBookingDebit = 0, todayBookingDebitCount = 0;
+        let totalReferralCredit = 0, todayReferralCreditCount = 0;
+        let totalReferralDebit = 0, todayReferralDebitCount = 0;
+        let totalTransferCredit = 0, todayTransferCreditCount = 0;
+        let totalTransferDebit = 0, todayTransferDebitCount = 0;
+
+        const mainCategoryTotals = {};
+        const todayMainCategoryTotals = {};
+
+        transactions.forEach(transaction => {
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) totalWalletCredit += transaction.amount;
+                if (transaction.dr) totalWalletDebit += transaction.amount;
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) totalQcCredit += transaction.amount;
+                if (transaction.dr) totalQcDebit += transaction.amount;
+            } else if (transaction.type === 'Booking') {
+                if (transaction.cr) totalBookingCredit += transaction.amount;
+                if (transaction.dr) totalBookingDebit += transaction.amount;
+
+                const mainCategory = transaction.booking?.mainCategory?.name || 'Unknown';
+                if (!mainCategoryTotals[mainCategory]) {
+                    mainCategoryTotals[mainCategory] = { credit: 0, debit: 0 };
+                }
+                if (transaction.cr) mainCategoryTotals[mainCategory].credit += transaction.amount;
+                if (transaction.dr) mainCategoryTotals[mainCategory].debit += transaction.amount;
+            } else if (transaction.type === 'Referral') {
+                if (transaction.cr) totalReferralCredit += transaction.amount;
+                if (transaction.dr) totalReferralDebit += transaction.amount;
+            } else if (transaction.type === 'Transfer') {
+                if (transaction.cr) totalTransferCredit += transaction.amount;
+                if (transaction.dr) totalTransferDebit += transaction.amount;
+            }
+        });
+
+        todayTransactions.forEach(transaction => {
+            if (transaction.type === 'Wallet') {
+                if (transaction.cr) todayWalletCreditCount += transaction.amount;
+                if (transaction.dr) todayWalletDebitCount += transaction.amount;
+            } else if (transaction.type === 'Qc') {
+                if (transaction.cr) todayQcCreditCount += transaction.amount;
+                if (transaction.dr) todayQcDebitCount += transaction.amount;
+            } else if (transaction.type === 'Booking') {
+                if (transaction.cr) todayBookingCreditCount += transaction.amount;
+                if (transaction.dr) todayBookingDebitCount += transaction.amount;
+
+                const mainCategory = transaction.booking?.mainCategory?.name || 'Unknown';
+                if (!todayMainCategoryTotals[mainCategory]) {
+                    todayMainCategoryTotals[mainCategory] = { credit: 0, debit: 0 };
+                }
+                if (transaction.cr) todayMainCategoryTotals[mainCategory].credit += transaction.amount;
+                if (transaction.dr) todayMainCategoryTotals[mainCategory].debit += transaction.amount;
+            } else if (transaction.type === 'Referral') {
+                if (transaction.cr) todayReferralCreditCount += transaction.amount;
+                if (transaction.dr) todayReferralDebitCount += transaction.amount;
+            } else if (transaction.type === 'Transfer') {
+                if (transaction.cr) todayTransferCreditCount += transaction.amount;
+                if (transaction.dr) todayTransferDebitCount += transaction.amount;
+            }
+        });
+
+        return res.status(200).json({
+            status: 200,
+            data: {
+                transactions,
+                todayTransactions,
+                totalWalletCredit,
+                totalWalletDebit,
+                todayWalletCreditCount,
+                todayWalletDebitCount,
+                totalQcCredit,
+                totalQcDebit,
+                todayQcCreditCount,
+                todayQcDebitCount,
+                totalBookingCredit,
+                totalBookingDebit,
+                todayBookingCreditCount,
+                todayBookingDebitCount,
+                totalReferralCredit,
+                totalReferralDebit,
+                todayReferralCreditCount,
+                todayReferralDebitCount,
+                totalTransferCredit,
+                totalTransferDebit,
+                todayTransferCreditCount,
+                todayTransferDebitCount,
+                mainCategoryTotals,
+                todayMainCategoryTotals,
+            },
         });
     } catch (error) {
         console.error(error);
@@ -6667,10 +6843,24 @@ exports.getAllRefundData = async (req, res) => {
             return res.status(404).json({ status: 404, message: 'Refund not found', data: null });
         }
 
+        const transactions = await Transaction.find({ type: { $in: ['Booking'] } });
+
+        let totalBookingCredit = 0;
+        let totalBookingDebit = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.booking && transaction.booking.paymentStatus === "PAID") {
+                if (transaction.cr) totalBookingCredit += transaction.amount;
+                if (transaction.dr) totalBookingDebit += transaction.amount;
+            }
+        });
+
         const response = {
             status: 200,
             message: 'Refund status and amount retrieved successfully',
             data: refund,
+            totalBookingCredit: totalBookingCredit,
+            totalBookingDebit: totalBookingDebit
         };
 
         return res.status(200).json(response);

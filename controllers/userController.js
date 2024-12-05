@@ -5200,6 +5200,17 @@ exports.addWithdrawMoney = async (req, res) => {
 
         const savedRefund = await newRefund.save();
 
+        const transactionData = {
+            user: userId,
+            date: Date.now(),
+            amount: amount,
+            type: "Wallet",
+            dr: true,
+            details: "Money has been deducted from your wallet.",
+            paymentStatus: 'Success',
+        };
+        const createdTransaction = await Transaction.create(transactionData);
+
         const welcomeMessage = `Withdraw initiated.`;
         const welcomeNotification = new Notification({
             recipient: userId,
