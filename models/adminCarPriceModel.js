@@ -98,6 +98,9 @@ const adminCarPriceSchema = new mongoose.Schema({
     extendPriceDiscountPercentage: {
         type: Number,
     },
+    qcPointUsed: {
+        type: Number,
+    },
 
 }, { timestamps: true });
 

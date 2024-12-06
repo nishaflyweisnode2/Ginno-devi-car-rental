@@ -2793,7 +2793,8 @@ exports.createAdminCarPrice = async (req, res) => {
             depositedMoney,
             depositedMoneyDiscountPercentage,
             extendPrice,
-            extendPriceDiscountPercentage
+            extendPriceDiscountPercentage,
+            qcPointUsed
         } = req.body;
 
         const mainCategoryObjects = await MainCategory.find({ _id: { $in: mainCategory } });
@@ -2847,7 +2848,8 @@ exports.createAdminCarPrice = async (req, res) => {
             depositedMoneyDiscountPercentage,
             extendPrice,
             extendPriceDiscountPrice,
-            extendPriceDiscountPercentage
+            extendPriceDiscountPercentage,
+            qcPointUsed
         });
 
         await adminCarPrice.save();
