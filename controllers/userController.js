@@ -48,6 +48,8 @@ const Order = require('../models/orderModel');
 const UserDetails = require('../models/userRefundModel');
 const ContactUs = require('../models/contactusModel');
 const FeatureImage = require('../models/carFeaturesImageModel');
+const HrKm = require('../models/hrKmModel');
+const CancellationCharge = require('../models/cancellationChargeModel');
 
 
 
@@ -2424,7 +2426,7 @@ exports.createBookingForSharingCar = async (req, res) => {
             dropOffDate: adminCarPrice.availableTo,
             seat,
             totalPrice: roundedTotalPrice,
-            isSharingBooking: true
+            isSharing: true
         });
 
         await newBooking.save();
@@ -3178,16 +3180,46 @@ exports.cancelBooking = async (req, res) => {
             }
         }
 
-        const refundCharges = await RefundCharge.findOne();
-        const refundAmount = booking.totalPrice
+        const cancellationTime = new Date();
+        console.log("cancellationTime", cancellationTime);
 
+        const pickupDate = new Date(booking.pickupDate);
+        const datePart = pickupDate.toISOString().split('T')[0];
+        console.log("datePart", datePart);
+
+        const bookingCreationTimeString = `${datePart}T${booking.pickupTime}:00`;
+        console.log("bookingCreationTimeString", bookingCreationTimeString);
+
+        const bookingCreationTime = new Date(bookingCreationTimeString);
+        if (isNaN(bookingCreationTime.getTime())) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Invalid pickupDate or pickupTime value',
+                data: null,
+            });
+        }
+        console.log("bookingCreationTime", bookingCreationTime);
+        const hoursDifference = Math.floor(Math.abs(bookingCreationTime - cancellationTime) / (1000 * 60 * 60));
+        console.log("hoursDifference", hoursDifference);
+        const applicableCharge = await CancellationCharge.findOne({
+            'hourRange.start': { $lte: hoursDifference },
+            'hourRange.end': { $gte: hoursDifference },
+        });
+
+        console.log("applicableCharge", applicableCharge);
+        const cancellationCharge = applicableCharge ? applicableCharge.price : 0;
+        console.log("cancellationCharge", cancellationCharge);
+
+
+        const refundCharges = await RefundCharge.findOne() || { refundAmount: 0 };
+        const refundAmount = Math.max(0, booking.totalPrice - refundCharges.refundAmount - cancellationCharge);
         const extendedPriceRefund = booking.isExtendedPricePaid ? booking.extendedPrice : 0;
-        const totalRefundAmount = refundAmount - refundCharges.refundAmount + extendedPriceRefund;
+        const totalRefundAmount = refundAmount + extendedPriceRefund;
 
         const newRefund = new Refund({
             booking: booking._id,
             refundAmount: refundAmount,
-            refundCharges: refundCharges.refundAmount || 0,
+            refundCharges: (refundCharges?.refundAmount || 0) + cancellationCharge,
             extendedPrice: extendedPriceRefund,
             totalRefundAmount: totalRefundAmount,
             refundStatus: 'PENDING',
@@ -3209,7 +3241,7 @@ exports.cancelBooking = async (req, res) => {
         console.log(booking.car);
         if (booking.car) {
             const carExist = await Car.findById(booking.car);
-            if (isQuackCoinApplied === true) {
+            if (booking.isQuackCoinApplied === true) {
                 user.coin -= booking.coinAmount;
                 await user.save();
             }
@@ -5963,5 +5995,99 @@ exports.getAllTaxAmount = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+    }
+};
+
+exports.getAllHrKm = async (req, res) => {
+    try {
+        const hrKmRecords = await HrKm.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm records retrieved successfully.",
+            data: hrKmRecords,
+        });
+    } catch (error) {
+        console.error("Error retrieving HrKm records:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving HrKm records.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getHrKmById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const hrKmRecord = await HrKm.findById(id);
+        if (!hrKmRecord) {
+            return res.status(404).json({
+                status: 404,
+                message: "HrKm record not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm record retrieved successfully.",
+            data: hrKmRecord,
+        });
+    } catch (error) {
+        console.error("Error retrieving HrKm record by ID:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving HrKm record by ID.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getAllCancellationCharges = async (req, res) => {
+    try {
+        const charges = await CancellationCharge.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charges retrieved successfully.",
+            data: charges,
+        });
+    } catch (error) {
+        console.error("Error retrieving cancellation charges:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving cancellation charges.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getCancellationChargeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const charge = await CancellationCharge.findById(id);
+        if (!charge) {
+            return res.status(404).json({
+                status: 404,
+                message: "Cancellation charge not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charge retrieved successfully.",
+            data: charge,
+        });
+    } catch (error) {
+        console.error("Error retrieving cancellation charge by ID:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving cancellation charge by ID.",
+            error: error.message,
+        });
     }
 };

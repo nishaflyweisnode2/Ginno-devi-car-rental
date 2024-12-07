@@ -279,13 +279,17 @@ const bookingSchema = new mongoose.Schema(
             type: Boolean,
             // default: false
         },
-        isSharingBooking: {
+        isSharing: {
             type: Boolean,
             default: false
         },
         isRental: {
             type: Boolean,
             default: false
+        },
+        isGovernmentTendor: {
+            type: Boolean,
+            default: false,
         },
         isAmountDistribute: {
             type: Boolean,

@@ -289,4 +289,18 @@ module.exports = (app) => {
     app.get('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.getFeatureImageById);
     app.put('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.updateFeatureImage);
     app.delete('/api/v1/admin/car-features-image/:id', [authJwt.isAdmin], auth.deleteFeatureImage);
+    app.post('/api/v1/admin/hrkm', [authJwt.isAdmin], auth.createHrKm);
+    app.get('/api/v1/admin/hrkm', [authJwt.isAdmin], auth.getAllHrKm);
+    app.get('/api/v1/admin/hrkm/:id', [authJwt.isAdmin], auth.getHrKmById);
+    app.put('/api/v1/admin/hrkm/:id', [authJwt.isAdmin], auth.updateHrKm);
+    app.delete('/api/v1/admin/hrkm/:id', [authJwt.isAdmin], auth.deleteHrKm);
+    app.post('/api/v1/admin/cancellation-charges', [authJwt.isAdmin], auth.createCancellationCharge);
+    app.get('/api/v1/admin/cancellation-charges', [authJwt.isAdmin], auth.getAllCancellationCharges);
+    app.get('/api/v1/admin/cancellation-charges/:id', [authJwt.isAdmin], auth.getCancellationChargeById);
+    app.put('/api/v1/admin/cancellation-charges/:id', [authJwt.isAdmin], auth.updateCancellationCharge);
+    app.delete('/api/v1/admin/cancellation-charges/:id', [authJwt.isAdmin], auth.deleteCancellationCharge);
+    app.get('/api/v1/admin/cars-on-duty', [authJwt.isAdmin], auth.getCarsOnDuty);
+    app.get('/api/v1/admin/getBookingDetailsWithAddDepositedMoney', [authJwt.isAdmin], auth.getBookingDetailsWithAddDepositedMoney);
+    app.get('/api/v1/admin/getBookingDetailsWithRefundDepositedMoney', [authJwt.isAdmin], auth.getBookingDetailsWithRefundDepositedMoney);
+
 }

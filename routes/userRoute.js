@@ -180,5 +180,9 @@ module.exports = (app) => {
     app.get('/api/v1/user/car-features-image/by-name/:featureName', [authJwt.verifyToken], auth.getAllFeatureImagesByFeatureName);
     app.get('/api/v1/user/car-features-image/:id', [authJwt.verifyToken], auth.getFeatureImageById);
     app.get('/api/v1/user/tax-amount', [authJwt.verifyToken], auth.getAllTaxAmount);
+    app.get('/api/v1/user/hrkm', [authJwt.verifyToken], auth.getAllHrKm);
+    app.get('/api/v1/user/hrkm/:id', [authJwt.verifyToken], auth.getHrKmById);
+    app.get('/api/v1/user/cancellation-charges', [authJwt.verifyToken], auth.getAllCancellationCharges);
+    app.get('/api/v1/user/cancellation-charges/:id', [authJwt.verifyToken], auth.getCancellationChargeById);
 
 }

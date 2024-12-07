@@ -58,6 +58,8 @@ const UserDetails = require('../models/userRefundModel');
 const ContactUs = require('../models/contactusModel');
 const CarFeatures = require('../models/carFeaturesModel');
 const FeatureImage = require('../models/carFeaturesImageModel');
+const HrKm = require('../models/hrKmModel');
+const CancellationCharge = require('../models/cancellationChargeModel');
 
 
 
@@ -7109,3 +7111,458 @@ exports.deleteFeatureImage = async (req, res) => {
         return res.status(500).json({ status: 500, error: error.message });
     }
 };
+
+exports.createHrKm = async (req, res) => {
+    try {
+        const { hr, km, description } = req.body;
+
+        const newHrKm = new HrKm({ hr, km, description });
+        const savedHrKm = await newHrKm.save();
+
+        return res.status(201).json({
+            status: 201,
+            message: "HrKm record created successfully.",
+            data: savedHrKm,
+        });
+    } catch (error) {
+        console.error("Error creating HrKm record:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while creating HrKm record.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getAllHrKm = async (req, res) => {
+    try {
+        const hrKmRecords = await HrKm.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm records retrieved successfully.",
+            data: hrKmRecords,
+        });
+    } catch (error) {
+        console.error("Error retrieving HrKm records:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving HrKm records.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getHrKmById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const hrKmRecord = await HrKm.findById(id);
+        if (!hrKmRecord) {
+            return res.status(404).json({
+                status: 404,
+                message: "HrKm record not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm record retrieved successfully.",
+            data: hrKmRecord,
+        });
+    } catch (error) {
+        console.error("Error retrieving HrKm record by ID:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving HrKm record by ID.",
+            error: error.message,
+        });
+    }
+};
+
+exports.updateHrKm = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hr, km, description } = req.body;
+
+        const updatedHrKm = await HrKm.findByIdAndUpdate(
+            id,
+            { hr, km, description },
+            { new: true }
+        );
+
+        if (!updatedHrKm) {
+            return res.status(404).json({
+                status: 404,
+                message: "HrKm record not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm record updated successfully.",
+            data: updatedHrKm,
+        });
+    } catch (error) {
+        console.error("Error updating HrKm record:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while updating HrKm record.",
+            error: error.message,
+        });
+    }
+};
+
+exports.deleteHrKm = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedHrKm = await HrKm.findByIdAndDelete(id);
+        if (!deletedHrKm) {
+            return res.status(404).json({
+                status: 404,
+                message: "HrKm record not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "HrKm record deleted successfully.",
+            data: deletedHrKm,
+        });
+    } catch (error) {
+        console.error("Error deleting HrKm record:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while deleting HrKm record.",
+            error: error.message,
+        });
+    }
+};
+
+exports.createCancellationCharge = async (req, res) => {
+    try {
+        const { hourRange, price, description } = req.body;
+
+        const newCharge = new CancellationCharge({
+            hourRange,
+            price,
+            description,
+        });
+
+        const savedCharge = await newCharge.save();
+        return res.status(201).json({
+            status: 201,
+            message: "Cancellation charge created successfully.",
+            data: savedCharge,
+        });
+    } catch (error) {
+        console.error("Error creating cancellation charge:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while creating cancellation charge.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getAllCancellationCharges = async (req, res) => {
+    try {
+        const charges = await CancellationCharge.find();
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charges retrieved successfully.",
+            data: charges,
+        });
+    } catch (error) {
+        console.error("Error retrieving cancellation charges:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving cancellation charges.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getCancellationChargeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const charge = await CancellationCharge.findById(id);
+        if (!charge) {
+            return res.status(404).json({
+                status: 404,
+                message: "Cancellation charge not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charge retrieved successfully.",
+            data: charge,
+        });
+    } catch (error) {
+        console.error("Error retrieving cancellation charge by ID:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while retrieving cancellation charge by ID.",
+            error: error.message,
+        });
+    }
+};
+
+exports.updateCancellationCharge = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hourRange, price, description } = req.body;
+
+        const updatedCharge = await CancellationCharge.findByIdAndUpdate(
+            id,
+            { hourRange, price, description },
+            { new: true }
+        );
+
+        if (!updatedCharge) {
+            return res.status(404).json({
+                status: 404,
+                message: "Cancellation charge not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charge updated successfully.",
+            data: updatedCharge,
+        });
+    } catch (error) {
+        console.error("Error updating cancellation charge:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while updating cancellation charge.",
+            error: error.message,
+        });
+    }
+};
+
+exports.deleteCancellationCharge = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedCharge = await CancellationCharge.findByIdAndDelete(id);
+        if (!deletedCharge) {
+            return res.status(404).json({
+                status: 404,
+                message: "Cancellation charge not found.",
+                data: null,
+            });
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: "Cancellation charge deleted successfully.",
+            data: deletedCharge,
+        });
+    } catch (error) {
+        console.error("Error deleting cancellation charge:", error);
+        return res.status(500).json({
+            status: 500,
+            message: "Server error while deleting cancellation charge.",
+            error: error.message,
+        });
+    }
+};
+
+exports.getCarsOnDuty = async (req, res) => {
+    try {
+        const { type } = req.query;
+        const now = new Date();
+        const currentDate = now.toISOString().split('T')[0];
+        let currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
+
+        console.log("currentDate", currentDate);
+        console.log("currentTime", currentTime);
+
+        let carFilter = { isRental: true };
+        if (type) {
+            carFilter[type] = true;
+        }
+
+        const rentalCars = await Car.find(carFilter);
+
+        if (!rentalCars || rentalCars.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No rental cars found', data: [] });
+        }
+
+        const onDutyCars = [];
+        for (const car of rentalCars) {
+            let bookingFilter = {
+                car: car._id,
+                paymentStatus: "PAID",
+                status: { $nin: ['CANCELLED', 'COMPLETED'] },
+            };
+
+            if (type) {
+                bookingFilter[type] = true;
+            }
+
+            const activeBooking = await Booking.findOne({
+                ...bookingFilter,
+                $or: [
+                    {
+                        pickupDate: { $lte: currentDate },
+                        dropOffDate: { $gte: currentDate },
+                    },
+                    {
+                        pickupDate: currentDate,
+                        pickupTime: { $lte: currentTime },
+                    },
+                    {
+                        dropOffDate: currentDate,
+                        dropOffTime: { $gte: currentTime },
+                    },
+                    {
+                        pickupDate: currentDate,
+                        pickupTime: currentTime,
+                    },
+                ],
+            });
+
+            if (activeBooking) {
+                onDutyCars.push({
+                    carId: car._id,
+                    carName: car.name,
+                    activeBookingId: activeBooking._id,
+                    pickupDate: activeBooking.pickupDate,
+                    dropOffDate: activeBooking.dropOffDate,
+                    pickupTime: activeBooking.pickupTime,
+                    dropOffTime: activeBooking.dropOffTime,
+                });
+            }
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Live status of rental cars retrieved successfully',
+            data: onDutyCars,
+        });
+    } catch (error) {
+        console.error('Error retrieving live status of rental cars:', error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving live status of rental cars',
+            error: error.message,
+        });
+    }
+};
+
+
+exports.getBookingDetailsWithAddDepositedMoney = async (req, res) => {
+    try {
+        const bookings = await Booking.find({ paymentStatus: "PAID" });
+
+        if (!bookings || bookings.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No PAID bookings found',
+                data: {
+                    totalDepositedMoney: 0,
+                    bookingCount: 0,
+                    bookings: [],
+                },
+            });
+        }
+
+        const totalDepositedMoney = bookings.reduce((total, booking) => {
+            return total + (booking.depositedMoney || 0);
+        }, 0);
+
+        const bookingCount = bookings.length;
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking details and total deposited money retrieved successfully',
+            data: {
+                totalDepositedMoney,
+                bookingCount,
+                bookings,
+            },
+        });
+    } catch (error) {
+        console.error('Error retrieving booking details and total deposited money:', error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving booking details and total deposited money',
+            error: error.message,
+        });
+    }
+};
+
+exports.getBookingDetailsWithRefundDepositedMoney = async (req, res) => {
+    try {
+        const bookings = await Booking.find({ paymentStatus: "PAID" });
+
+        if (!bookings || bookings.length === 0) {
+            return res.status(200).json({
+                status: 200,
+                message: 'No PAID bookings found',
+                data: {
+                    totalRefundDepositedMoney: 0,
+                    refundCount: 0,
+                    bookings: [],
+                },
+            });
+        }
+
+        const onDutyBookings = [];
+        let totalRefundDepositedMoney = 0;
+        let refundCount = 0;
+
+        for (const booking of bookings) {
+            const refund = await Refund.findOne({ booking: booking._id, refundStatus: 'COMPLETED' });
+
+            if (refund) {
+                const depositedMoney = booking.depositedMoney || 0;
+
+                totalRefundDepositedMoney += depositedMoney;
+                refundCount += 1;
+
+                onDutyBookings.push({
+                    carId: booking.car,
+                    activeBookingId: booking._id,
+                    pickupDate: booking.pickupDate,
+                    dropOffDate: booking.dropOffDate,
+                    pickupTime: booking.pickupTime,
+                    dropOffTime: booking.dropOffTime,
+                    depositedMoney: depositedMoney,
+                    refundStatus: refund.refundStatus,
+                });
+            }
+        }
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Booking details and refund status retrieved successfully',
+            data: {
+                totalRefundDepositedMoney,
+                refundCount,
+                bookings: onDutyBookings,
+            },
+        });
+    } catch (error) {
+        console.error('Error retrieving booking details and refund status:', error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Server error while retrieving booking details and refund status',
+            error: error.message,
+        });
+    }
+};
+
+
+
+
